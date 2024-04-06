@@ -2,9 +2,13 @@
 Langchain tools for Customer Intelligence API
 """
 from conductor.database.aws import upload_dict_to_s3
+from conductor.prompts import CONDUCTOR_APOLLO_CUSTOMER_PROMPT
 from conductor.models import BaseConductorToolInput
 from langchain.pydantic_v1 import Field
 from langchain.tools import tool
+from langchain.chains.llm import LLMChain
+from langchain.prompts import PromptTemplate
+from langchain_openai import ChatOpenAI
 import requests
 import os
 import logging
@@ -13,6 +17,20 @@ import json
 
 
 logger = logging.getLogger(__name__)
+
+input_prompt = PromptTemplate(
+    input_variables=["apollo_people_data"],
+    template=CONDUCTOR_APOLLO_CUSTOMER_PROMPT,
+)
+
+
+def create_conductor_observation(apollo_people_data: str) -> str:
+    chain = LLMChain(
+        llm=ChatOpenAI(model="gpt-4-0125-preview", temperature=0),
+        prompt=input_prompt,
+    )
+    response = chain.run(apollo_people_data=apollo_people_data)
+    return response
 
 
 # Apollo Search Tool
@@ -55,6 +73,8 @@ def clean_apollo_person_search(data: dict) -> str:
                 observation += f"Title: {person['title']}\n"
             if "seniority" in person:
                 observation += f"Seniority: {person['seniority']}\n"
+            if "website_url" in person:
+                observation += f"Company Website: {person['website_url']}\n"
             if "linkedin_url" in person:
                 observation += f"LinkedIn URL: {person['linkedin_url']}\n"
             if "twitter_url" in person:
@@ -173,9 +193,16 @@ def apollo_person_search(
         upload_dict_to_s3(
             data=cleaned_data,
             bucket=os.getenv("AWS_S3_BUCKET"),
+            key=f"{job_id}/apollo_person_search/text/{file_id}.txt",
+        )
+        logger.info("Summarizing for conductor observation ...")
+        observation = create_conductor_observation(cleaned_data)
+        upload_dict_to_s3(
+            data=observation,
+            bucket=os.getenv("AWS_S3_BUCKET"),
             key=f"{job_id}/apollo_person_search/observation/{file_id}.txt",
         )
-        return cleaned_data
+        return observation
     else:
         logger.error(f"Failed to fetch data from Apollo: {response.status_code}")
         logger.error(f"Failed to fetch data from Apollo: {response.text}")

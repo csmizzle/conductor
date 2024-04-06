@@ -6,6 +6,16 @@ Look at the json to best answer the input.
 
 INPUT:
 {input}
+
+TOOLS:
+{tools}
+
+TOOL_NAMES:
+{tool_names}
+
+
+AGENT_SCRATCHPAD:
+{agent_scratchpad}
 """
 
 
@@ -20,4 +30,17 @@ JOB_ID: {job_id}
 GEOGRAPHY: {geography}
 TITLES: {titles}
 INDUSTRIES: {industries}
+"""
+
+
+CONDUCTOR_APOLLO_CUSTOMER_PROMPT = """
+Use to following customer inputs to create an egagement strategy for this product:
+
+Product: Conductor - an automated market research tool
+
+Be sure to include best information of each company and person in the response.
+  - Also include any specific links that will help with engagement.
+
+Person Search Results:
+{apollo_people_data}
 """
