@@ -20,9 +20,10 @@ AGENT_SCRATCHPAD:
 
 
 CONDUCTOR_INPUT_PROMPT = """
-Your an expery query builder. Use the following input to create an optimal natural language search query for a world class market researcher that is responsible
-for finding customer leads in a specific geography. The researcher is looking for people with specific titles in specific industries that would be interested in the product below.
-Help the analyst use these inputs to create an instruction set for customer engagement.
+Use the following input to create an optimal natural language search query for a world class market researcher that is responsible
+for finding customer leads in a specific geography.
+
+This agent will use the apollo-person-search tool to find the right data to answer the question.
 -------
 Product: Conductor - an automated market research tool
 JOB_ID: {job_id}
@@ -40,6 +41,18 @@ Product: Conductor - an automated market research tool
 
 Be sure to include best information of each company and person in the response.
   - Also include any specific links that will help with engagement.
+
+Break the response into the following sections:
+  - Key Players
+    - Add any additional key players that may be relevant
+  - Company Backgrounds
+    - Actionable background information relevant to the engagement strategy
+  - Engagement Strategy
+    - Break down the engagement strategy for each person
+  - Key URLs
+    - Company Website
+    - LinkedIn
+    - Twitter
 
 Person Search Results:
 {apollo_people_data}

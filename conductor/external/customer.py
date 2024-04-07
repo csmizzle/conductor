@@ -2,13 +2,13 @@
 Langchain tools for Customer Intelligence API
 """
 from conductor.database.aws import upload_dict_to_s3
+from conductor.llms import claude_v2_1
 from conductor.prompts import CONDUCTOR_APOLLO_CUSTOMER_PROMPT
 from conductor.models import BaseConductorToolInput
 from langchain.pydantic_v1 import Field
 from langchain.tools import tool
 from langchain.chains.llm import LLMChain
 from langchain.prompts import PromptTemplate
-from langchain_openai import ChatOpenAI
 import requests
 import os
 import logging
@@ -26,7 +26,7 @@ input_prompt = PromptTemplate(
 
 def create_conductor_observation(apollo_people_data: str) -> str:
     chain = LLMChain(
-        llm=ChatOpenAI(model="gpt-4-0125-preview", temperature=0),
+        llm=claude_v2_1,
         prompt=input_prompt,
     )
     response = chain.run(apollo_people_data=apollo_people_data)
@@ -73,8 +73,10 @@ def clean_apollo_person_search(data: dict) -> str:
                 observation += f"Title: {person['title']}\n"
             if "seniority" in person:
                 observation += f"Seniority: {person['seniority']}\n"
-            if "website_url" in person:
-                observation += f"Company Website: {person['website_url']}\n"
+            if "website_url" in person["organization"]:
+                observation += (
+                    f"Company Website: {person["organization"]["website_url"]}\n"
+                )
             if "linkedin_url" in person:
                 observation += f"LinkedIn URL: {person['linkedin_url']}\n"
             if "twitter_url" in person:

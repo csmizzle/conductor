@@ -2,14 +2,16 @@
 Agent constructor function
 """
 from conductor.external.customer import apollo_person_search
+from conductor.llms import claude_v2_1
 from langchain.prompts import PromptTemplate
 from langchain.chains.llm import LLMChain
-from langchain.memory import ConversationBufferMemory
 from langchain.agents.agent_types import AgentType
 from langchain.agents import initialize_agent
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
+from langchain.memory import ConversationBufferMemory
 from conductor.prompts import JSON_AGENT_PROMPT, CONDUCTOR_INPUT_PROMPT
+
 
 input_prompt = PromptTemplate(
     input_variables=["job_id", "geography", "titles", "industries"],
@@ -51,7 +53,6 @@ json_agent_prompt = PromptTemplate(
 )
 
 INTERNAL_SYSTEM_MESSAGE = """
-You are a world class market researcher, can take unstructured data and create valuable insights for you users.
 Use the apollo-person-search tool to find the right data to answer the question.
 Always include direct links to the data you used to make your decisions.
 If your tools are not giving you the right data, use your best judgement to produce the right answer.
@@ -65,7 +66,8 @@ def build_internal_agent():
         tools=[apollo_person_search],
         # TODO: implement the Bedrock LLM
         # llm=Bedrock(),
-        llm=ChatOpenAI(model="gpt-4-0125-preview", temperature=0),
+        # llm=ChatOpenAI(model="gpt-4-0125-preview", temperature=0),
+        llm=claude_v2_1,
         verbose=True,
         max_iterations=10,
         memory=ConversationBufferMemory(memory_key="chat_history"),
@@ -73,12 +75,3 @@ def build_internal_agent():
             "system_message": INTERNAL_SYSTEM_MESSAGE,
         },
     )
-    # tools = [apollo_person_search]
-    # prompt = hub.pull("hwchase17/structured-chat-agent")
-    # llm=ChatOpenAI(model="gpt-4-0125-preview", temperature=0)
-    # # Construct the JSON agent
-    # agent = create_structured_chat_agent(llm, tools, json_agent_prompt)
-    # agent_executor = AgentExecutor(
-    #     agent=agent, tools=tools, verbose=True, handle_parsing_errors=True
-    # )
-    # return agent_executor
