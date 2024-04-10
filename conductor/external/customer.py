@@ -50,7 +50,7 @@ class ApolloSearchInput(BaseConductorToolInput):
 
 
 def clean_apollo_person_search(data: dict) -> str:
-    """Clean Apollo data
+    """Clean Apollo data to be used in a LLM
 
     Args:
         data (dict): raw data from apollo
