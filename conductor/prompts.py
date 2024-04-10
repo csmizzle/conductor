@@ -56,4 +56,6 @@ Break the response into the following sections:
 
 Person Search Results:
 {apollo_people_data}
+\n
+{format_instructions}
 """

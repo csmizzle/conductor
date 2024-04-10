@@ -5,6 +5,7 @@ from conductor.database.aws import upload_dict_to_s3
 from conductor.llms import claude_v2_1
 from conductor.prompts import CONDUCTOR_APOLLO_CUSTOMER_PROMPT
 from conductor.models import BaseConductorToolInput
+from conductor.parsers import customer_observation_parser, CustomerObservation
 from langchain.pydantic_v1 import Field
 from langchain.tools import tool
 from langchain.chains.llm import LLMChain
@@ -21,15 +22,18 @@ logger = logging.getLogger(__name__)
 input_prompt = PromptTemplate(
     input_variables=["apollo_people_data"],
     template=CONDUCTOR_APOLLO_CUSTOMER_PROMPT,
+    partial_variables={
+        "format_instructions": customer_observation_parser.get_format_instructions()
+    },
 )
 
 
-def create_conductor_observation(apollo_people_data: str) -> str:
+def create_conductor_observation(apollo_people_data: str) -> CustomerObservation:
     chain = LLMChain(
         llm=claude_v2_1,
         prompt=input_prompt,
     )
-    response = chain.run(apollo_people_data=apollo_people_data)
+    response = chain.invoke({"apollo_people_data": apollo_people_data})
     return response
 
 
@@ -199,12 +203,15 @@ def apollo_person_search(
         )
         logger.info("Summarizing for conductor observation ...")
         observation = create_conductor_observation(cleaned_data)
-        upload_dict_to_s3(
-            data=observation,
-            bucket=os.getenv("AWS_S3_BUCKET"),
-            key=f"{job_id}/apollo_person_search/observation/{file_id}.txt",
+        customer_observation_object = customer_observation_parser.parse(
+            observation["text"]
         )
-        return observation
+        upload_dict_to_s3(
+            data=customer_observation_object.json(indent=4),
+            bucket=os.getenv("AWS_S3_BUCKET"),
+            key=f"{job_id}/apollo_person_search/observation/{file_id}.json",
+        )
+        return observation["text"]
     else:
         logger.error(f"Failed to fetch data from Apollo: {response.status_code}")
         logger.error(f"Failed to fetch data from Apollo: {response.text}")
