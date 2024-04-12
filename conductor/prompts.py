@@ -42,13 +42,16 @@ Product: Conductor - an automated market research tool
 Be sure to include best information of each company and person in the response.
   - Also include any specific links that will help with engagement.
 
+Include an entry for each person in the Person Search Results section.
+
 Break the response into the following sections:
   - Key Players
     - Add any additional key players that may be relevant
   - Company Backgrounds
-    - Actionable background information relevant to the engagement strategy
+    - Actionable background information relevant to the engagement strategy, include at least 2-3 sentences for each company.
   - Engagement Strategy
-    - Break down the engagement strategy for each person
+    - Break down the engagement strategy for each person for pitching them how Conductor can help them.
+    - Be specific about the strategy for each person, include at least 2-3 sentences for each person.
   - Key URLs
     - Company Website
     - LinkedIn

@@ -1,3 +1,0 @@
-"""
-Pinecone vector databases
-"""
