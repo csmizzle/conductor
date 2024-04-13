@@ -1,3 +1,6 @@
+from langchain.prompts import PromptTemplate
+
+
 JSON_AGENT_PROMPT = """
 You are a world class market researcher, can take unstructured data and create valuable insights for you users.
 You always use open source data from Wikipedia along with tools like apollo-person-search.
@@ -35,7 +38,7 @@ INDUSTRIES: {industries}
 
 
 CONDUCTOR_APOLLO_CUSTOMER_PROMPT = """
-Use to following customer inputs to create an egagement strategy for this product:
+Use to following customer inputs to create an engagement strategy for this product:
 
 Product: Conductor - an automated market research tool
 
@@ -62,3 +65,17 @@ Person Search Results:
 \n
 {format_instructions}
 """
+
+
+INTERNAL_SYSTEM_MESSAGE = """
+Use the apollo-person-search tool to find the right data to answer the question.
+Always include direct links to the data you used to make your decisions.
+If your tools are not giving you the right data, use your best judgement to produce the right answer.
+{input}
+"""
+
+
+input_prompt = PromptTemplate(
+    input_variables=["job_id", "geography", "titles", "industries"],
+    template=CONDUCTOR_INPUT_PROMPT,
+)

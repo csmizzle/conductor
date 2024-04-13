@@ -13,6 +13,9 @@ class CompanyBackground(BaseModel):
 class KeyPlayer(BaseModel):
     name: str = Field("The name of the key player")
     title: str = Field("The title of the key player")
+    city: str = Field("The city of the key player")
+    state: str = Field("The state of the key player")
+    country: str = Field("The country of the key player")
     company: CompanyBackground
     strategy: str = Field("The engagement strategy for the key player")
     urls: list[str] = Field("The URLs for the company")

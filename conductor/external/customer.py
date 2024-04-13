@@ -157,7 +157,7 @@ def apollo_person_search(
 ):
     """
     Apollo Person Search Tool that should be used with looking for people in a given industry or company
-    Helful when you need to idenitfy people in a specific industry or company
+    Helpful when you need to identify people in a specific industry or company
     """
     response = requests.post(
         url="https://api.apollo.io/v1/mixed_people/search",
@@ -184,21 +184,21 @@ def apollo_person_search(
             f"Successfully fetched data from Apollo: {response.status_code} ..."
         )
         logger.info(
-            f"Pushing raw Apollo response to s3: {os.getenv('AWS_S3_BUCKET')} ..."
+            f"Pushing raw Apollo response to s3: {os.getenv('CONDUCTOR_S3_BUCKET')} ..."
         )
         upload_dict_to_s3(
             data=json.dumps(data, indent=4),
-            bucket=os.getenv("AWS_S3_BUCKET"),
+            bucket=os.getenv("CONDUCTOR_S3_BUCKET"),
             key=f"{job_id}/apollo_person_search/raw/{file_id}.json",
         )
         cleaned_data = clean_apollo_person_search(data)
         logger.info("Successfully cleaned apollo data")
         logger.info(
-            f"Pushing obversation from cleand Apollo response to s3: {os.getenv('AWS_S3_BUCKET')} ..."
+            f"Pushing observation from cleaned Apollo response to s3: {os.getenv('CONDUCTOR_S3_BUCKET')} ..."
         )
         upload_dict_to_s3(
             data=cleaned_data,
-            bucket=os.getenv("AWS_S3_BUCKET"),
+            bucket=os.getenv("CONDUCTOR_S3_BUCKET"),
             key=f"{job_id}/apollo_person_search/text/{file_id}.txt",
         )
         logger.info("Summarizing for conductor observation ...")
@@ -208,7 +208,7 @@ def apollo_person_search(
         )
         upload_dict_to_s3(
             data=customer_observation_object.json(indent=4),
-            bucket=os.getenv("AWS_S3_BUCKET"),
+            bucket=os.getenv("CONDUCTOR_S3_BUCKET"),
             key=f"{job_id}/apollo_person_search/observation/{file_id}.json",
         )
         return observation["text"]

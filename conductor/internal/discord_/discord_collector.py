@@ -53,6 +53,9 @@ async def collect(ctx, channel_id: int):
     logger.info(
         f"Uploaded to S3: {os.getenv('DISCORD_S3_BUCKET')} with collect ID: {job_id}"
     )
+    await ctx.send(
+        f"Collected {len(messages)} messages from channel {channel_id} with collect ID: {job_id}"
+    )
 
 
 bot.run(os.getenv("DISCORD_TOKEN"))
