@@ -24,6 +24,8 @@ def run_conductor(
 ):
     if not job_name:
         job_name = "test-job"
+    if geography:
+        geography = ",".join(geography)
     if not geography:
         geography = "Alexandria, VA"
     if titles:

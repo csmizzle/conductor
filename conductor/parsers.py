@@ -16,7 +16,7 @@ class KeyPlayer(BaseModel):
     city: str = Field("The city of the key player")
     state: str = Field("The state of the key player")
     country: str = Field("The country of the key player")
-    company: CompanyBackground
+    company: CompanyBackground = None
     strategy: str = Field("The engagement strategy for the key player")
     urls: list[str] = Field("The URLs for the company")
 

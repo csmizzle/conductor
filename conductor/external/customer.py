@@ -184,32 +184,33 @@ def apollo_person_search(
             f"Successfully fetched data from Apollo: {response.status_code} ..."
         )
         logger.info(
-            f"Pushing raw Apollo response to s3: {os.getenv('CONDUCTOR_S3_BUCKET')} ..."
+            f"Pushing raw Apollo response to s3: {os.getenv('APOLLO_S3_BUCKET')} ..."
         )
+        json_response = json.dumps(data, indent=4)
         upload_dict_to_s3(
-            data=json.dumps(data, indent=4),
-            bucket=os.getenv("CONDUCTOR_S3_BUCKET"),
-            key=f"{job_id}/apollo_person_search/raw/{file_id}.json",
+            data=json_response,
+            bucket=os.getenv("APOLLO_S3_BUCKET"),
+            key=f"{job_id}/{file_id}.json",
         )
-        cleaned_data = clean_apollo_person_search(data)
-        logger.info("Successfully cleaned apollo data")
-        logger.info(
-            f"Pushing observation from cleaned Apollo response to s3: {os.getenv('CONDUCTOR_S3_BUCKET')} ..."
-        )
-        upload_dict_to_s3(
-            data=cleaned_data,
-            bucket=os.getenv("CONDUCTOR_S3_BUCKET"),
-            key=f"{job_id}/apollo_person_search/text/{file_id}.txt",
-        )
+        # cleaned_data = clean_apollo_person_search(data)
+        # logger.info("Successfully cleaned apollo data")
+        # logger.info(
+        #     f"Pushing observation from cleaned Apollo response to s3: {os.getenv('APOLLO_S3_BUCKET')} ..."
+        # )
+        # upload_dict_to_s3(
+        #     data=cleaned_data,
+        #     bucket=os.getenv("APOLLO_S3_BUCKET"),
+        #     key=f"{job_id}/{file_id}.txt",
+        # )
         logger.info("Summarizing for conductor observation ...")
-        observation = create_conductor_observation(cleaned_data)
+        observation = create_conductor_observation(json_response)
         customer_observation_object = customer_observation_parser.parse(
             observation["text"]
         )
         upload_dict_to_s3(
             data=customer_observation_object.json(indent=4),
             bucket=os.getenv("CONDUCTOR_S3_BUCKET"),
-            key=f"{job_id}/apollo_person_search/observation/{file_id}.json",
+            key=f"{job_id}/apollo_person_search.json",
         )
         return observation["text"]
     else:

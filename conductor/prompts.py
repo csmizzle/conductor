@@ -38,14 +38,13 @@ INDUSTRIES: {industries}
 
 
 CONDUCTOR_APOLLO_CUSTOMER_PROMPT = """
-Use to following customer inputs to create an engagement strategy for this product:
+Include an entry for each person in the Person Search Results section, do not leave any out of your final response.
+Use to following customer inputs JSON to create an engagement strategy for this product:
 
 Product: Conductor - an automated market research tool
 
 Be sure to include best information of each company and person in the response.
   - Also include any specific links that will help with engagement.
-
-Include an entry for each person in the Person Search Results section.
 
 Break the response into the following sections:
   - Key Players
@@ -59,6 +58,8 @@ Break the response into the following sections:
     - Company Website
     - LinkedIn
     - Twitter
+
+Provide reasoning to show your thought process in the response.
 
 Person Search Results:
 {apollo_people_data}
