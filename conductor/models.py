@@ -30,4 +30,4 @@ class ConductorJobCustomerInput(BaseModel):
 class ConductorJobCustomerResponse(BaseModel):
     input: ConductorJobCustomerInput
     agent_query: str = None
-    response: str = None
+    response: list = None

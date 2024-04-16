@@ -21,10 +21,23 @@ class KeyPlayer(BaseModel):
     urls: list[str] = Field("The URLs for the company")
 
 
+class EngagementStrategy(BaseModel):
+    strategy: str = Field("The engagement strategy for the potential customer")
+    reasoning: str = Field("The reasoning behind the strategy")
+
+
 class CustomerObservation(BaseModel):
     key_players: list[KeyPlayer] = Field(
         "The key players identified in the search results"
     )
 
 
+class PersonEngagementStrategy(BaseModel):
+    person: dict
+    engagement_strategy: EngagementStrategy
+
+
 customer_observation_parser = PydanticOutputParser(pydantic_object=CustomerObservation)
+
+
+engagement_strategy_parser = PydanticOutputParser(pydantic_object=EngagementStrategy)
