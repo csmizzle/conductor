@@ -111,7 +111,7 @@ def apollo_person_search(
         )
         people: list[PersonEngagementStrategy] = []
         for person in data["people"]:
-            print("Creating engagement strategy ...")
+            logger.info("Creating engagement strategy ...")
             engagement_strategy = create_engagement_strategy(person)
             engagement_strategy_object = engagement_strategy_parser.parse(
                 engagement_strategy["text"]
