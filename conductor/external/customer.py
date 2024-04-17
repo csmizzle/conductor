@@ -57,7 +57,7 @@ class ApolloSearchInput(BaseConductorToolInput):
     # organization_locations: Optional[list[str]] = Field('An array of strings denoting allowed locations of organization headquarters of the person')
 
 
-@tool("apollo-person-search-tool", args_schema=ApolloSearchInput, return_direct=True)
+@tool("apollo-person-search-tool", args_schema=ApolloSearchInput)
 def apollo_person_search(
     job_id: str,
     person_titles: list[str],
@@ -109,26 +109,36 @@ def apollo_person_search(
         logger.info(
             "Creating an engagement strategy for each person in the results ..."
         )
-        people: list[PersonEngagementStrategy] = []
-        for person in data["people"]:
-            print("Creating engagement strategy ...")
-            engagement_strategy = create_engagement_strategy(person)
-            engagement_strategy_object = engagement_strategy_parser.parse(
-                engagement_strategy["text"]
-            )
-            people.append(
-                PersonEngagementStrategy(
-                    person=person, engagement_strategy=engagement_strategy_object
-                )
-            )
-        people_data = [object_.dict() for object_ in people]
-        upload_dict_to_s3(
-            data=json.dumps(people_data, indent=4),
-            bucket=os.getenv("CONDUCTOR_S3_BUCKET"),
-            key=f"{job_id}/apollo_person_search.json",
+        return f"People: {data["people"]}"
+
+
+class PeopleInput(BaseConductorToolInput):
+    people: list[dict] = Field(
+        "A list of people JSON to create engagement strategies for"
+    )
+
+
+@tool("person-engagement-strategy-tool", args_schema=PeopleInput)
+def person_engagement_strategy(job_id: str, people: list[dict]):
+    """
+    Use when you need to create an engagement strategy for a list of people
+    """
+    people: list[PersonEngagementStrategy] = []
+    for person in people["people"]:
+        print("Creating engagement strategy ...")
+        engagement_strategy = create_engagement_strategy(person)
+        engagement_strategy_object = engagement_strategy_parser.parse(
+            engagement_strategy["text"]
         )
-        return people_data
-    else:
-        logger.error(f"Failed to fetch data from Apollo: {response.status_code}")
-        logger.error(f"Failed to fetch data from Apollo: {response.text}")
-        return "Failed to fetch data from Apollo, I should use other data to answer the question."
+        people.append(
+            PersonEngagementStrategy(
+                person=person, engagement_strategy=engagement_strategy_object
+            )
+        )
+    people_data = [object_.dict() for object_ in people]
+    upload_dict_to_s3(
+        data=json.dumps(people_data, indent=4),
+        bucket=os.getenv("CONDUCTOR_S3_BUCKET"),
+        key=f"{job_id}/engagement_strategy.json",
+    )
+    return people_data

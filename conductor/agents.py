@@ -1,7 +1,7 @@
 """
 Agent constructor function
 """
-from conductor.external.customer import apollo_person_search
+from conductor.external.customer import apollo_person_search, person_engagement_strategy
 from conductor.prompts import INTERNAL_SYSTEM_MESSAGE
 from conductor.llms import claude_v2_1
 from langchain.agents.agent_types import AgentType
@@ -12,7 +12,7 @@ from langchain.memory import ConversationBufferMemory
 def build_internal_agent():
     return initialize_agent(
         agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
-        tools=[apollo_person_search],
+        tools=[apollo_person_search, person_engagement_strategy],
         llm=claude_v2_1,
         verbose=True,
         max_iterations=10,
