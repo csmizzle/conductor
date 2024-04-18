@@ -68,26 +68,29 @@ async def collect(ctx, channel_id: int):
 
 @bot.command()
 async def ask_claude(ctx, query: str):
-    logger.info(f"Received query: {query}")
-    answer = claude_retriever.run(query)
-    logger.info(f"Answer: {answer}")
-    await ctx.send(answer)
+    async with ctx.typing():
+        logger.info(f"Received query: {query}")
+        answer = claude_retriever.run(query)
+        logger.info(f"Answer: {answer}")
+        await ctx.send(answer)
 
 
 @bot.command()
 async def ask_gpt(ctx, query: str):
-    logger.info(f"Received query: {query}")
-    answer = gpt_retriever.run(query)
-    logger.info(f"Answer: {answer}")
-    await ctx.send(answer)
+    async with ctx.typing():
+        logger.info(f"Received query: {query}")
+        answer = gpt_retriever.run(query)
+        logger.info(f"Answer: {answer}")
+        await ctx.send(answer)
 
 
 @bot.command()
 async def ask_apollo(ctx, query: str):
-    logger.info(f"Received query: {query}")
-    answer = gpt_apollo_retriever.run(query)
-    logger.info(f"Answer: {answer}")
-    await ctx.send(answer)
+    async with ctx.typing():
+        logger.info(f"Received query: {query}")
+        answer = gpt_apollo_retriever.run(query)
+        logger.info(f"Answer: {answer}")
+        await ctx.send(answer)
 
 
 bot.run(os.getenv("DISCORD_TOKEN"))
