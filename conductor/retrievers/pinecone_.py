@@ -57,6 +57,15 @@ class DiscordPineconeSelfQueryRetriever:
         )
 
 
+def create_discord_pinecone_self_retriever():
+    return DiscordPineconeSelfQueryRetriever(
+        discord_pinecone_index=os.getenv("PINECONE_DISCORD_INDEX"),
+        embeddings=BedrockEmbeddings(
+            region_name="us-east-1",
+        ),
+    )
+
+
 def create_claud_pinecone_discord_retriever():
     pinecone = PineconeVectorStore(
         index_name=os.getenv("PINECONE_DISCORD_INDEX"),
