@@ -1,5 +1,5 @@
 from langchain.prompts import PromptTemplate
-
+from conductor.parsers import engagement_strategy_parser
 
 JSON_AGENT_PROMPT = """
 You are a world class market researcher, can take unstructured data and create valuable insights for you users.
@@ -65,7 +65,33 @@ If your tools are not giving you the right data, use your best judgement to prod
 """
 
 
+APOLLO_INPUT_PROMPT = """
+Extract Apollo input parameters from a general input string below and provide a one sentence natural language query for the Apollo person search tool with job_id: {job_id}.
+
+
+Apollo Input Parameters:
+- Titles
+- Location
+
+{general_input}
+"""
+
+
 input_prompt = PromptTemplate(
     input_variables=["job_id", "geography", "titles", "industries"],
     template=CONDUCTOR_INPUT_PROMPT,
+)
+
+
+input_prompt = PromptTemplate(
+    input_variables=["apollo_people_data"],
+    template=CONDUCTOR_APOLLO_CUSTOMER_PROMPT,
+    partial_variables={
+        "format_instructions": engagement_strategy_parser.get_format_instructions()
+    },
+)
+
+apollo_input_prompt = PromptTemplate(
+    input_variables=["job_id", "general_input"],
+    template=APOLLO_INPUT_PROMPT,
 )

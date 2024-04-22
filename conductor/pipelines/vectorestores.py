@@ -33,7 +33,7 @@ class PineconeCreateDestroyPipeline(ABC):
             spec=ServerlessSpec(cloud=cloud, region=region),
         )
 
-    def _build_vectorstore(
+    def _update_vectorstore(
         self,
         index_name: str,
         source_bucket_name: str,
@@ -61,7 +61,7 @@ class PineconeCreateDestroyPipeline(ABC):
         pass
 
     @abstractmethod
-    def build(self, job_id: str):
+    def update(self, job_id: str):
         pass
 
 
@@ -131,12 +131,12 @@ class ApolloPineconeCreateDestroyPipeline(PineconeCreateDestroyPipeline):
     def destroy(self):
         return self._destroy_vector_store(index_name=os.getenv("PINECONE_APOLLO_INDEX"))
 
-    def build(self, job_id: str):
-        return self._build_vectorstore(
+    def update(self, job_id: str):
+        return self._update_vectorstore(
             index_name=os.getenv("PINECONE_APOLLO_INDEX"),
-            source_bucket_name=os.getenv("APOLLO_S3_BUCKET"),
+            source_bucket_name=os.getenv("CONDUCTOR_S3_BUCKET"),
             job_id=job_id,
-            conductor_s3_pipeline=ApolloS3Pipeline,
+            conductor_job_s3_pipeline=ApolloS3Pipeline,
             embedding_function=BedrockEmbeddings(
                 region_name=os.getenv("BEDROCK_REGION"),
             ),
@@ -168,7 +168,7 @@ class DiscordPineconeCreateDestroyPipeline(PineconeCreateDestroyPipeline):
             index_name=os.getenv("PINECONE_DISCORD_INDEX"),
             source_bucket_name=os.getenv("DISCORD_S3_BUCKET"),
             job_id=job_id,
-            conductor_s3_pipeline=DiscordS3Pipeline,
+            conductor_job_s3_pipeline=DiscordS3Pipeline,
             embedding_function=BedrockEmbeddings(
                 region_name=os.getenv("BEDROCK_REGION"),
             ),

@@ -68,7 +68,7 @@ class ConductorJobS3Pipeline(ABC):
             index_name=self.destination_index, embedding=self.embedding_function
         )
         pinecone_index.add_documents(documents)
-        logger.info(f"Indexed {len(documents)} documents to {self.destination_index}")
+        print(f"Indexed {len(documents)} documents to {self.destination_index}")
 
 
 class ConductorBulkS3Pipeline(ABC):
@@ -121,15 +121,14 @@ class ApolloS3Pipeline(ConductorJobS3Pipeline):
     def prepare_documents_for_pinecone(self) -> list[str]:
         """Create a list of documents from the s3 data"""
         documents = []
-        data = self.get_data_from_job(
-            job_id_suffix="/apollo_person_search/observation/"
-        )
-        for key_player in data["key_players"]:
+        data = self.get_data_from_job(job_id_suffix="/apollo_person_search")
+        for entry in data:
             documents.append(
                 Document(
-                    page_content=f"""The key player {key_player['name']} is the {key_player['title']} at {key_player['company']['name']}.
-{key_player['company']['name']}'s background is {key_player['company']['background']}
-The engagement strategy is {key_player['strategy']}""",
+                    page_content=f"""The key player {entry['person']['name']} is the {entry['person']['title']} at {entry['person']['organization']['name']}.
+                    {entry['person']['name']}'s is located in {entry['person']['city']}, {entry['person']['state']}, {entry['person']['country']}.
+                    LinkedIn: {entry['person']['linkedin_url']}.
+                    The engagement strategy is {entry['engagement_strategy']['strategy']}""",
                     metadata={
                         "source": "s3_apollo_person_search",
                         "job_id": self.job_id,

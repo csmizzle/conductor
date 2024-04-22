@@ -1,4 +1,6 @@
-from conductor.prompts import input_prompt
+from conductor.prompts import input_prompt, apollo_input_prompt
+from conductor.llms import claude_v2_1
+from conductor.parsers import EngagementStrategy
 from langchain.chains.llm import LLMChain
 from langchain_openai import ChatOpenAI
 
@@ -24,4 +26,26 @@ def create_conductor_search(
     response = chain.run(
         job_id=job_id, geography=geography, titles=titles, industries=industries
     )
+    return response
+
+
+def create_engagement_strategy(apollo_people_data: str) -> EngagementStrategy:
+    chain = LLMChain(
+        llm=claude_v2_1,
+        prompt=input_prompt,
+    )
+    response = chain.invoke({"apollo_people_data": apollo_people_data})
+    return response
+
+
+def create_apollo_input(query: str, job_id: str) -> str:
+    """
+    Extract Apollo input parameters from a general input string
+    """
+    chain = LLMChain(
+        llm=ChatOpenAI(model="gpt-4-0125-preview", temperature=0),
+        prompt=apollo_input_prompt,
+    )
+    response = chain.invoke({"general_input": query, "job_id": job_id})
+    print(response)
     return response
