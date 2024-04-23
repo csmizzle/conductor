@@ -1,9 +1,12 @@
 """
 Agent constructor function
 """
-from conductor.tools import apollo_person_search
-from conductor.tools import apollo_pinecone_gpt4, discord_pinecone_gpt4
-from conductor.chains import create_apollo_input
+from conductor.tools import (
+    apollo_pinecone_gpt4,
+    discord_pinecone_gpt4,
+    apollo_person_search,
+    apollo_input_writer,
+)
 from conductor.prompts import INTERNAL_SYSTEM_MESSAGE
 from conductor.llms import claude_v2_1
 from langchain.agents.agent_types import AgentType
@@ -27,39 +30,13 @@ def build_internal_agent():
     )
 
 
-knowledge_master = Agent(
-    role="Knowledge Master",
-    goal="Retrieve information from all available data to get the best answer",
+query_builder_agent = Agent(
+    role="Translate a natural language query into a structured query for apollo",
+    goal="Create a one sentence query for Apollo's person search tool",
     verbose=True,
-    memory=True,
-    backstory=(
-        "Merge all available data sources to provide the best answer to any question."
-        "Create insightful and actionable responses based on the data available."
-    ),
-    tools=[apollo_pinecone_gpt4, discord_pinecone_gpt4],
-    allow_delegation=False,
+    backstory="You are an expert in translating natural language queries into structured queries for Apollo's person search tool",
+    tools=[apollo_input_writer],
 )
-
-query_task = Task(
-    description=(
-        "Use {question} to craft a query for internal and external data sources."
-        "Focus on identifying the best course of action for each query. "
-        "The response should be insightful and actionable."
-    ),
-    expected_output="A bulleted list of external and internal data merged together in a report highlighting the best course of action.This list should include all information on the potential customers, contact information, their backgrounds, and engagement strategies.",
-    tools=[apollo_pinecone_gpt4, discord_pinecone_gpt4],
-    agent=knowledge_master,
-)
-
-question_crew = Crew(
-    agents=[knowledge_master],
-    tasks=[query_task],
-    verbose=True,
-    memory=True,
-    cache=True,
-    share_crew=False,
-)
-
 
 retriever_agent = Agent(
     role="Vector Database Retriever",
@@ -71,6 +48,7 @@ retriever_agent = Agent(
     ),
     tools=[apollo_pinecone_gpt4, discord_pinecone_gpt4],
     allow_delegation=False,
+    cache=True,
 )
 
 
@@ -86,6 +64,26 @@ apollo_agent = Agent(
     ),
     tools=[apollo_person_search],
     allow_delegation=False,
+    cache=True,
+)
+
+
+create_query_task = Task(
+    description="Take this {question} and {job_id} and create a structured query for Apollo's person search tool. Always check with a human that your query is correct.",
+    expected_output="A one sentence query for Apollo's person search tool.",
+    agent=query_builder_agent,
+    human_input=True,
+)
+
+
+retrieve_task = Task(
+    description=(
+        "Use {question} to craft a query for internal and external data sources."
+        "Focus on identifying the best course of action for each query. "
+        "The response should be insightful and actionable."
+    ),
+    expected_output="A bulleted list of external and internal data merged together in a report highlighting the best course of action.This list should include all information on the potential customers, contact information, their backgrounds, and engagement strategies.",
+    agent=retriever_agent,
 )
 
 
@@ -95,20 +93,22 @@ query_task = Task(
         "Focus on identifying the best course of action for each query."
         "The response should be insightful and actionable."
     ),
-    expected_output="A bulleted list of external and internal data merged together in a report highlighting the best course of action.This list should include all information on the potential customers, contact information, their backgrounds, and engagement strategies.",
+    expected_output="A bulleted list of external and internal data merged together in a report highlighting the best course of action. This list should include all information on the potential customers, contact information, their backgrounds, and engagement strategies.",
     agent=retriever_agent,
 )
 
 
 apollo_task = Task(
-    description="Use {apollo_input} to search for new customer data in Apollo's person search tool. Use {job_id} to store the results in a database for future reference. Once finished provide the job_id used to track the information.",
+    description="Search for new customer data in Apollo's person search tool. Use {job_id} to store the results in a database for future reference. Once finished provide the job_id used to track the information. Make sure with a human that the apollo search is good before you send it.",
     expected_output="A status of the apollo job with the job_id.",
     agent=apollo_agent,
+    context=[create_query_task],
 )
 
+
 crew = Crew(
-    agents=[apollo_agent, retriever_agent],
-    tasks=[apollo_task, query_task],
+    agents=[query_builder_agent, apollo_agent, retriever_agent],
+    tasks=[create_query_task, apollo_task, query_task],
     verbose=True,
     memory=True,
     cache=True,
@@ -118,7 +118,4 @@ crew = Crew(
 
 def run_task_crew(query: str):
     job_id = str(uuid.uuid4())
-    apollo_input = create_apollo_input(query=query, job_id=job_id)
-    return crew.kickoff(
-        {"apollo_input": apollo_input["text"], "question": query, "job_id": job_id}
-    )
+    return crew.kickoff({"question": query, "job_id": job_id})

@@ -21,6 +21,7 @@ pinecone-client = "^3.2.2"
 langchain-pinecone = "^0.1.0"
 fire = "^0.6.0"
 crewai = {extras = ["tools"], version = "^0.28.8"}
+celery = {extras = ["redis"], version = "^5.4.0"}
 
 
 [tool.poetry.group.dev.dependencies]

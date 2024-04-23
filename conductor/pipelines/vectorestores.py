@@ -15,7 +15,7 @@ from langchain_community.embeddings.bedrock import BedrockEmbeddings
 import os
 
 
-class PineconeCreateDestroyPipeline(ABC):
+class PineconeCreateDestroyUpdatePipeline(ABC):
     """
     Handle the creation, building, and destruction of Pinecone vector stores
     """
@@ -113,7 +113,7 @@ class BulkPineconeCreateDestroyPipeline(ABC):
         pass
 
 
-class ApolloPineconeCreateDestroyPipeline(PineconeCreateDestroyPipeline):
+class ApolloPineconeCreateDestroyUpdatePipeline(PineconeCreateDestroyUpdatePipeline):
     """
     Pipeline for creating and destroying Apollo Pinecone vector stores
     These pipelines read from templated values in conductor environment variables
@@ -131,9 +131,9 @@ class ApolloPineconeCreateDestroyPipeline(PineconeCreateDestroyPipeline):
     def destroy(self):
         return self._destroy_vector_store(index_name=os.getenv("PINECONE_APOLLO_INDEX"))
 
-    def update(self, job_id: str):
+    def update(self, job_id: str, index_name: str = None):
         return self._update_vectorstore(
-            index_name=os.getenv("PINECONE_APOLLO_INDEX"),
+            index_name=index_name if index_name else os.getenv("PINECONE_APOLLO_INDEX"),
             source_bucket_name=os.getenv("CONDUCTOR_S3_BUCKET"),
             job_id=job_id,
             conductor_job_s3_pipeline=ApolloS3Pipeline,
@@ -143,7 +143,7 @@ class ApolloPineconeCreateDestroyPipeline(PineconeCreateDestroyPipeline):
         )
 
 
-class DiscordPineconeCreateDestroyPipeline(PineconeCreateDestroyPipeline):
+class DiscordPineconeCreateDestroyUpdatePipeline(PineconeCreateDestroyUpdatePipeline):
     """
     Pipeline for creating and destroying Discord Pinecone vector stores
     These pipelines read from templated values in conductor environment variables

@@ -6,30 +6,31 @@ from conductor.retrievers.pinecone_ import (
     create_gpt4_pinecone_apollo_retriever,
     create_gpt4_pinecone_discord_retriever,
 )
-from langchain.pydantic_v1 import BaseModel
-from conductor.database.aws import upload_dict_to_s3
+from langchain.pydantic_v1 import BaseModel, Field
+from conductor.tasks import vectorize_apollo_data
+from conductor.tools import upload_dict_to_s3
 from conductor.models import BaseConductorToolInput
-from conductor.parsers import (
-    engagement_strategy_parser,
-    PersonEngagementStrategy,
+from conductor.functions.apollo import (
+    apollo_api_person_search,
+    create_apollo_engagement_strategies,
 )
-from conductor.pipelines.vectorestores import ApolloPineconeCreateDestroyPipeline
-from conductor.chains import create_engagement_strategy
-from langchain.pydantic_v1 import Field
-import requests
-import os
-import json
+from conductor.chains import create_apollo_input
 import logging
+import os
 
 
 logger = logging.getLogger(__name__)
 
 
-class PineconeQuery(BaseModel):
-    query: str
+class Query(BaseModel):
+    query: str = Field("A natural language query")
 
 
-@tool("apollo-pinecone-gpt4-query", args_schema=PineconeQuery)
+class QueryWithJobId(Query):
+    job_id: str = Field("The provided unique job id")
+
+
+@tool("apollo-pinecone-gpt4-query", args_schema=Query)
 def apollo_pinecone_gpt4(query: str):
     """
     A Pinecone vector database with external customer data
@@ -38,7 +39,7 @@ def apollo_pinecone_gpt4(query: str):
     return apollo.run(query)
 
 
-@tool("discord-pinecone-gpt4-query", args_schema=PineconeQuery)
+@tool("discord-pinecone-gpt4-query", args_schema=Query)
 def discord_pinecone_gpt4(query: str):
     """
     A Pinecone vector database with internal discord data
@@ -47,13 +48,22 @@ def discord_pinecone_gpt4(query: str):
     return discord.run(query)
 
 
+@tool("apollo-input-writer", args_schema=QueryWithJobId)
+def apollo_input_writer(query: str, job_id: str) -> str:
+    """
+    Turn a natural language query into an Apollo input
+    """
+    query = create_apollo_input(query=query, job_id=job_id)
+    return query["text"]
+
+
 # Apollo Search Tool
 class ApolloSearchInput(BaseConductorToolInput):
     person_titles: list[str] = Field(
         "An array of the person's title. Apollo will return results matching ANY of the titles passed in"
     )
     person_locations: list[str] = Field(
-        'An array of strings denoting allowed locations of the person. Be sure to include city and country seperated by a comma. Example: "San Francisco, US" or "London, GB"'
+        'An array of strings denoting allowed locations of the person. Be sure to include city and country separated by a comma. Example: "San Francisco, US" or "London, GB"'
     )
     # q_keywords: Optional[str] = Field("A string of words over which we want to filter the results")
     # prospected_by_current_team: Optional[list[str]] = Field('An array of string booleans defining whether we want models prospected by current team or not. "no" means to look in net new database only, "yes" means to see saved contacts only')
@@ -79,67 +89,25 @@ def apollo_person_search(
     Apollo Person Search Tool that should be used with looking for people in a given industry or company
     Helpful when you need to identify people in a specific industry or company
     """
-    response = requests.post(
-        url="https://api.apollo.io/v1/mixed_people/search",
-        json={
-            "api_key": os.getenv("APOLLO_API_KEY"),
-            # "q_organization_domains": '\n'.join(q_organization_domains),
-            "page": 1,
-            "per_page": 3,
-            # "organization_locations": organization_locations,
-            # "person_seniorities": person_seniorties,
-            "person_titles": person_titles,
-            "person_locations": person_locations,
-            # "q_keywords" : q_keywords,
-            # "prospected_by_current_team": prospected_by_current_team,
-            # "contact_email_status": contact_email_status
-        },
-        headers={"Cache-Control": "no-cache", "Content-Type": "application/json"},
+    people_data = apollo_api_person_search(
+        person_titles=person_titles, person_locations=person_locations
     )
-    if response.ok:
-        # store the data in s3
-        data = response.json()
-        logger.info(
-            f"Successfully fetched data from Apollo: {response.status_code} ..."
-        )
-        logger.info(
-            f"Pushing raw Apollo response to s3: {os.getenv('APOLLO_S3_BUCKET')} ..."
-        )
-        json_response = json.dumps(data, indent=4)
+    upload_dict_to_s3(
+        data=people_data,
+        bucket=os.getenv("APOLLO_S3_BUCKET"),
+        key=f"{job_id}/raw.json",
+    )
+    engagement_strategies = create_apollo_engagement_strategies(people_data)
+    if len(engagement_strategies) > 0:
+        dict_data = [
+            engagement_strategy.dict() for engagement_strategy in engagement_strategies
+        ]
         upload_dict_to_s3(
-            data=json_response,
-            bucket=os.getenv("APOLLO_S3_BUCKET"),
-            key=f"{job_id}/raw.json",
-        )
-        logger.info(
-            "Creating an engagement strategy for each person in the results ..."
-        )
-        people: list[PersonEngagementStrategy] = []
-        print("Creating engagement strategies for:", len(data["people"]))
-        for person in data["people"]:
-            print("Creating engagement strategy ...")
-            engagement_strategy = create_engagement_strategy(person)
-            engagement_strategy_object = engagement_strategy_parser.parse(
-                engagement_strategy["text"]
-            )
-            people.append(
-                PersonEngagementStrategy(
-                    person=person, engagement_strategy=engagement_strategy_object
-                )
-            )
-        people_data = [object_.dict() for object_ in people]
-        logger.info("uploading apollo data to S3 ...")
-        upload_dict_to_s3(
-            data=json.dumps(people_data, indent=4),
+            data=dict_data,
             bucket=os.getenv("CONDUCTOR_S3_BUCKET"),
             key=f"{job_id}/apollo_person_search.json",
         )
-        # update apollo knowledge base
-        print("Updating Apollo Knowledge Base ...")
-        ApolloPineconeCreateDestroyPipeline().update(job_id)
-        print("Successfully updated Apollo Knowledge Base ...")
-        return f"Job ran successfully. Data stored in S3 with job_id: {job_id}"
+        vectorize_apollo_data.delay(job_id)
+        return f"Successfully collected Apollo data for job: {job_id} \n People Data: {dict_data}"
     else:
-        logger.error(f"Failed to fetch data from Apollo: {response.status_code}")
-        logger.error(f"Failed to fetch data from Apollo: {response.text}")
-        return "Failed to fetch data from Apollo, I should use other data to answer the question."
+        return f"Failed to collect Apollo data for job: {job_id}"

@@ -47,5 +47,4 @@ def create_apollo_input(query: str, job_id: str) -> str:
         prompt=apollo_input_prompt,
     )
     response = chain.invoke({"general_input": query, "job_id": job_id})
-    print(response)
     return response
