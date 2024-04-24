@@ -47,6 +47,7 @@ class ConductorJobS3Pipeline(ABC):
             object_ends_with = ".json"
         s3 = boto3.client("s3")
         bucket = boto3.resource("s3").Bucket(self.source_bucket_name)
+        print("Getting data for prefix:", prefix)
         data = bucket.objects.filter(Prefix=prefix)
         for object in data:
             if object.key.endswith(object_ends_with):
@@ -57,7 +58,7 @@ class ConductorJobS3Pipeline(ABC):
     def prepare_documents_for_pinecone(self) -> list[str]:
         pass
 
-    def add_documents_from_job(self) -> None:
+    def add_documents_from_job(self) -> dict:
         """
         Vectorize text using the embedding function
         """
@@ -68,7 +69,10 @@ class ConductorJobS3Pipeline(ABC):
             index_name=self.destination_index, embedding=self.embedding_function
         )
         pinecone_index.add_documents(documents)
-        print(f"Indexed {len(documents)} documents to {self.destination_index}")
+        return {
+            "status": "success",
+            "message": f"Indexed {len(documents)} documents to {self.destination_index}",
+        }
 
 
 class ConductorBulkS3Pipeline(ABC):

@@ -7,16 +7,11 @@ from conductor.retrievers.pinecone_ import (
     create_gpt4_pinecone_discord_retriever,
 )
 from langchain.pydantic_v1 import BaseModel, Field
-from conductor.tasks import vectorize_apollo_data
-from conductor.tools import upload_dict_to_s3
 from conductor.models import BaseConductorToolInput
-from conductor.functions.apollo import (
-    apollo_api_person_search,
-    create_apollo_engagement_strategies,
-)
+from conductor.functions.apollo import generate_apollo_person_search_context
 from conductor.chains import create_apollo_input
 import logging
-import os
+from langsmith import traceable
 
 
 logger = logging.getLogger(__name__)
@@ -30,6 +25,7 @@ class QueryWithJobId(Query):
     job_id: str = Field("The provided unique job id")
 
 
+@traceable
 @tool("apollo-pinecone-gpt4-query", args_schema=Query)
 def apollo_pinecone_gpt4(query: str):
     """
@@ -39,6 +35,7 @@ def apollo_pinecone_gpt4(query: str):
     return apollo.run(query)
 
 
+@traceable
 @tool("discord-pinecone-gpt4-query", args_schema=Query)
 def discord_pinecone_gpt4(query: str):
     """
@@ -48,6 +45,7 @@ def discord_pinecone_gpt4(query: str):
     return discord.run(query)
 
 
+@traceable
 @tool("apollo-input-writer", args_schema=QueryWithJobId)
 def apollo_input_writer(query: str, job_id: str) -> str:
     """
@@ -73,8 +71,9 @@ class ApolloSearchInput(BaseConductorToolInput):
     # organization_locations: Optional[list[str]] = Field('An array of strings denoting allowed locations of organization headquarters of the person')
 
 
+@traceable
 @tool("apollo-person-search-tool", args_schema=ApolloSearchInput)
-def apollo_person_search(
+def apollo_person_search_context(
     job_id: str,
     person_titles: list[str],
     person_locations: list[str],
@@ -89,25 +88,9 @@ def apollo_person_search(
     Apollo Person Search Tool that should be used with looking for people in a given industry or company
     Helpful when you need to identify people in a specific industry or company
     """
-    people_data = apollo_api_person_search(
-        person_titles=person_titles, person_locations=person_locations
+    return generate_apollo_person_search_context(
+        job_id=job_id,
+        person_titles=person_titles,
+        person_locations=person_locations,
+        save=True,
     )
-    upload_dict_to_s3(
-        data=people_data,
-        bucket=os.getenv("APOLLO_S3_BUCKET"),
-        key=f"{job_id}/raw.json",
-    )
-    engagement_strategies = create_apollo_engagement_strategies(people_data)
-    if len(engagement_strategies) > 0:
-        dict_data = [
-            engagement_strategy.dict() for engagement_strategy in engagement_strategies
-        ]
-        upload_dict_to_s3(
-            data=dict_data,
-            bucket=os.getenv("CONDUCTOR_S3_BUCKET"),
-            key=f"{job_id}/apollo_person_search.json",
-        )
-        vectorize_apollo_data.delay(job_id)
-        return f"Successfully collected Apollo data for job: {job_id} \n People Data: {dict_data}"
-    else:
-        return f"Failed to collect Apollo data for job: {job_id}"

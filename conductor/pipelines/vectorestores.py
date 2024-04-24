@@ -47,7 +47,7 @@ class PineconeCreateDestroyUpdatePipeline(ABC):
             embedding_function=embedding_function,
             job_id=job_id,
         )
-        conductor_job_s3_pipeline.add_documents_from_job()
+        return conductor_job_s3_pipeline.add_documents_from_job()
 
     def _destroy_vector_store(self, index_name: str):
         return self.pinecone.delete_index(name=index_name)
@@ -131,10 +131,14 @@ class ApolloPineconeCreateDestroyUpdatePipeline(PineconeCreateDestroyUpdatePipel
     def destroy(self):
         return self._destroy_vector_store(index_name=os.getenv("PINECONE_APOLLO_INDEX"))
 
-    def update(self, job_id: str, index_name: str = None):
+    def update(
+        self, job_id: str, index_name: str = None, source_bucket_name: str = None
+    ):
         return self._update_vectorstore(
             index_name=index_name if index_name else os.getenv("PINECONE_APOLLO_INDEX"),
-            source_bucket_name=os.getenv("CONDUCTOR_S3_BUCKET"),
+            source_bucket_name=source_bucket_name
+            if source_bucket_name
+            else os.getenv("CONDUCTOR_S3_BUCKET"),
             job_id=job_id,
             conductor_job_s3_pipeline=ApolloS3Pipeline,
             embedding_function=BedrockEmbeddings(

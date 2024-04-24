@@ -1,7 +1,7 @@
 """
 Implementation of the LLM services
 """
-from langchain_community.llms.openai import OpenAI
+from langchain_openai.llms import OpenAI
 from langchain_community.llms.bedrock import Bedrock
 import boto3
 

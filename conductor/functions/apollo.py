@@ -3,9 +3,11 @@ Functions for Apollo data
 """
 from conductor.chains import create_engagement_strategy
 from conductor.parsers import engagement_strategy_parser, PersonEngagementStrategy
+from conductor.database.aws import upload_dict_to_s3
 import requests
 from typing import Union
 import os
+from langsmith import traceable
 
 
 def apollo_api_person_search(
@@ -35,6 +37,7 @@ def apollo_api_person_search(
         return response.json()
 
 
+@traceable
 def create_apollo_engagement_strategies(data: dict) -> list[PersonEngagementStrategy]:
     """
     Use LLM chain to create tailored engagement strategies for each person
@@ -54,22 +57,35 @@ def create_apollo_engagement_strategies(data: dict) -> list[PersonEngagementStra
     return people
 
 
-# def scrape_organization_page(data: dict):
-#     """
-#     Celery task to scrape organization page
-#     """
-#     if "organization" in data:
-#         if "website_url" in data["organization"]:
-#             scrape_page.delay(data["organization"]["website_url"])
-
-
-# upload_dict_to_s3(
-#     data=json.dumps(people_data, indent=4),
-#     bucket=os.getenv("CONDUCTOR_S3_BUCKET"),
-#     key=f"{job_id}/apollo_person_search.json",
-# )
-# # update apollo knowledge base
-# print("Updating Apollo Knowledge Base ...")
-# ApolloPineconeCreateDestroyPipeline().update(job_id)
-# print("Successfully updated Apollo Knowledge Base ...")
-# return f"Job ran successfully. Data stored in S3 with job_id: {job_id}"
+@traceable
+def generate_apollo_person_search_context(
+    job_id: str,
+    person_titles: list[str],
+    person_locations: list[str],
+    raw_data_bucket: str,
+    engagement_strategy_bucket: str,
+    save: bool = True,
+) -> str:
+    people_data = apollo_api_person_search(
+        person_titles=person_titles, person_locations=person_locations
+    )
+    if save:
+        upload_dict_to_s3(
+            data=people_data,
+            bucket=raw_data_bucket,
+            key=f"{job_id}/raw.json",
+        )
+    engagement_strategies = create_apollo_engagement_strategies(people_data)
+    if len(engagement_strategies) > 0:
+        dict_data = [
+            engagement_strategy.dict() for engagement_strategy in engagement_strategies
+        ]
+        if save:
+            upload_dict_to_s3(
+                data=dict_data,
+                bucket=engagement_strategy_bucket,
+                key=f"{job_id}/apollo_person_search.json",
+            )
+        return f"Successfully collected Apollo data for job: {job_id} \n People Data: {dict_data}"
+    else:
+        return f"Failed to collect Apollo data for job: {job_id}"
