@@ -12,6 +12,7 @@ from conductor.functions.apollo import generate_apollo_person_search_context
 from conductor.chains import create_apollo_input
 import logging
 from langsmith import traceable
+import os
 
 
 logger = logging.getLogger(__name__)
@@ -45,7 +46,6 @@ def discord_pinecone_gpt4(query: str):
     return discord.run(query)
 
 
-@traceable
 @tool("apollo-input-writer", args_schema=QueryWithJobId)
 def apollo_input_writer(query: str, job_id: str) -> str:
     """
@@ -71,7 +71,6 @@ class ApolloSearchInput(BaseConductorToolInput):
     # organization_locations: Optional[list[str]] = Field('An array of strings denoting allowed locations of organization headquarters of the person')
 
 
-@traceable
 @tool("apollo-person-search-tool", args_schema=ApolloSearchInput)
 def apollo_person_search_context(
     job_id: str,
@@ -92,5 +91,7 @@ def apollo_person_search_context(
         job_id=job_id,
         person_titles=person_titles,
         person_locations=person_locations,
+        raw_data_bucket=os.getenv("APOLLO_S3_BUCKET"),
+        engagement_strategy_bucket=os.getenv("CONDUCTOR_S3_BUCKET"),
         save=True,
     )

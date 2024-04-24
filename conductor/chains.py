@@ -3,8 +3,10 @@ from conductor.llms import claude_v2_1
 from conductor.parsers import EngagementStrategy
 from langchain.chains.llm import LLMChain
 from langchain_openai import ChatOpenAI
+from langsmith import traceable
 
 
+@traceable
 def create_conductor_search(
     job_id: str, geography: str, titles: list[str], industries: list[str]
 ) -> str:
@@ -29,6 +31,7 @@ def create_conductor_search(
     return response
 
 
+@traceable
 def create_engagement_strategy(apollo_people_data: str) -> EngagementStrategy:
     chain = LLMChain(
         llm=claude_v2_1,
@@ -38,6 +41,7 @@ def create_engagement_strategy(apollo_people_data: str) -> EngagementStrategy:
     return response
 
 
+@traceable
 def create_apollo_input(query: str, job_id: str) -> str:
     """
     Extract Apollo input parameters from a general input string

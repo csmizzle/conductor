@@ -1,7 +1,7 @@
 """
 Agent constructor function
 """
-from conductor.tools import generate_apollo_person_search_context, apollo_input_writer
+from conductor.tools import apollo_person_search_context, apollo_input_writer
 from crewai import Agent, Task, Crew
 import uuid
 
@@ -21,13 +21,12 @@ apollo_agent = Agent(
     role="Apollo Person Searcher",
     goal="Retrieve information from Apollo's person search tool",
     verbose=True,
-    memory=True,
     backstory=(
         "You are capable of looking at natural language instructions and querying Apollo's person search tool for the best answer"
         "Once you finish the search, you will store the results in a database for future reference."
         "Upon successful completion, you will provide the job_id used to track the information."
     ),
-    tools=[generate_apollo_person_search_context],
+    tools=[apollo_person_search_context],
     allow_delegation=False,
     cache=True,
 )
