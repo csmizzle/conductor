@@ -32,6 +32,16 @@ apollo_agent = Agent(
 )
 
 
+answer_agent = Agent(
+    role="Expert Analyst",
+    goal="Provide the best and concise answers to a question",
+    verbose=True,
+    backstory="You are an expert in analyzing data and providing the best answers to questions",
+    allow_delegation=False,
+    cache=True,
+)
+
+
 create_query_task = Task(
     description="Take this {question} and {job_id} and create a structured query for Apollo's person search tool. Always check with a human that your query is correct.",
     expected_output="A one sentence query for Apollo's person search tool.",
@@ -47,9 +57,17 @@ apollo_task = Task(
 )
 
 
+answer_task = Task(
+    description="Answer the question {question} using the context provided.",
+    expected_output="The answer to the question in bulleted fashion with concise but informative answers.",
+    agent=answer_agent,
+    context=[apollo_task],
+)
+
+
 crew = Crew(
-    agents=[query_builder_agent, apollo_agent],
-    tasks=[create_query_task, apollo_task],
+    agents=[query_builder_agent, apollo_agent, answer_agent],
+    tasks=[create_query_task, apollo_task, answer_task],
     verbose=True,
     memory=True,
     cache=True,
