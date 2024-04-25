@@ -64,6 +64,31 @@ answer_task = Task(
     context=[apollo_task],
 )
 
+gmail_agent = Agent(
+    role="Gmail Agent",
+    goal="Create an email draft for the prospective customer.",
+    backstory="You are an expert in sending emails that catch the readers eye by being engaging and informative.",
+    verbose=True,
+    allow_delegation=False,
+    cache=True,
+    tools=[],
+)
+
+gmail_task = Task(
+    description="Use the provided {context} to create an email draft for the prospective customer.",
+    agent=gmail_agent,
+    expected_output="An email draft for the prospective customer.",
+)
+
+
+gmail_crew = Crew(
+    agents=[gmail_agent],
+    tasks=[gmail_task],
+    verbose=True,
+    cache=True,
+    share_crew=False,
+)
+
 
 crew = Crew(
     agents=[query_builder_agent, apollo_agent, answer_agent],

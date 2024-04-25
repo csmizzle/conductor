@@ -1,4 +1,4 @@
-from conductor.prompts import input_prompt, apollo_input_prompt
+from conductor.prompts import input_prompt, apollo_input_prompt, gmail_input_prompt
 from conductor.llms import claude_v2_1
 from conductor.parsers import EngagementStrategy
 from langchain.chains.llm import LLMChain
@@ -51,4 +51,17 @@ def create_apollo_input(query: str, job_id: str) -> str:
         prompt=apollo_input_prompt,
     )
     response = chain.invoke({"general_input": query, "job_id": job_id})
+    return response
+
+
+@traceable
+def create_gmail_input(input_: str) -> str:
+    """
+    Extract Gmail input parameters from a general input string
+    """
+    chain = LLMChain(
+        llm=claude_v2_1,
+        prompt=gmail_input_prompt,
+    )
+    response = chain.invoke({"general_input": input_})
     return response

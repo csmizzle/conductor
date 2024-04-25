@@ -82,7 +82,7 @@ def apollo_person_search_context(
     # contact_email_status: Optional[list[str]] = None,
     # q_organization_domains: Optional[list[str]] = None,
     # organization_locations: Optional[list[str]] = None
-):
+) -> str:
     """
     Apollo Person Search Tool that should be used with looking for people in a given industry or company
     Helpful when you need to identify people in a specific industry or company

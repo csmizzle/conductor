@@ -38,7 +38,12 @@ class PersonEngagementStrategy(BaseModel):
     context: str
 
 
+class GmailInput(BaseModel):
+    to: list[str] = Field("The email address to send the email to")
+    subject: str = Field("The subject of the email")
+    message: str = Field("The message of the email")
+
+
 customer_observation_parser = PydanticOutputParser(pydantic_object=CustomerObservation)
-
-
 engagement_strategy_parser = PydanticOutputParser(pydantic_object=EngagementStrategy)
+gmail_input_parser = PydanticOutputParser(pydantic_object=GmailInput)
