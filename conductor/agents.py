@@ -4,7 +4,8 @@ Agent constructor function
 from conductor.tools import (
     apollo_person_search_context,
     apollo_input_writer,
-    gmail_draft_from_input,
+    gmail_input_from_input,
+    gmail_draft,
 )
 from crewai import Agent, Task, Crew
 import uuid
@@ -68,26 +69,47 @@ answer_task = Task(
     context=[apollo_task],
 )
 
-gmail_agent = Agent(
-    role="Gmail Agent",
-    goal="Create an email draft for the prospective customer.",
+
+gmail_input_builder_agent = Agent(
+    role="Gmail Input Writer",
+    goal="Create the correct input for creating a Gmail email.",
+    backstory="You are an expert at looking at at a general input and extracting the correct parameters for the Gmail draft tool.",
+    verbose=True,
+    allow_delegation=False,
+    cache=True,
+    tools=[gmail_input_from_input],
+)
+
+
+gmail_draft_agent = Agent(
+    role="Gmail Draft Writer",
+    goal="Create an email draft for the prospective customer. Be engaging and tie their business needs to the product.",
     backstory="You are an expert in sending emails that catch the readers eye by being engaging and informative by looking at customer data and creating a draft for the prospective customer. You should not use the customer contact information in the body of the message",
     verbose=True,
     allow_delegation=False,
     cache=True,
-    tools=[gmail_draft_from_input],
+    tools=[gmail_draft],
 )
 
-gmail_task = Task(
-    description="Use the provided {context} to create an email draft for the prospective customer. The provided data is the customer's contact information and the message to be sent. Make sure to check with a human that the email draft is correct before sending.",
-    agent=gmail_agent,
+
+gmail_input_task = Task(
+    description="Extract the needed inputs from {context} for the gmail_input_from_input tool.",
+    agent=gmail_input_builder_agent,
+    expected_output="The extracted information from the general input as a single sentence.",
+)
+
+
+gmail_draft_task = Task(
+    description="Use the provided context to create an email draft for the prospective customer. The provided data is the customer's contact information and the message to be sent.",
+    agent=gmail_draft_agent,
     expected_output="Confirmation of the draft being created and a summary of the email draft.",
+    context=[gmail_input_task],
 )
 
 
 gmail_crew = Crew(
-    agents=[gmail_agent],
-    tasks=[gmail_task],
+    agents=[gmail_input_builder_agent, gmail_draft_agent],
+    tasks=[gmail_input_task, gmail_draft_task],
     verbose=True,
     cache=True,
     share_crew=False,
