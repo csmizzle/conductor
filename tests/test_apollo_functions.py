@@ -11,24 +11,9 @@ from tests.vars import (
     TEST_JOB_ID,
     TEST_RAW_DATA_BUCKET,
     TEST_ENGAGEMENT_STRATEGIES_BUCKET,
+    TEST_APOLLO_RAW_DATA,
 )
 from langsmith import unit
-
-
-test_people_data = {
-    "people": [
-        {
-            "name": "John Doe",
-            "title": "CEO",
-            "location": "San Francisco, CA",
-        },
-        {
-            "name": "Jane Doe",
-            "title": "CTO",
-            "location": "San Francisco, CA",
-        },
-    ]
-}
 
 
 def test_apollo_person_search():
@@ -41,8 +26,8 @@ def test_apollo_person_search():
 
 @unit
 def test_create_apollo_engagement_strategy():
-    engagement_strategies = create_apollo_engagement_strategies(test_people_data)
-    assert isinstance(engagement_strategies, list) and len(engagement_strategies) == 2
+    engagement_strategies = create_apollo_engagement_strategies(TEST_APOLLO_RAW_DATA)
+    assert isinstance(engagement_strategies, list) and len(engagement_strategies) == 3
     for engagement_strategy in engagement_strategies:
         assert isinstance(engagement_strategy, PersonEngagementStrategy)
 

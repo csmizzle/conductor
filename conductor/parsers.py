@@ -35,6 +35,7 @@ class CustomerObservation(BaseModel):
 class PersonEngagementStrategy(BaseModel):
     person: dict
     engagement_strategy: EngagementStrategy
+    context: str
 
 
 customer_observation_parser = PydanticOutputParser(pydantic_object=CustomerObservation)

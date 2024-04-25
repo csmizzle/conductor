@@ -3,6 +3,10 @@ Functions for Apollo data
 """
 from conductor.chains import create_engagement_strategy
 from conductor.parsers import engagement_strategy_parser, PersonEngagementStrategy
+from conductor.context.apollo import (
+    ApolloPersonSearchContext,
+    ApolloPersonSearchRawContext,
+)
 from conductor.database.aws import upload_dict_to_s3
 import requests
 from typing import Union
@@ -43,15 +47,18 @@ def create_apollo_engagement_strategies(data: dict) -> list[PersonEngagementStra
     Use LLM chain to create tailored engagement strategies for each person
     """
     people = []
-    for person in data["people"]:
-        print("Creating engagement strategy ...")
-        engagement_strategy = create_engagement_strategy(person)
+    context_creator = ApolloPersonSearchRawContext()
+    contexts = context_creator.create_context(data=data)
+    for idx, context in enumerate(contexts):
+        engagement_strategy = create_engagement_strategy(context)
         engagement_strategy_object = engagement_strategy_parser.parse(
             engagement_strategy["text"]
         )
         people.append(
             PersonEngagementStrategy(
-                person=person, engagement_strategy=engagement_strategy_object
+                person=data["people"][idx],
+                engagement_strategy=engagement_strategy_object,
+                context=context,
             )
         )
     return people
@@ -86,6 +93,7 @@ def generate_apollo_person_search_context(
                 bucket=engagement_strategy_bucket,
                 key=f"{job_id}/apollo_person_search.json",
             )
-        return f"Successfully collected Apollo data for job: {job_id} \n People Data: {dict_data}"
+        enriched_context_creator = ApolloPersonSearchContext()
+        return f"Successfully ran Apollo Person Search Tool. Results {"\n".join(enriched_context_creator.create_context(data=dict_data))}"
     else:
-        return f"Failed to collect Apollo data for job: {job_id}"
+        return "No results found for Apollo Person Search Tool."
