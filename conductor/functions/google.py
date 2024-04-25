@@ -45,10 +45,8 @@ def create_gmail_input_from_input(input_: str) -> dict:
 
 @traceable
 def create_gmail_draft_from_input(input_: str) -> str:
-    """Create a Gmail draft from a natural language input.
-
-    Args:
-        input_ (str): general input
-    """
+    """Create a Gmail draft from a natural language input."""
     parsed_inputs = create_gmail_input_from_input(input_)
-    return create_gmail_draft(**parsed_inputs)
+    created_draft = create_gmail_draft(**parsed_inputs)
+    print("Created draft:", created_draft)
+    return created_draft

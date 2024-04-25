@@ -78,9 +78,14 @@ Apollo Input Parameters:
 
 
 GMAIL_INPUT_PROMPT = """
-Extract the to, subject, and body of an email from a general input string below and provide the extracted information.
+Extract the following parameters a general input string below and provide the extracted information.
 If subject isn't provided, create one that is relevant to the body of the email.
 If to isn't provided, return "No recipient provided".
+
+Parameters:
+  - Email Address(es) if there are multiple
+  - Subject
+  - Body
 
 {general_input}
 \n

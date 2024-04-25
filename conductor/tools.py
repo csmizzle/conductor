@@ -9,6 +9,7 @@ from conductor.retrievers.pinecone_ import (
 from langchain.pydantic_v1 import BaseModel, Field
 from conductor.models import BaseConductorToolInput
 from conductor.functions.apollo import generate_apollo_person_search_context
+from conductor.functions.google import create_gmail_draft_from_input
 from conductor.chains import create_apollo_input
 import logging
 from langsmith import traceable
@@ -95,3 +96,11 @@ def apollo_person_search_context(
         engagement_strategy_bucket=os.getenv("CONDUCTOR_S3_BUCKET"),
         save=True,
     )
+
+
+@tool("gmail-draft-from-draft", args_schema=Query)
+def gmail_draft_from_input(input_: str) -> str:
+    """
+    Take natural language input and create a Gmail draft
+    """
+    return create_gmail_draft_from_input(input_)

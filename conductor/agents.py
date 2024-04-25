@@ -1,7 +1,11 @@
 """
 Agent constructor function
 """
-from conductor.tools import apollo_person_search_context, apollo_input_writer
+from conductor.tools import (
+    apollo_person_search_context,
+    apollo_input_writer,
+    gmail_draft_from_input,
+)
 from crewai import Agent, Task, Crew
 import uuid
 
@@ -67,17 +71,17 @@ answer_task = Task(
 gmail_agent = Agent(
     role="Gmail Agent",
     goal="Create an email draft for the prospective customer.",
-    backstory="You are an expert in sending emails that catch the readers eye by being engaging and informative.",
+    backstory="You are an expert in sending emails that catch the readers eye by being engaging and informative by looking at customer data and creating a draft for the prospective customer. You should not use the customer contact information in the body of the message",
     verbose=True,
     allow_delegation=False,
     cache=True,
-    tools=[],
+    tools=[gmail_draft_from_input],
 )
 
 gmail_task = Task(
-    description="Use the provided {context} to create an email draft for the prospective customer.",
+    description="Use the provided {context} to create an email draft for the prospective customer. The provided data is the customer's contact information and the message to be sent. Make sure to check with a human that the email draft is correct before sending.",
     agent=gmail_agent,
-    expected_output="An email draft for the prospective customer.",
+    expected_output="Confirmation of the draft being created and a summary of the email draft.",
 )
 
 
