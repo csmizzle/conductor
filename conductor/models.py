@@ -1,9 +1,12 @@
 """
 Base models for conductor
 """
+from abc import ABC, abstractmethod
 from langchain.pydantic_v1 import BaseModel as LangchainBaseModel
 from langchain.pydantic_v1 import Field as LangchainField
 from pydantic import BaseModel
+from typing import Any
+import jmespath
 
 
 class BaseConductorToolInput(LangchainBaseModel):
@@ -31,3 +34,17 @@ class ConductorJobCustomerResponse(BaseModel):
     input: ConductorJobCustomerInput
     agent_query: str = None
     response: list = None
+
+
+class Context(ABC):
+    """
+    Context for a given job
+    """
+
+    def path_search(self, search: str, data: Any) -> str:
+        expression = jmespath.compile(search)
+        return expression.search(data)
+
+    @abstractmethod
+    def create_context(self, data: Any) -> list[str]:
+        pass

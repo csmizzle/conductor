@@ -10,6 +10,3 @@ def test_run_crew() -> None:
     agentops.init(tags=["unit-test"])
     output = run_crew(TEST_CREW_PROMPT)
     assert isinstance(output, str) and len(output) > 0
-
-
-test_run_crew()
