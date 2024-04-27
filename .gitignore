@@ -5,3 +5,4 @@ data
 scratch
 credentials.json
 token.json
+conductor/storage
