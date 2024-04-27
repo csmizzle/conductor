@@ -5,6 +5,8 @@ from conductor.functions.google import (
     create_gmail_draft,
     create_gmail_input_from_input,
     create_gmail_draft_from_input,
+    send_gmail,
+    send_gmail_from_input,
 )
 from tests.vars import TEST_GMAIL_INPUT, TEST_GMAIL_CREW_PROMPT, TEST_APOLLO_DATA
 from langsmith import expect, unit
@@ -15,6 +17,12 @@ def test_create_gmail_draft() -> None:
     created_draft = create_gmail_draft(**TEST_GMAIL_INPUT)
     assert isinstance(created_draft, str)
     assert created_draft.startswith("Draft created.")
+
+
+def test_send_gmail() -> None:
+    sent_email = send_gmail(**TEST_GMAIL_INPUT)
+    assert isinstance(sent_email, str)
+    assert sent_email.startswith("Message sent.")
 
 
 @unit
@@ -46,3 +54,10 @@ def test_create_gmail_input_from_apollo_input() -> None:
     assert "to" in created_apollo_gmail_input
     assert "subject" in created_apollo_gmail_input
     assert "message" in created_apollo_gmail_input
+
+
+@unit
+def test_send_gmail_from_input() -> None:
+    sent_email = send_gmail_from_input(TEST_GMAIL_CREW_PROMPT)
+    assert isinstance(sent_email, str)
+    assert sent_email.startswith("Message sent.")
