@@ -8,7 +8,9 @@ from conductor.retrievers.pinecone_ import (
 )
 from langchain.pydantic_v1 import BaseModel, Field
 from conductor.models import BaseConductorToolInput
+from conductor.parsers import GmailInput
 from conductor.functions.apollo import generate_apollo_person_search_context
+from conductor.functions.google import create_gmail_input_from_input, create_gmail_draft
 from conductor.chains import create_apollo_input
 import logging
 from langsmith import traceable
@@ -82,7 +84,7 @@ def apollo_person_search_context(
     # contact_email_status: Optional[list[str]] = None,
     # q_organization_domains: Optional[list[str]] = None,
     # organization_locations: Optional[list[str]] = None
-):
+) -> str:
     """
     Apollo Person Search Tool that should be used with looking for people in a given industry or company
     Helpful when you need to identify people in a specific industry or company
@@ -95,3 +97,20 @@ def apollo_person_search_context(
         engagement_strategy_bucket=os.getenv("CONDUCTOR_S3_BUCKET"),
         save=True,
     )
+
+
+@tool("gmail-input-from-draft", args_schema=Query)
+def gmail_input_from_input(input_: str) -> str:
+    """
+    Take natural language input and create a Gmail email input
+    """
+    parsed_input = create_gmail_input_from_input(input_)
+    return f"Google Draft input: {parsed_input}"
+
+
+@tool("gmail-draft", args_schema=GmailInput)
+def gmail_draft(to: list[str], subject: str, message: str) -> str:
+    """
+    Create a Gmail draft
+    """
+    return create_gmail_draft(to=to, subject=subject, message=message)

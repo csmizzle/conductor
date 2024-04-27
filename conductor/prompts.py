@@ -1,5 +1,5 @@
 from langchain.prompts import PromptTemplate
-from conductor.parsers import engagement_strategy_parser
+from conductor.parsers import engagement_strategy_parser, gmail_input_parser
 
 JSON_AGENT_PROMPT = """
 You are a world class market researcher, can take unstructured data and create valuable insights for you users.
@@ -77,6 +77,22 @@ Apollo Input Parameters:
 """
 
 
+GMAIL_INPUT_PROMPT = """
+Extract the following parameters a general input string below and provide the extracted information.
+If subject isn't provided, create one that is relevant to the body of the email.
+If to isn't provided, return "No recipient provided".
+
+Parameters:
+  - Email Address(es) if there are multiple
+  - Subject
+  - Body
+
+{general_input}
+\n
+{format_instructions}
+"""
+
+
 input_prompt = PromptTemplate(
     input_variables=["job_id", "geography", "titles", "industries"],
     template=CONDUCTOR_INPUT_PROMPT,
@@ -91,7 +107,17 @@ input_prompt = PromptTemplate(
     },
 )
 
+
 apollo_input_prompt = PromptTemplate(
     input_variables=["job_id", "general_input"],
     template=APOLLO_INPUT_PROMPT,
+)
+
+
+gmail_input_prompt = PromptTemplate(
+    input_variables=["general_input"],
+    template=GMAIL_INPUT_PROMPT,
+    partial_variables={
+        "format_instructions": gmail_input_parser.get_format_instructions()
+    },
 )
