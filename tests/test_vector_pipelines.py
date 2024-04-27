@@ -1,14 +1,33 @@
 """
 Test vector pipelines
 """
-from conductor.pipelines.vectorestores import ApolloPineconeCreateDestroyUpdatePipeline
-from tests.vars import TEST_JOB_ID, TEST_PINECONE_INDEX, TEST_RAW_DATA_BUCKET
+from conductor.pipelines.vectorestores import (
+    ApolloPineconeCreateDestroyUpdatePipeline,
+    DiscordPineconeCreateDestroyUpdatePipeline,
+)
+from tests.vars import (
+    TEST_APOLLO_JOB_ID,
+    TEST_PINECONE_INDEX,
+    TEST_RAW_DATA_BUCKET,
+    TEST_DISCORD_JOB_ID,
+    TEST_DISCORD_PINECONE_INDEX,
+    TEST_RAW_DISCORD_DATA_BUCKET,
+)
 
 
-def test_s3_to_pinecone_apollo() -> None:
+def test_s3_apollo_to_pinecone() -> None:
     data = ApolloPineconeCreateDestroyUpdatePipeline().update(
-        job_id=TEST_JOB_ID,
+        job_id=TEST_APOLLO_JOB_ID,
         index_name=TEST_PINECONE_INDEX,
         source_bucket_name=TEST_RAW_DATA_BUCKET,
     )
     assert data["status"] == "success"
+
+
+def test_s3_discord_to_pinecone() -> None:
+    data = DiscordPineconeCreateDestroyUpdatePipeline().update(
+        job_id=TEST_DISCORD_JOB_ID,
+        index_name=TEST_DISCORD_PINECONE_INDEX,
+        source_bucket_name=TEST_RAW_DISCORD_DATA_BUCKET,
+    )
+    return data

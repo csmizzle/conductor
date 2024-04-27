@@ -153,9 +153,11 @@ class DiscordPineconeCreateDestroyUpdatePipeline(PineconeCreateDestroyUpdatePipe
     These pipelines read from templated values in conductor environment variables
     """
 
-    def create(self):
+    def create(self, index_name: str = None):
         return self._create_vectorstore(
-            index_name=os.getenv("PINECONE_DISCORD_INDEX"),
+            index_name=index_name
+            if index_name
+            else os.getenv("PINECONE_DISCORD_INDEX"),
             dimension=int(os.getenv("PINECONE_VECTOR_DIMENSIONS")),
             metric=os.getenv("PINECONE_METRIC"),
             cloud=os.getenv("PINECONE_CLOUD"),
@@ -167,10 +169,12 @@ class DiscordPineconeCreateDestroyUpdatePipeline(PineconeCreateDestroyUpdatePipe
             index_name=os.getenv("PINECONE_DISCORD_INDEX")
         )
 
-    def build(self, job_id: str):
-        return self._build_vectorstore(
-            index_name=os.getenv("PINECONE_DISCORD_INDEX"),
-            source_bucket_name=os.getenv("DISCORD_S3_BUCKET"),
+    def update(
+        self, job_id: str, index_name: str = None, source_bucket_name: str = None
+    ):
+        return self._update_vectorstore(
+            index_name=index_name,
+            source_bucket_name=source_bucket_name,
             job_id=job_id,
             conductor_job_s3_pipeline=DiscordS3Pipeline,
             embedding_function=BedrockEmbeddings(
