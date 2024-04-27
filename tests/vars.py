@@ -20,4 +20,5 @@ TEST_GMAIL_INPUT = {
     "to": ["test@email.com"],
     "subject": "Test subject",
     "message": "Test message",
+    "credentials": os.path.join(BASEDIR, "..", "credentials.json"),
 }

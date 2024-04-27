@@ -4,22 +4,36 @@ Gmail functions
 from conductor.chains import create_gmail_input
 from conductor.parsers import gmail_input_parser
 from langchain_community.agent_toolkits import GmailToolkit
+from langchain_community.tools.gmail.utils import (
+    get_gmail_credentials,
+    build_resource_service,
+)
 from langchain_community.tools.gmail.create_draft import GmailCreateDraft
 from langsmith import traceable
 
 
-def create_gmail_draft(to: list[str], subject: str, message: str) -> str:
+def create_gmail_draft(
+    to: list[str], subject: str, message: str, credentials: str = None
+) -> str:
     """Create a Gmail draft for the prospective customer.
 
     Args:
         to (str): where to send
         subject (str): subject of email
         message (str): message of email
+        credentials (str): credentials for gmail API
 
     Returns:
         dict: context with data
     """
-    gmail = GmailToolkit()
+    if credentials:
+        credentials = get_gmail_credentials(
+            client_secrets_file=credentials,
+        )
+        api_resource = build_resource_service(credentials=credentials)
+        gmail = GmailToolkit(api_resource=api_resource)
+    else:
+        gmail = GmailToolkit()
     draft = GmailCreateDraft(api_resource=gmail.api_resource)
     result = draft(
         {

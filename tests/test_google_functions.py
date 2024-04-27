@@ -12,8 +12,9 @@ from langsmith import expect, unit
 
 @unit
 def test_create_gmail_draft() -> None:
-    draft = create_gmail_draft(**TEST_GMAIL_INPUT)
-    assert isinstance(draft, str)
+    created_draft = create_gmail_draft(**TEST_GMAIL_INPUT)
+    assert isinstance(created_draft, str)
+    assert created_draft.startswith("Draft created.")
 
 
 @unit
