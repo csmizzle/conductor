@@ -31,6 +31,7 @@ google-api-python-client = "^2.127.0"
 scrapy = "^2.11.1"
 apify = {extras = ["scrapy"], version = "^1.7.0"}
 nest-asyncio = "^1.6.0"
+bs4 = "^0.0.2"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -18,3 +18,13 @@ class TitleItem(Item):
 
     url = Field()
     title = Field()
+
+
+class SummaryItem(Item):
+    """
+    A summary containing the url, raw html, and processed summary
+    """
+
+    url = Field()
+    raw = Field()
+    summary = Field()

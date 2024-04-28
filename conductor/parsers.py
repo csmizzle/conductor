@@ -5,31 +5,9 @@ from langchain.pydantic_v1 import BaseModel, Field
 from langchain.output_parsers import PydanticOutputParser
 
 
-class CompanyBackground(BaseModel):
-    name: str = Field("The company name")
-    background: str = Field("The background information of the company")
-
-
-class KeyPlayer(BaseModel):
-    name: str = Field("The name of the key player")
-    title: str = Field("The title of the key player")
-    city: str = Field("The city of the key player")
-    state: str = Field("The state of the key player")
-    country: str = Field("The country of the key player")
-    company: CompanyBackground = None
-    strategy: str = Field("The engagement strategy for the key player")
-    urls: list[str] = Field("The URLs for the company")
-
-
 class EngagementStrategy(BaseModel):
     strategy: str = Field("The engagement strategy for the potential customer")
     reasoning: str = Field("The reasoning behind the strategy")
-
-
-class CustomerObservation(BaseModel):
-    key_players: list[KeyPlayer] = Field(
-        "The key players identified in the search results"
-    )
 
 
 class PersonEngagementStrategy(BaseModel):
@@ -44,6 +22,11 @@ class GmailInput(BaseModel):
     message: str = Field("The message of the email")
 
 
-customer_observation_parser = PydanticOutputParser(pydantic_object=CustomerObservation)
+class HtmlSummary(BaseModel):
+    html: str = Field("The raw HTML content of the web page")
+    summary: str = Field("The summary of the web page")
+
+
 engagement_strategy_parser = PydanticOutputParser(pydantic_object=EngagementStrategy)
 gmail_input_parser = PydanticOutputParser(pydantic_object=GmailInput)
+html_summary_parser = PydanticOutputParser(pydantic_object=HtmlSummary)

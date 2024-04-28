@@ -1,4 +1,9 @@
-from conductor.prompts import input_prompt, apollo_input_prompt, gmail_input_prompt
+from conductor.prompts import (
+    input_prompt,
+    apollo_input_prompt,
+    gmail_input_prompt,
+    html_summary_prompt,
+)
 from conductor.llms import claude_v2_1
 from conductor.parsers import EngagementStrategy
 from langchain.chains.llm import LLMChain
@@ -64,4 +69,17 @@ def create_gmail_input(input_: str) -> str:
         prompt=gmail_input_prompt,
     )
     response = chain.invoke({"general_input": input_})
+    return response
+
+
+@traceable
+def create_html_summary(raw: str) -> str:
+    """
+    Summarize the HTML content of a web page
+    """
+    chain = LLMChain(
+        llm=claude_v2_1,
+        prompt=html_summary_prompt,
+    )
+    response = chain.invoke({"raw": raw})
     return response

@@ -1,5 +1,9 @@
 from langchain.prompts import PromptTemplate
-from conductor.parsers import engagement_strategy_parser, gmail_input_parser
+from conductor.parsers import (
+    engagement_strategy_parser,
+    gmail_input_parser,
+    html_summary_parser,
+)
 
 JSON_AGENT_PROMPT = """
 You are a world class market researcher, can take unstructured data and create valuable insights for you users.
@@ -93,6 +97,14 @@ Parameters:
 """
 
 
+HTML_INPUT_PROMPT = """
+Using the raw html from a web page, create a summary of the content that distills what the webpage is about.
+
+{raw}
+\n
+{format_instructions}
+"""
+
 input_prompt = PromptTemplate(
     input_variables=["job_id", "geography", "titles", "industries"],
     template=CONDUCTOR_INPUT_PROMPT,
@@ -119,5 +131,14 @@ gmail_input_prompt = PromptTemplate(
     template=GMAIL_INPUT_PROMPT,
     partial_variables={
         "format_instructions": gmail_input_parser.get_format_instructions()
+    },
+)
+
+
+html_summary_prompt = PromptTemplate(
+    input_variables=["raw"],
+    template=HTML_INPUT_PROMPT,
+    partial_variables={
+        "format_instructions": html_summary_parser.get_format_instructions()
     },
 )

@@ -7,7 +7,6 @@ import discord
 from discord.ext import commands
 import os
 import uuid
-import json
 import logging
 
 
@@ -45,7 +44,7 @@ async def collect(ctx, channel_id: int):
         f"Uploading to S3: {os.getenv('DISCORD_S3_BUCKET')} with collect ID: {job_id}"
     )
     upload_dict_to_s3(
-        data=json.dumps([message.dict() for message in messages], indent=4),
+        data=[message.dict() for message in messages],
         bucket=os.getenv("DISCORD_S3_BUCKET"),
         key=f"{job_id}.json",
     )

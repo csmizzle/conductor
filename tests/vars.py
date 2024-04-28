@@ -1,6 +1,6 @@
 import os
 import json
-
+import pathlib
 
 BASEDIR = os.path.dirname(os.path.abspath(__file__))
 TEST_PINECONE_INDEX = os.getenv("TEST_PINECONE_INDEX", "unit-test-index")
@@ -25,3 +25,6 @@ TEST_GMAIL_INPUT = {
 TEST_DISCORD_JOB_ID = ""
 TEST_DISCORD_PINECONE_INDEX = ""
 TEST_RAW_DISCORD_DATA_BUCKET = ""
+TEST_HTML_DATA = pathlib.Path(
+    os.path.join(BASEDIR, "data", "pinecone.html")
+).read_text()
