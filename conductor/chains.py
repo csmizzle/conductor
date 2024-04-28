@@ -5,7 +5,7 @@ from conductor.prompts import (
     html_summary_prompt,
 )
 from conductor.llms import claude_v2_1
-from conductor.parsers import EngagementStrategy
+from conductor.parsers import EngagementStrategy, HtmlSummary, html_summary_parser
 from langchain.chains.llm import LLMChain
 from langchain_openai import ChatOpenAI
 from langsmith import traceable
@@ -83,3 +83,11 @@ def create_html_summary(raw: str) -> str:
     )
     response = chain.invoke({"raw": raw})
     return response
+
+
+def get_parsed_html_summary(raw: str) -> HtmlSummary:
+    """
+    Run html_chain and get parsed summary
+    """
+    response = create_html_summary(raw)
+    return html_summary_parser.parse(response["text"])

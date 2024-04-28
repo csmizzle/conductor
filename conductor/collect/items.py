@@ -26,5 +26,5 @@ class SummaryItem(Item):
     """
 
     url = Field()
-    raw = Field()
+    html = Field()
     summary = Field()

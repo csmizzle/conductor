@@ -1,7 +1,12 @@
 """
 Test different langchain chains
 """
-from conductor.chains import create_apollo_input, create_html_summary
+from conductor.chains import (
+    create_apollo_input,
+    create_html_summary,
+    get_parsed_html_summary,
+)
+from conductor.parsers import HtmlSummary
 from tests.vars import TEST_HTML_DATA
 from bs4 import BeautifulSoup
 from langsmith import unit
@@ -20,3 +25,9 @@ def test_create_html_summary() -> None:
     text = BeautifulSoup(TEST_HTML_DATA, "html.parser").get_text()
     response = create_html_summary(text)
     assert isinstance(response["text"], str)
+
+
+def test_get_parsed_html_summary() -> None:
+    text = BeautifulSoup(TEST_HTML_DATA, "html.parser").get_text()
+    summary = get_parsed_html_summary(text)
+    assert isinstance(summary, HtmlSummary)
