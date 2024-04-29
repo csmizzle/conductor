@@ -30,4 +30,4 @@ def test_s3_discord_to_pinecone() -> None:
         index_name=TEST_DISCORD_PINECONE_INDEX,
         source_bucket_name=TEST_RAW_DISCORD_DATA_BUCKET,
     )
-    return data
+    return data["status"] == "success"

@@ -8,7 +8,7 @@ from conductor.functions.apollo import (
 )
 from conductor.parsers import PersonEngagementStrategy
 from tests.vars import (
-    TEST_JOB_ID,
+    TEST_APOLLO_JOB_ID,
     TEST_RAW_DATA_BUCKET,
     TEST_ENGAGEMENT_STRATEGIES_BUCKET,
     TEST_APOLLO_RAW_DATA,
@@ -35,7 +35,7 @@ def test_create_apollo_engagement_strategy():
 @unit
 def test_apollo_person_search_context():
     results = generate_apollo_person_search_context(
-        job_id=TEST_JOB_ID,
+        job_id=TEST_APOLLO_JOB_ID,
         raw_data_bucket=TEST_RAW_DATA_BUCKET,
         engagement_strategy_bucket=TEST_ENGAGEMENT_STRATEGIES_BUCKET,
         person_titles=["CEO", "CTO"],

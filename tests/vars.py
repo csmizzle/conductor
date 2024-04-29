@@ -22,9 +22,11 @@ TEST_GMAIL_INPUT = {
     "message": "Test message",
     "credentials": os.path.join(BASEDIR, "..", "credentials.json"),
 }
-TEST_DISCORD_JOB_ID = ""
-TEST_DISCORD_PINECONE_INDEX = ""
-TEST_RAW_DISCORD_DATA_BUCKET = ""
+TEST_DISCORD_JOB_ID = "19fee3dd-539d-40c4-a312-31c9871513b3-1233762364923445309"
+TEST_DISCORD_PINECONE_INDEX = os.getenv("TEST_PINECONE_INDEX", "unit-test-index")
+TEST_RAW_DISCORD_DATA_BUCKET = os.getenv(
+    "TEST_RAW_DISCORD_DATA_BUCKET", "discord-testing-bucket"
+)
 TEST_HTML_DATA = pathlib.Path(
     os.path.join(BASEDIR, "data", "pinecone.html")
 ).read_text()
