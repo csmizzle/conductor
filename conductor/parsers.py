@@ -23,7 +23,7 @@ class GmailInput(BaseModel):
 
 
 class HtmlSummary(BaseModel):
-    html: str = Field("The raw HTML content of the web page")
+    content: str = Field("The content of the web page")
     summary: str = Field("The summary of the web page")
 
 

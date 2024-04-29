@@ -28,3 +28,6 @@ TEST_RAW_DISCORD_DATA_BUCKET = ""
 TEST_HTML_DATA = pathlib.Path(
     os.path.join(BASEDIR, "data", "pinecone.html")
 ).read_text()
+TEST_NEWLINE_HTML_DATA = pathlib.Path(
+    os.path.join(BASEDIR, "data", "newline.txt")
+).read_text()

@@ -6,7 +6,8 @@ from conductor.chains import get_parsed_html_summary
 from scrapy import Spider
 from scrapy.responsetypes import Response
 from bs4 import BeautifulSoup
-from ..items import SummaryItem
+from conductor.collect.items import SummaryItem
+from conductor.utils import clean_string
 
 
 class SummarySpider(Spider):
@@ -23,7 +24,7 @@ class SummarySpider(Spider):
         super().__init__(*args, **kwargs)
         self.start_urls = urls
 
-    def parse(self, response: Response) -> Generator[SummaryItem]:
+    def parse(self, response: Response) -> Generator[SummaryItem, None, None]:
         """Parse a raw response and generate a summary.
 
         Args:
@@ -35,5 +36,8 @@ class SummarySpider(Spider):
         self.logger.info("SummarySpider is parsing %s...", response)
         raw = response.body
         text = BeautifulSoup(raw, "html.parser").get_text()
-        summary = get_parsed_html_summary(text)
-        yield SummaryItem(url=response.url, html=summary.html, summary=summary.summary)
+        cleaned_text = clean_string(text)
+        summary = get_parsed_html_summary(cleaned_text)
+        yield SummaryItem(
+            url=response.url, content=summary.content, summary=summary.summary
+        )

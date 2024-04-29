@@ -85,9 +85,11 @@ def create_html_summary(raw: str) -> str:
     return response
 
 
-def get_parsed_html_summary(raw: str) -> HtmlSummary:
+def get_parsed_html_summary(content: str) -> HtmlSummary:
     """
     Run html_chain and get parsed summary
     """
-    response = create_html_summary(raw)
-    return html_summary_parser.parse(response["text"])
+    response = create_html_summary(content)
+    html_summary = html_summary_parser.parse(response["text"])
+    html_summary.content = content
+    return html_summary

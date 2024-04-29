@@ -97,8 +97,8 @@ Parameters:
 """
 
 
-HTML_INPUT_PROMPT = """
-Using the raw html from a web page, create a summary of the content that distills what the webpage is about.
+SUMMARY_INPUT_PROMPT = """
+Using the semi-cleaned text from a web page, create a summary of the content that distills what the content is about.
 
 {raw}
 \n
@@ -137,7 +137,7 @@ gmail_input_prompt = PromptTemplate(
 
 html_summary_prompt = PromptTemplate(
     input_variables=["raw"],
-    template=HTML_INPUT_PROMPT,
+    template=SUMMARY_INPUT_PROMPT,
     partial_variables={
         "format_instructions": html_summary_parser.get_format_instructions()
     },
