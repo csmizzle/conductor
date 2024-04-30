@@ -33,3 +33,5 @@ TEST_HTML_DATA = pathlib.Path(
 TEST_NEWLINE_HTML_DATA = pathlib.Path(
     os.path.join(BASEDIR, "data", "newline.txt")
 ).read_text()
+#### APIFY
+TEST_APIFY_BUCKET = os.getenv("TEST_APIFY_BUCKET", "test-apify-bucket-dev")

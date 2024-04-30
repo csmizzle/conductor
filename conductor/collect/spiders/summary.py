@@ -2,7 +2,6 @@
 A custom spider that uses LLMs to process the HTML content of a web page into a summary.
 """
 from typing import Generator
-from conductor.chains import get_parsed_html_summary
 from scrapy import Spider
 from scrapy.responsetypes import Response
 from bs4 import BeautifulSoup
@@ -16,6 +15,9 @@ class SummarySpider(Spider):
     """
 
     name = "summary_spider"
+    custom_settings = {
+        "ITEM_PIPELINES": {"conductor.collect.pipelines.SummaryItemPipeline": 300}
+    }
 
     def __init__(self, urls: list[str], *args, **kwargs):
         """
@@ -37,7 +39,7 @@ class SummarySpider(Spider):
         raw = response.body
         text = BeautifulSoup(raw, "html.parser").get_text()
         cleaned_text = clean_string(text)
-        summary = get_parsed_html_summary(cleaned_text)
-        yield SummaryItem(
-            url=response.url, content=summary.content, summary=summary.summary
-        )
+        yield {
+            "url": response.url,
+            "content": cleaned_text,
+        }

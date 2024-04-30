@@ -13,7 +13,7 @@ nest_asyncio.apply()
 asyncioreactor.install()
 
 
-async def summarize_urls(urls: list[str]) -> None:
+async def summarize_urls(urls: list[str], stop: bool = True) -> None:
     """
     Scrape and summarize a web page.
     """
@@ -33,13 +33,8 @@ async def summarize_urls(urls: list[str]) -> None:
         print("Starting crawl ...")
         process.crawl(SummarySpider, urls=urls)
         print("Starting process ...")
-        process.start()
+        process.start(stop_after_crawl=stop)
 
 
-def run_summarize_urls(urls: list[str]) -> None:
-    return asyncio.run(summarize_urls(urls))
-
-
-if __name__ == "__main__":
-    results = run_summarize_urls(["https://clay.com"])
-    print("Results: ", results)
+def run_summarize_urls(urls: list[str], stop: bool = True) -> None:
+    return asyncio.run(summarize_urls(urls=urls, stop=stop))

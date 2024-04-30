@@ -8,6 +8,7 @@ from conductor.database.pinecone_ import (
     ApolloS3Pipeline,
     DiscordS3Pipeline,
     ApolloBulkS3Pipeline,
+    ApifyBulkS3Pipeline,
 )
 from pinecone import Pinecone, ServerlessSpec
 from langchain_core.embeddings.embeddings import Embeddings
@@ -95,7 +96,7 @@ class BulkPineconeCreateDestroyPipeline(ABC):
             destination_index=index_name,
             embedding_function=embedding_function,
         )
-        conductor_s3_pipeline.add_documents_from_bucket()
+        return conductor_s3_pipeline.add_documents_from_bucket()
 
     def _destroy_vector_store(self, index_name: str):
         return self.pinecone.delete_index(name=index_name)
@@ -206,6 +207,38 @@ class ApolloBulkPineconeCreateDestroyPipeline(BulkPineconeCreateDestroyPipeline)
             index_name=os.getenv("PINECONE_APOLLO_INDEX"),
             source_bucket_name=os.getenv("CONDUCTOR_S3_BUCKET"),
             conductor_s3_pipeline=ApolloBulkS3Pipeline,
+            embedding_function=BedrockEmbeddings(
+                region_name=os.getenv("BEDROCK_REGION"),
+            ),
+        )
+
+
+class ApifyBulkPineconeCreateDestroyPipeline(BulkPineconeCreateDestroyPipeline):
+    """Bulk pipeline for creating and destroying Apify Bulk Pinecone vector stores
+
+    Args:
+        BulkPineconeCreateDestroyPipeline (_type_): _description_
+    """
+
+    def create(self):
+        return self._create_vectorstore(
+            index_name=os.getenv("PINECONE_APIFY_INDEX"),
+            dimension=int(os.getenv("PINECONE_VECTOR_DIMENSIONS")),
+            metric=os.getenv("PINECONE_METRIC"),
+            cloud=os.getenv("PINECONE_CLOUD"),
+            region=os.getenv("PINECONE_REGION"),
+        )
+
+    def destroy(self):
+        return self._destroy_vector_store(index_name=os.getenv("PINECONE_APIFY_INDEX"))
+
+    def build(self, index_name: str = None, source_bucket_name: str = None):
+        return self._build_vectorstore(
+            index_name=index_name if index_name else os.getenv("PINECONE_APIFY_INDEX"),
+            source_bucket_name=source_bucket_name
+            if source_bucket_name
+            else os.getenv("APIFY_S3_BUCKET"),
+            conductor_s3_pipeline=ApifyBulkS3Pipeline,
             embedding_function=BedrockEmbeddings(
                 region_name=os.getenv("BEDROCK_REGION"),
             ),

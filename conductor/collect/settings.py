@@ -16,7 +16,7 @@ REQUEST_FINGERPRINTER_IMPLEMENTATION = "2.7"
 ROBOTSTXT_OBEY = True
 SPIDER_MODULES = ["conductor.collect.spiders"]
 ITEM_PIPELINES = {
-    "conductor.collect.pipelines.TitleItemPipeline": 123,
+    "conductor.collect.pipelines.SummaryItemPipeline": 1,
 }
 SPIDER_MIDDLEWARES = {
     "conductor.collect.middlewares.TitleSpiderMiddleware": 543,

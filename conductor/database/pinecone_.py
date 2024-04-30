@@ -118,7 +118,10 @@ class ConductorBulkS3Pipeline(ABC):
             index_name=self.destination_index, embedding=self.embedding_function
         )
         pinecone_index.add_documents(documents)
-        logger.info(f"Indexed {len(documents)} documents to {self.destination_index}")
+        return {
+            "status": "success",
+            "message": f"Indexed {len(documents)} documents to {self.destination_index}",
+        }
 
 
 class ApolloS3Pipeline(ConductorJobS3Pipeline):
@@ -198,4 +201,26 @@ class ApolloBulkS3Pipeline(ConductorBulkS3Pipeline):
         else:
             logger.error("No job_id found in data")
             documents = None
+        return documents
+
+
+class ApifyBulkS3Pipeline(ConductorBulkS3Pipeline):
+    """
+    Apify bulk pipeline to read all data from s3 and add to Pinecone
+    """
+
+    def prepare_documents_for_pinecone(self) -> list[str]:
+        documents = []
+        data = self.get_data_from_bucket()
+        for entry in data:
+            documents.append(
+                Document(
+                    page_content=entry["summary"],
+                    metadata={
+                        "source": "s3_apify",
+                        "url": entry["url"],
+                        "type": "summary",
+                    },
+                )
+            )
         return documents

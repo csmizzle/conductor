@@ -85,6 +85,7 @@ def create_html_summary(raw: str) -> str:
     return response
 
 
+@traceable
 def get_parsed_html_summary(content: str) -> HtmlSummary:
     """
     Run html_chain and get parsed summary
