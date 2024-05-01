@@ -4,6 +4,7 @@ Test tool
 from conductor.functions.apollo import (
     apollo_api_person_search,
     create_apollo_engagement_strategies,
+    generate_apollo_person_search_job_context,
     generate_apollo_person_search_context,
 )
 from conductor.parsers import PersonEngagementStrategy
@@ -33,11 +34,24 @@ def test_create_apollo_engagement_strategy():
 
 
 @unit
-def test_apollo_person_search_context():
-    results = generate_apollo_person_search_context(
+def test_apollo_person_search_job_context():
+    results = generate_apollo_person_search_job_context(
         job_id=TEST_APOLLO_JOB_ID,
         raw_data_bucket=TEST_RAW_DATA_BUCKET,
         engagement_strategy_bucket=TEST_ENGAGEMENT_STRATEGIES_BUCKET,
+        person_titles=["CEO", "CTO"],
+        person_locations=["San Francisco, CA"],
+    )
+    assert (
+        len(results) > 0
+        and isinstance(results, str)
+        and results.startswith("Successfully")
+    )
+
+
+@unit
+def test_apollo_person_search_context():
+    results = generate_apollo_person_search_context(
         person_titles=["CEO", "CTO"],
         person_locations=["San Francisco, CA"],
     )

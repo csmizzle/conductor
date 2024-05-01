@@ -1,5 +1,6 @@
 from conductor.prompts import (
     input_prompt,
+    apollo_with_job_id_input_prompt,
     apollo_input_prompt,
     gmail_input_prompt,
     html_summary_prompt,
@@ -47,15 +48,28 @@ def create_engagement_strategy(apollo_people_data: str) -> EngagementStrategy:
 
 
 @traceable
-def create_apollo_input(query: str, job_id: str) -> str:
+def create_apollo_input_with_job_id(query: str, job_id: str) -> str:
     """
     Extract Apollo input parameters from a general input string
     """
     chain = LLMChain(
         llm=ChatOpenAI(model="gpt-4-0125-preview", temperature=0),
-        prompt=apollo_input_prompt,
+        prompt=apollo_with_job_id_input_prompt,
     )
     response = chain.invoke({"general_input": query, "job_id": job_id})
+    return response
+
+
+@traceable
+def create_apollo_input(query: str) -> str:
+    """
+    Extract Apollo input parameters from a general input string
+    """
+    chain = LLMChain(
+        llm=claude_v2_1,
+        prompt=apollo_input_prompt,
+    )
+    response = chain.invoke({"general_input": query})
     return response
 
 

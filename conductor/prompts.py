@@ -68,8 +68,19 @@ If your tools are not giving you the right data, use your best judgement to prod
 {input}
 """
 
-
 APOLLO_INPUT_PROMPT = """
+Extract Apollo input parameters from a general input string below and provide a one sentence natural language query for the Apollo person search tool.
+
+
+Apollo Input Parameters:
+- Titles
+- Location
+
+{general_input}
+"""
+
+
+APOLLO_WITH_JOB_ID_INPUT_PROMPT = """
 Extract Apollo input parameters from a general input string below and provide a one sentence natural language query for the Apollo person search tool with job_id: {job_id}.
 
 
@@ -120,8 +131,14 @@ input_prompt = PromptTemplate(
 )
 
 
-apollo_input_prompt = PromptTemplate(
+apollo_with_job_id_input_prompt = PromptTemplate(
     input_variables=["job_id", "general_input"],
+    template=APOLLO_WITH_JOB_ID_INPUT_PROMPT,
+)
+
+
+apollo_input_prompt = PromptTemplate(
+    input_variables=["general_input"],
     template=APOLLO_INPUT_PROMPT,
 )
 

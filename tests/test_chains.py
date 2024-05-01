@@ -2,7 +2,7 @@
 Test different langchain chains
 """
 from conductor.chains import (
-    create_apollo_input,
+    create_apollo_input_with_job_id,
     create_html_summary,
     get_parsed_html_summary,
 )
@@ -16,7 +16,7 @@ from langsmith import unit
 def test_create_apollo_input() -> None:
     query = "Find me a CEO in San Francisco"
     job_id = "12345"
-    response = create_apollo_input(query, job_id)
+    response = create_apollo_input_with_job_id(query, job_id)
     assert isinstance(response["text"], str)
 
 

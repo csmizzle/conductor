@@ -65,7 +65,7 @@ def create_apollo_engagement_strategies(data: dict) -> list[PersonEngagementStra
 
 
 @traceable
-def generate_apollo_person_search_context(
+def generate_apollo_person_search_job_context(
     job_id: str,
     person_titles: list[str],
     person_locations: list[str],
@@ -93,6 +93,25 @@ def generate_apollo_person_search_context(
                 bucket=engagement_strategy_bucket,
                 key=f"{job_id}/apollo_person_search.json",
             )
+        enriched_context_creator = ApolloPersonSearchContext()
+        return f"Successfully ran Apollo Person Search Tool. Results {"\n".join(enriched_context_creator.create_context(data=dict_data))}"
+    else:
+        return "No results found for Apollo Person Search Tool."
+
+
+@traceable
+def generate_apollo_person_search_context(
+    person_titles: list[str],
+    person_locations: list[str],
+) -> str:
+    people_data = apollo_api_person_search(
+        person_titles=person_titles, person_locations=person_locations
+    )
+    engagement_strategies = create_apollo_engagement_strategies(people_data)
+    if len(engagement_strategies) > 0:
+        dict_data = [
+            engagement_strategy.dict() for engagement_strategy in engagement_strategies
+        ]
         enriched_context_creator = ApolloPersonSearchContext()
         return f"Successfully ran Apollo Person Search Tool. Results {"\n".join(enriched_context_creator.create_context(data=dict_data))}"
     else:
