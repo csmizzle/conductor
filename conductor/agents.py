@@ -9,6 +9,7 @@ from conductor.tools import (
     gmail_input_from_input,
     gmail_draft,
     gmail_send,
+    apollo_email_sender,
 )
 from crewai import Agent, Task, Crew
 import uuid
@@ -190,6 +191,31 @@ gmail_apollo_send_task = Task(
     context=[gmail_apollo_input_task],
 )
 
+apollo_email_agent = Agent(
+    role="Apollo Email Writer",
+    goal="Create an email draft using the Apollo Person Search results and send to the recipient.",
+    backstory="You are an expert in sending emails that catch the readers eye by being engaging and informative by looking at customer data and creating a draft for the prospective customer. You should not use the customer contact information in the body of the message",
+    verbose=True,
+    allow_delegation=False,
+    cache=True,
+    tools=[apollo_email_sender],
+)
+
+apollo_email_task = Task(
+    description="Use {input} to create and send an email to the recipient.",
+    agent=apollo_email_agent,
+    expected_output="Confirmation of the email being sent and a summary of the email.",
+)
+
+
+answer_email_task = Task(
+    description="Summarize the data in the context and given the input: {input}",
+    expected_output="A summary of your actions with the data from the email in a bullet point format.",
+    agent=answer_agent,
+    context=[apollo_email_task],
+)
+
+
 gmail_crew = Crew(
     agents=[gmail_input_builder_agent, gmail_draft_agent],
     tasks=[gmail_input_task, gmail_draft_task],
@@ -211,17 +237,13 @@ crew = Crew(
 market_email_crew = Crew(
     agents=[
         query_builder_agent,
-        apollo_agent,
-        gmail_input_builder_agent,
-        gmail_send_agent,
+        apollo_email_agent,
         answer_agent,
     ],
     tasks=[
         create_query_task,
-        apollo_task,
-        gmail_apollo_input_task,
-        gmail_apollo_send_task,
-        answer_task,
+        apollo_email_task,
+        answer_email_task,
     ],
     verbose=True,
     memory=True,

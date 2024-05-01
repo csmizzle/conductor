@@ -45,3 +45,5 @@ TEST_CREW_PROMPT = "Find CTOs in McLean, VA. Tell me about their backgrounds."
 TEST_EMAIL_CONTEXT = pathlib.Path(
     os.path.join(BASEDIR, "data", "email_context.txt")
 ).read_text()
+#### JSON
+TEST_JSON = json.load(open(os.path.join(BASEDIR, "data", "json_data.json")))

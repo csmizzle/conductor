@@ -85,7 +85,7 @@ def send_gmail(
             "bcc": bcc,
         }
     )
-    return result
+    return f"Message Confirmation: {result}\nMessage: {message}"
 
 
 @traceable

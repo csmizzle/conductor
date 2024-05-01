@@ -101,6 +101,19 @@ def create_html_summary(raw: str) -> str:
 
 
 @traceable
+def create_email_from_context(tone: str, context: str, sign_off: str) -> str:
+    """
+    Create an email from a context
+    """
+    chain = LLMChain(
+        llm=claude_v2_1,
+        prompt=email_prompt,
+    )
+    response = chain.invoke({"tone": tone, "context": context, "sign_off": sign_off})
+    return response
+
+
+@traceable
 def get_parsed_html_summary(content: str) -> HtmlSummary:
     """
     Run html_chain and get parsed summary
@@ -109,16 +122,3 @@ def get_parsed_html_summary(content: str) -> HtmlSummary:
     html_summary = html_summary_parser.parse(response["text"])
     html_summary.content = content
     return html_summary
-
-
-@traceable
-def create_email_from_context(context: str, sign_off: str) -> str:
-    """
-    Create an email from a context
-    """
-    chain = LLMChain(
-        llm=claude_v2_1,
-        prompt=email_prompt,
-    )
-    response = chain.invoke({"context": context, "sign_off": sign_off})
-    return response

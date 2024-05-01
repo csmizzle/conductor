@@ -3,7 +3,6 @@ from conductor.parsers import (
     engagement_strategy_parser,
     gmail_input_parser,
     html_summary_parser,
-    email_parser,
 )
 
 JSON_AGENT_PROMPT = """
@@ -117,16 +116,15 @@ Using the semi-cleaned text from a web page, create a summary of the content tha
 {format_instructions}
 """
 
+
 EMAIL_PROMPT = """
-Create an email from the following context in bullet point fashion and sign off with the provided sign off.:
-
-Context:
-{context}
-
-Sign Off:
-{sign_off}
-
-{format_instructions}
+Use the below context to write an email summary.
+Start the body of the email with "Here is your research!".
+The email body should be a world class summary containing all information with tone: {tone} from the context into paragraphs and sign off with the provided sign off {sign_off}.
+You are simply summarizing the context and providing a concise email body, not reaching out to anyone mentioned in the context.
+--------
+Context: {context}
+--------
 """
 
 input_prompt = PromptTemplate(
@@ -175,7 +173,6 @@ html_summary_prompt = PromptTemplate(
 
 
 email_prompt = PromptTemplate(
-    input_variables=["context", "sign_off"],
+    input_variables=["context", "sign_off", "tone"],
     template=EMAIL_PROMPT,
-    partial_variables={"format_instructions": email_parser.get_format_instructions()},
 )

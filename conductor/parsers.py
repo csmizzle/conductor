@@ -28,8 +28,8 @@ class HtmlSummary(BaseModel):
 
 
 class Email(BaseModel):
+    subject: str = Field("The subject of the email")
     email_body: str = Field("The body of the email")
-    sign_off: str = Field("The sign off of the email")
 
 
 engagement_strategy_parser = PydanticOutputParser(pydantic_object=EngagementStrategy)

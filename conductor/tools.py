@@ -18,6 +18,7 @@ from conductor.functions.google import (
     create_gmail_draft,
     send_gmail,
 )
+from conductor.chains import create_email_from_context
 from conductor.chains import create_apollo_input_with_job_id, create_apollo_input
 import logging
 from langsmith import traceable
@@ -33,6 +34,16 @@ class Query(BaseModel):
 
 class QueryWithJobId(Query):
     job_id: str = Field("The provided unique job id")
+
+
+class ApolloEmailInput(BaseModel):
+    to: list[str] = Field("A list of valid email addresses to send the email to")
+    person_titles: list[str] = Field(
+        "An array of the person's title. Apollo will return results matching ANY of the titles passed in"
+    )
+    person_locations: list[str] = Field(
+        'An array of strings denoting allowed locations of the person. Be sure to include city and country separated by a comma. Example: "San Francisco, US" or "London, GB"'
+    )
 
 
 @traceable
@@ -159,3 +170,22 @@ def gmail_send(to: list[str], subject: str, message: str) -> str:
     Create a Gmail draft
     """
     return send_gmail(to=to, subject=subject, message=message)
+
+
+@tool("apollo-email-sender", args_schema=ApolloEmailInput)
+def apollo_email_sender(
+    to: list[str], person_titles: list[str], person_locations: list[str]
+) -> str:
+    """
+    Use context created from Apollo Person Search to create and send an email.:
+    """
+    apollo_context = generate_apollo_person_search_context(
+        person_titles=person_titles, person_locations=person_locations
+    )
+    email = create_email_from_context(
+        context=apollo_context,
+        sign_off="Best, John Envoy",
+        tone="Summary for researcher",
+    )
+    sent_gmail = send_gmail(to=to, subject="Market Research", message=email["text"])
+    return sent_gmail
