@@ -4,6 +4,7 @@ from conductor.prompts import (
     apollo_input_prompt,
     gmail_input_prompt,
     html_summary_prompt,
+    email_prompt,
 )
 from conductor.llms import claude_v2_1
 from conductor.parsers import EngagementStrategy, HtmlSummary, html_summary_parser
@@ -108,3 +109,16 @@ def get_parsed_html_summary(content: str) -> HtmlSummary:
     html_summary = html_summary_parser.parse(response["text"])
     html_summary.content = content
     return html_summary
+
+
+@traceable
+def create_email_from_context(context: str, sign_off: str) -> str:
+    """
+    Create an email from a context
+    """
+    chain = LLMChain(
+        llm=claude_v2_1,
+        prompt=email_prompt,
+    )
+    response = chain.invoke({"context": context, "sign_off": sign_off})
+    return response

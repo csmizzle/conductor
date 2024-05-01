@@ -27,6 +27,12 @@ class HtmlSummary(BaseModel):
     summary: str = Field("The summary of the web page")
 
 
+class Email(BaseModel):
+    email_body: str = Field("The body of the email")
+    sign_off: str = Field("The sign off of the email")
+
+
 engagement_strategy_parser = PydanticOutputParser(pydantic_object=EngagementStrategy)
 gmail_input_parser = PydanticOutputParser(pydantic_object=GmailInput)
 html_summary_parser = PydanticOutputParser(pydantic_object=HtmlSummary)
+email_parser = PydanticOutputParser(pydantic_object=Email)
