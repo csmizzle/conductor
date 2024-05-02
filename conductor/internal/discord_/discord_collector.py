@@ -5,7 +5,7 @@ from conductor.models import InternalKnowledgeChat
 from conductor.database.aws import upload_dict_to_s3
 from conductor.agents import market_email_crew
 import discord
-from discord.ext import commands
+from discord import app_commands
 import os
 import uuid
 import logging
@@ -14,19 +14,28 @@ import logging
 logger = logging.getLogger("discord")
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+client = discord.Client(intents=intents)
+tree = app_commands.CommandTree(client=client)
 
 
-@bot.event
+@client.event
 async def on_ready():
-    logger.info(f"We have logged in as {bot.user}")
+    for guild in client.guilds:
+        print("Syncing guild:", guild.id)
+        await tree.sync(guild=discord.Object(id=guild.id))
+    logger.info(f"We have logged in as {client.user}")
 
 
-@bot.command()
-async def collect(ctx, channel_id: int):
+@tree.command(
+    name="collect",
+    description="Collect all messages from a channel",
+    guild=discord.Object(id=1210249806052855868),
+)
+async def collect(interaction: discord.Interaction, channel_id: str):
+    await interaction.response.defer(ephemeral=True)
     collect_id = uuid.uuid4()
     messages = []
-    channel = bot.get_channel(channel_id)
+    channel = client.get_channel(int(channel_id))
     job_id = str(collect_id) + "-" + str(channel_id)
     logger.info(f"Starting collect job {job_id}")
     async for message in channel.history(limit=None):
@@ -52,16 +61,20 @@ async def collect(ctx, channel_id: int):
     logger.info(
         f"Uploaded to S3: {os.getenv('DISCORD_S3_BUCKET')} with collect ID: {job_id}"
     )
-    await ctx.send(
+    await interaction.followup.send(
         f"Collected {len(messages)} messages from channel {channel_id} with collect ID: {job_id}"
     )
 
 
-@bot.command()
-async def research(ctx, query: str):
-    await ctx.send("Running research!")
-    results = market_email_crew.kickoff({"input": query})
-    await ctx.send(results)
+@tree.command(
+    name="research",
+    description="Issue a research task to the market research crew",
+    guild=discord.Object(id=1210249806052855868),
+)
+async def research(interaction: discord.Interaction, task: str):
+    await interaction.response.defer(ephemeral=True)
+    results = market_email_crew.kickoff({"input": task})
+    await interaction.followup.send(results)
 
 
-bot.run(os.getenv("DISCORD_TOKEN"))
+client.run(os.getenv("DISCORD_TOKEN"))
