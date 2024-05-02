@@ -32,7 +32,7 @@ async def on_ready():
     guild=discord.Object(id=1210249806052855868),
 )
 async def collect(interaction: discord.Interaction, channel_id: str):
-    await interaction.response.defer(ephemeral=True)
+    await interaction.response.defer()
     collect_id = uuid.uuid4()
     messages = []
     channel = client.get_channel(int(channel_id))
@@ -72,7 +72,7 @@ async def collect(interaction: discord.Interaction, channel_id: str):
     guild=discord.Object(id=1210249806052855868),
 )
 async def research(interaction: discord.Interaction, task: str):
-    await interaction.response.defer(ephemeral=True)
+    await interaction.response.defer()
     results = market_email_crew.kickoff({"input": task})
     await interaction.followup.send(results)
 
