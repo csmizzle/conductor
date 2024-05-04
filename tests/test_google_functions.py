@@ -61,3 +61,15 @@ def test_send_gmail_from_input() -> None:
     sent_email = send_gmail_from_input(TEST_GMAIL_CREW_PROMPT)
     assert isinstance(sent_email, str)
     assert sent_email.startswith("Message sent.")
+
+
+def test_send_email_with_breaks() -> None:
+    """Test email with line breaks in it"""
+    message = "Hello,\n\nThis is a test message.\n\nBest,\nConductor"
+    sent_email = send_gmail(
+        to=TEST_GMAIL_INPUT["to"],
+        subject=TEST_GMAIL_INPUT["subject"],
+        message=message,
+    )
+    assert isinstance(sent_email, str)
+    assert sent_email.startswith("Message Confirmation:")

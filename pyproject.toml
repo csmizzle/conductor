@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "conductor"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["csmizzle <chrissmith700@gmail.com>"]
 readme = "README.md"
@@ -36,6 +36,7 @@ bs4 = "^0.0.2"
 pre-commit = "^3.7.0"
 vcrpy = "^6.0.1"
 pyyaml = "^6.0.1"
+pytest = "^8.2.0"
 
 [build-system]
 requires = ["poetry-core"]

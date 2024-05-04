@@ -76,11 +76,12 @@ def send_gmail(
     else:
         gmail = GmailToolkit()
     send_message = GmailSendMessage(api_resource=gmail.api_resource)
+    html_message = message.replace("\n", "<br>")
     result = send_message(
         {
             "to": to,
             "subject": subject,
-            "message": message,
+            "message": html_message,
             "cc": cc,
             "bcc": bcc,
         }
