@@ -1,4 +1,4 @@
-from conductor.llms import claude_v2_1, openai_gpt_4
+from conductor.llms import claude_v2_1, openai_gpt_4, fireworks_mistral
 from langchain_core.embeddings.embeddings import Embeddings
 from langchain.chains.query_constructor.base import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
@@ -102,4 +102,17 @@ def create_gpt4_pinecone_apollo_retriever():
     )
     return RetrievalQA.from_chain_type(
         llm=openai_gpt_4, chain_type="stuff", retriever=pinecone.as_retriever()
+    )
+
+
+def create_fireworks_pinecone_apollo_retriever():
+    pinecone = PineconeVectorStore(
+        index_name=os.getenv("PINECONE_APOLLO_INDEX"),
+        embedding=BedrockEmbeddings(
+            region_name="us-east-1",
+        ),
+        text_key="text",
+    )
+    return RetrievalQA.from_chain_type(
+        llm=fireworks_mistral, chain_type="stuff", retriever=pinecone.as_retriever()
     )
