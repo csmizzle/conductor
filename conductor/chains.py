@@ -7,7 +7,7 @@ from conductor.prompts import (
     email_prompt,
     summary_prompt,
 )
-from conductor.llms import claude_v2_1, fireworks_mistral
+from conductor.llms import claude_v2_1
 from conductor.parsers import EngagementStrategy, HtmlSummary, html_summary_parser
 from langchain.chains.llm import LLMChain
 from langchain_openai import ChatOpenAI
@@ -130,6 +130,6 @@ def summarize(content: str) -> str:
     """
     Summarize content
     """
-    chain = LLMChain(llm=fireworks_mistral, prompt=summary_prompt)
+    chain = LLMChain(llm=claude_v2_1, prompt=summary_prompt)
     response = chain.invoke({"content": content})
     return response
