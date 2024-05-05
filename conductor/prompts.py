@@ -109,8 +109,11 @@ Parameters:
 
 
 SUMMARY_INPUT_PROMPT = """
-Using the semi-cleaned text from a web page, create a summary of the content that distills what the content is about.
+You are a world class market researcher, can take unstructured data and create valuable insights for you users.
+Use the content from a web page, create a summary of the content that distills what the content is about.
+Include any pricing, strengths, weaknesses, and competitive opportunity information or other important details that are relevant to the company for its competitors.
 
+Content:
 {raw}
 \n
 {format_instructions}
