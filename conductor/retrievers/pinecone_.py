@@ -116,3 +116,16 @@ def create_fireworks_pinecone_apollo_retriever():
     return RetrievalQA.from_chain_type(
         llm=fireworks_mistral, chain_type="stuff", retriever=pinecone.as_retriever()
     )
+
+
+def create_fireworks_pinecone_discord_retriever():
+    pinecone = PineconeVectorStore(
+        index_name=os.getenv("PINECONE_DISCORD_INDEX"),
+        embedding=BedrockEmbeddings(
+            region_name="us-east-1",
+        ),
+        text_key="text",
+    )
+    return RetrievalQA.from_chain_type(
+        llm=fireworks_mistral, chain_type="stuff", retriever=pinecone.as_retriever()
+    )

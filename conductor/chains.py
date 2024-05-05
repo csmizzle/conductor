@@ -5,8 +5,9 @@ from conductor.prompts import (
     gmail_input_prompt,
     html_summary_prompt,
     email_prompt,
+    summary_prompt,
 )
-from conductor.llms import claude_v2_1
+from conductor.llms import claude_v2_1, fireworks_mistral
 from conductor.parsers import EngagementStrategy, HtmlSummary, html_summary_parser
 from langchain.chains.llm import LLMChain
 from langchain_openai import ChatOpenAI
@@ -122,3 +123,13 @@ def get_parsed_html_summary(content: str) -> HtmlSummary:
     html_summary = html_summary_parser.parse(response["text"])
     html_summary.content = content
     return html_summary
+
+
+@traceable
+def summarize(content: str) -> str:
+    """
+    Summarize content
+    """
+    chain = LLMChain(llm=fireworks_mistral, prompt=summary_prompt)
+    response = chain.invoke({"content": content})
+    return response

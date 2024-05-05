@@ -138,6 +138,15 @@ Here is your research!
 {sign_off}
 """
 
+
+SUMMARY_PROMPT = """
+You are a world class professional writer.
+Combine the content below into a cohesive and thorough summary.
+
+Content:
+{content}
+"""
+
 input_prompt = PromptTemplate(
     input_variables=["job_id", "geography", "titles", "industries"],
     template=CONDUCTOR_INPUT_PROMPT,
@@ -186,4 +195,10 @@ html_summary_prompt = PromptTemplate(
 email_prompt = PromptTemplate(
     input_variables=["context", "sign_off", "tone"],
     template=EMAIL_PROMPT,
+)
+
+
+summary_prompt = PromptTemplate(
+    input_variables=["content"],
+    template=SUMMARY_PROMPT,
 )
