@@ -121,10 +121,21 @@ EMAIL_PROMPT = """
 Use the below context to write an email summary.
 Start the body of the email with "Here is your research!".
 The email body should be a world class summary containing all information with tone: {tone} from the context into paragraphs and sign off with the provided sign off {sign_off}.
+The email should contain all links and contact information mentioned in the context in a bulleted list.
 You are simply summarizing the context and providing a concise email body, not reaching out to anyone mentioned in the context.
 --------
 Context: {context}
 --------
+Example Format:
+
+Here is your research!
+
+<Name, Company>
+<Summary>
+<Links>
+<Contact Information>
+
+{sign_off}
 """
 
 input_prompt = PromptTemplate(
