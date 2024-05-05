@@ -126,10 +126,10 @@ def get_parsed_html_summary(content: str) -> HtmlSummary:
 
 
 @traceable
-def summarize(content: str) -> str:
+def summarize(query: str, content: str) -> str:
     """
     Summarize content
     """
     chain = LLMChain(llm=claude_v2_1, prompt=summary_prompt)
-    response = chain.invoke({"content": content})
+    response = chain.invoke({"question": query, "content": content})
     return response

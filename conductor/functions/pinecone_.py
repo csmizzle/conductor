@@ -17,5 +17,7 @@ def search_pinecone(query: str) -> dict:
     """
     apollo = fireworks_apollo.invoke({"query": query})
     discord = fireworks_discord.invoke({"query": query})
-    summary = summarize(apollo["result"] + "\n" + discord["result"])
+    summary = summarize(
+        query=query, content=apollo["result"] + "\n" + discord["result"]
+    )
     return summary

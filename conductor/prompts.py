@@ -140,8 +140,8 @@ Here is your research!
 
 
 SUMMARY_PROMPT = """
-You are a world class professional writer.
-Combine the content below into a cohesive and thorough summary.
+You are a world class professional writer and trying to answer this question: {question}
+Combine the content below into a cohesive and thorough summary to answer the question.
 
 Content:
 {content}
