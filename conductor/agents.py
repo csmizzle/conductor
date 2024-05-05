@@ -37,7 +37,7 @@ query_builder_agent = Agent(
 
 
 apollo_agent = Agent(
-    role="Apollo  Person Searcher",
+    role="Apollo Person Searcher",
     goal="Retrieve information from Apollo's person search tool",
     verbose=True,
     backstory=(
@@ -193,7 +193,7 @@ gmail_apollo_send_task = Task(
 
 apollo_email_agent = Agent(
     role="Apollo Email Writer",
-    goal="Create an email draft using the Apollo Person Search results and send to the recipient.",
+    goal="Create an email using the Apollo Person Search results and send to the recipient(s).",
     backstory="You are an expert in sending emails that catch the readers eye by being engaging and informative by looking at customer data and creating a draft for the prospective customer. You should not use the customer contact information in the body of the message",
     verbose=True,
     allow_delegation=False,
@@ -241,7 +241,6 @@ market_email_crew = Crew(
         answer_agent,
     ],
     tasks=[
-        create_query_task,
         apollo_email_task,
         answer_email_task,
     ],
