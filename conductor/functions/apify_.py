@@ -74,13 +74,3 @@ async def acollect_summarize_urls(urls: list[str], stop: bool = True) -> None:
 
 def collect_summarize_urls(urls: list[str], stop: bool = True) -> list[dict]:
     return asyncio.run(acollect_summarize_urls(urls=urls, stop=stop))
-
-
-print(
-    collect_summarize_urls(
-        [
-            "https://dspy-docs.vercel.app/docs/building-blocks/signatures#inline-dspy-signatures"
-        ],
-        True,
-    )
-)
