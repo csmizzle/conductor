@@ -6,3 +6,4 @@ scratch
 credentials.json
 token.json
 *storage*
+.DS_Store

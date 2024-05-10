@@ -24,13 +24,17 @@ class SummaryItemPipeline:
     def process_item(self, item: dict, spider: Spider) -> SummaryItem:
         # Do something with the item here, such as cleaning it or persisting it to a database
         print("Running pipeline ...")
+        job_id = str(uuid.uuid4())
         summary = get_parsed_html_summary(item["content"])
         item["summary"] = summary.summary
         upload_dict_to_s3(
             data=dict(item),
             bucket=os.getenv("APIFY_S3_BUCKET"),
-            key=f"{str(uuid.uuid4())}_summary.json",
+            key=f"{job_id}_summary.json",
         )
         return SummaryItem(
-            url=item["url"], content=item["content"], summary=item["summary"]
+            job_id=job_id,
+            url=item["url"],
+            content=item["content"],
+            summary=item["summary"],
         )

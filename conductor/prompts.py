@@ -109,8 +109,9 @@ Parameters:
 
 
 SUMMARY_INPUT_PROMPT = """
-Using the semi-cleaned text from a web page, create a summary of the content that distills what the content is about.
+Describe and summarize the content from a scraped web page that distills the content.
 
+Content:
 {raw}
 \n
 {format_instructions}
