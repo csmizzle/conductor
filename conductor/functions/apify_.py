@@ -8,11 +8,6 @@ from scrapy import signals
 from apify import Actor
 from apify.scrapy.utils import apply_apify_settings
 import asyncio
-from twisted.internet import asyncioreactor
-import nest_asyncio
-
-nest_asyncio.apply()
-asyncioreactor.install()
 
 
 async def summarize_urls(urls: list[str], stop: bool = True) -> None:
@@ -68,6 +63,23 @@ async def acollect_summarize_urls(urls: list[str], stop: bool = True) -> None:
         process.crawl(SummarySpider, urls=urls)
         print("Starting process ...")
         process.start(stop_after_crawl=stop)
+
+    return results
+
+
+def sync_summarize_urls(urls: list[str], stop: bool = True) -> list[dict]:
+    results = []
+
+    def crawler_results(signal, sender, item, response, spider):
+        results.append(item)
+
+    dispatcher.connect(crawler_results, signal=signals.item_scraped)
+    print("Starting CrawlerProcess ...")
+    process = CrawlerProcess(install_root_handler=False)
+    print("Starting crawl ...")
+    process.crawl(SummarySpider, urls=urls)
+    print("Starting process ...")
+    process.start(stop_after_crawl=stop)
 
     return results
 
