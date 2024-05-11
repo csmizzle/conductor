@@ -34,7 +34,6 @@ langchain-fireworks = "^0.1.2"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.7.0"
-vcrpy = "^6.0.1"
 pyyaml = "^6.0.1"
 pytest = "^8.2.0"
 

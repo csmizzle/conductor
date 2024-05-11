@@ -67,7 +67,9 @@ async def acollect_summarize_urls(urls: list[str], stop: bool = True) -> None:
     return results
 
 
-def sync_summarize_urls(urls: list[str], stop: bool = True) -> list[dict]:
+def sync_summarize_urls(
+    urls: list[str], stop: bool = True, task_id: str = None
+) -> list[dict]:
     results = []
 
     def crawler_results(signal, sender, item, response, spider):
@@ -77,10 +79,9 @@ def sync_summarize_urls(urls: list[str], stop: bool = True) -> list[dict]:
     print("Starting CrawlerProcess ...")
     process = CrawlerProcess(install_root_handler=False)
     print("Starting crawl ...")
-    process.crawl(SummarySpider, urls=urls)
+    process.crawl(SummarySpider, urls=urls, task_id=task_id)
     print("Starting process ...")
     process.start(stop_after_crawl=stop)
-
     return results
 
 

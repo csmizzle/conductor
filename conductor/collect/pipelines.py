@@ -30,9 +30,10 @@ class SummaryItemPipeline:
         upload_dict_to_s3(
             data=dict(item),
             bucket=os.getenv("APIFY_S3_BUCKET"),
-            key=f"{job_id}_summary.json",
+            key=f"{item['task_id']}/{job_id}_summary.json",
         )
         return SummaryItem(
+            task_id=item["task_id"],
             job_id=job_id,
             url=item["url"],
             content=item["content"],

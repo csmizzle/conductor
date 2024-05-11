@@ -16,6 +16,7 @@ class SummaryItem(Item):
     A summary containing the url, raw html, and processed summary
     """
 
+    task_id = Field()
     job_id = Field()
     url = Field()
     content = Field()

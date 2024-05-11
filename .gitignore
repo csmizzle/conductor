@@ -7,3 +7,4 @@ credentials.json
 token.json
 *storage*
 .DS_Store
+tests/cassettes
