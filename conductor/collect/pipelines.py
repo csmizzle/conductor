@@ -10,9 +10,7 @@ http://doc.scrapy.org/en/latest/topics/item-pipeline.html
 
 from scrapy import Spider
 from conductor.collect.items import SummaryItem
-from conductor.database.aws import upload_dict_to_s3
 from conductor.chains import get_parsed_html_summary
-import os
 import uuid
 
 
@@ -27,11 +25,6 @@ class SummaryItemPipeline:
         job_id = str(uuid.uuid4())
         summary = get_parsed_html_summary(item["content"])
         item["summary"] = summary.summary
-        upload_dict_to_s3(
-            data=dict(item),
-            bucket=os.getenv("APIFY_S3_BUCKET"),
-            key=f"{item['task_id']}/{job_id}.json",
-        )
         return SummaryItem(
             task_id=item["task_id"],
             job_id=job_id,
