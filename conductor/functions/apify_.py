@@ -2,7 +2,8 @@
 Functions that interact with the Apify spiders
 """
 from conductor.collect.spiders.summary import SummarySpider
-from scrapy.crawler import CrawlerProcess
+from twisted.internet import reactor
+from scrapy.crawler import CrawlerProcess, CrawlerRunner
 from scrapy.signalmanager import dispatcher
 from scrapy import signals
 from apify import Actor
@@ -76,12 +77,13 @@ def sync_summarize_urls(
         results.append(item)
 
     dispatcher.connect(crawler_results, signal=signals.item_scraped)
-    print("Starting CrawlerProcess ...")
-    process = CrawlerProcess(install_root_handler=False)
+    print("Starting CrawlerRunner ...")
+    runner = CrawlerRunner()
     print("Starting crawl ...")
-    process.crawl(SummarySpider, urls=urls, task_id=task_id)
+    deferred = runner.crawl(SummarySpider, urls=urls, task_id=task_id)
     print("Starting process ...")
-    process.start(stop_after_crawl=stop)
+    deferred.addBoth(lambda _: reactor.stop())
+    reactor.run()  # the script will block here until the crawling is finished
     return results
 
 

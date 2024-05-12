@@ -12,7 +12,6 @@ BOT_NAME = "titlebot"
 DEPTH_LIMIT = 1
 LOG_LEVEL = "INFO"
 NEWSPIDER_MODULE = "conductor.collect.spiders"
-REQUEST_FINGERPRINTER_IMPLEMENTATION = "2.7"
 ROBOTSTXT_OBEY = True
 SPIDER_MODULES = ["conductor.collect.spiders"]
 ITEM_PIPELINES = {

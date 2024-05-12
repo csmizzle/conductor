@@ -36,7 +36,7 @@ async def collect(interaction: discord.Interaction, channel_id: str):
     collect_id = uuid.uuid4()
     messages = []
     channel = client.get_channel(int(channel_id))
-    job_id = str(collect_id) + "-" + str(channel_id)
+    job_id = str(channel_id) + "/" + str(collect_id)
     logger.info(f"Starting collect job {job_id}")
     async for message in channel.history(limit=None):
         messages.append(
