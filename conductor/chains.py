@@ -6,12 +6,21 @@ from conductor.prompts import (
     html_summary_prompt,
     email_prompt,
     summary_prompt,
+    reduce_prompt,
 )
 from conductor.llms import claude_v2_1
 from conductor.parsers import EngagementStrategy, HtmlSummary, html_summary_parser
 from langchain.chains.llm import LLMChain
+from langchain.chains.summarize import (
+    MapReduceDocumentsChain,
+    ReduceDocumentsChain,
+    StuffDocumentsChain,
+)
+from langchain_text_splitters import CharacterTextSplitter
 from langchain_openai import ChatOpenAI
 from langsmith import traceable
+from langchain import hub
+from langchain.docstore.document import Document
 
 
 @traceable
@@ -133,3 +142,46 @@ def summarize(query: str, content: str) -> str:
     chain = LLMChain(llm=claude_v2_1, prompt=summary_prompt)
     response = chain.invoke({"question": query, "content": content})
     return response
+
+
+@traceable
+def map_reduce_summarize(contents: list[str]) -> dict:
+    # create langchain docs
+    docs = []
+    for content in contents:
+        doc = Document(page_content=content)
+        docs.append(doc)
+    map_prompt = hub.pull("rlm/map-prompt")
+    map_chain = LLMChain(llm=claude_v2_1, prompt=map_prompt)
+    reduce_chain = LLMChain(llm=claude_v2_1, prompt=reduce_prompt)
+    # Takes a list of documents, combines them into a single string, and passes this to an LLMChain
+    combine_documents_chain = StuffDocumentsChain(
+        llm_chain=reduce_chain, document_variable_name="docs"
+    )
+
+    # Combines and iteratively reduces the mapped documents
+    reduce_documents_chain = ReduceDocumentsChain(
+        # This is final chain that is called.
+        combine_documents_chain=combine_documents_chain,
+        # If documents exceed context for `StuffDocumentsChain`
+        collapse_documents_chain=combine_documents_chain,
+        # The maximum number of tokens to group documents into.
+        token_max=4000,
+    )
+    # Combining documents by mapping a chain over them, then combining results
+    map_reduce_chain = MapReduceDocumentsChain(
+        # Map chain
+        llm_chain=map_chain,
+        # Reduce chain
+        reduce_documents_chain=reduce_documents_chain,
+        # The variable name in the llm_chain to put the documents in
+        document_variable_name="docs",
+        # Return the results of the map steps in the output
+        return_intermediate_steps=False,
+    )
+
+    text_splitter = CharacterTextSplitter.from_tiktoken_encoder(
+        chunk_size=1000, chunk_overlap=0
+    )
+    split_docs = text_splitter.split_documents(docs)
+    return map_reduce_chain.invoke(split_docs)

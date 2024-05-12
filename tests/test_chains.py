@@ -5,6 +5,7 @@ from conductor.chains import (
     create_apollo_input_with_job_id,
     create_html_summary,
     get_parsed_html_summary,
+    map_reduce_summarize,
 )
 from conductor.parsers import HtmlSummary
 from tests.vars import TEST_HTML_DATA
@@ -31,3 +32,13 @@ def test_get_parsed_html_summary() -> None:
     text = BeautifulSoup(TEST_HTML_DATA, "html.parser").get_text()
     summary = get_parsed_html_summary(text)
     assert isinstance(summary, HtmlSummary)
+
+
+def test_map_reduce_summarize() -> None:
+    contents = [
+        BeautifulSoup(TEST_HTML_DATA, "html.parser").get_text(),
+        BeautifulSoup(TEST_HTML_DATA, "html.parser").get_text(),
+    ]
+    response = map_reduce_summarize(contents)
+    assert isinstance(response, dict)
+    assert isinstance(response["output_text"], str)

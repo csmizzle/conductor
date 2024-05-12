@@ -30,6 +30,8 @@ apify = {extras = ["scrapy"], version = "^1.7.0"}
 nest-asyncio = "^1.6.0"
 bs4 = "^0.0.2"
 langchain-fireworks = "^0.1.2"
+billiard = "^4.2.0"
+anthropic = "^0.25.8"
 
 
 [tool.poetry.group.dev.dependencies]

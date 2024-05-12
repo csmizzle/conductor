@@ -148,6 +148,13 @@ Content:
 {content}
 """
 
+REDUCE_SUMMARY_PROMPT = """
+The following is set of summaries:
+{docs}
+Take these and distill it into a final, consolidated summary of the main themes.
+Helpful Answer:
+"""
+
 input_prompt = PromptTemplate(
     input_variables=["job_id", "geography", "titles", "industries"],
     template=CONDUCTOR_INPUT_PROMPT,
@@ -203,3 +210,5 @@ summary_prompt = PromptTemplate(
     input_variables=["content"],
     template=SUMMARY_PROMPT,
 )
+
+reduce_prompt = PromptTemplate.from_template(REDUCE_SUMMARY_PROMPT)
