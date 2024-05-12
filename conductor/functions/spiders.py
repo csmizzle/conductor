@@ -2,8 +2,6 @@
 Conductor spiders module
 Implementation of https://stackoverflow.com/questions/41495052/scrapy-reactor-not-restartable
 """
-from conductor.collect.spiders.summary import SummarySpider
-from scrapy.utils.log import configure_logging
 from scrapy.crawler import CrawlerRunner
 from scrapy.signalmanager import dispatcher
 from scrapy import signals
@@ -42,9 +40,3 @@ def run_spider(spider, urls: list[str], task_id: str = None):
         raise result
     else:
         return result
-
-
-if __name__ == "__main__":
-    configure_logging()
-    results = run_spider(SummarySpider, ["https://clay.com"], task_id="test_task_id")
-    print(results)
