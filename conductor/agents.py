@@ -22,7 +22,6 @@ query_job_builder_agent = Agent(
     backstory="You are an expert in translating natural language queries into structured queries for Apollo's person search tool",
     tools=[apollo_input_with_job_writer],
     allow_delegation=False,
-    cache=True,
 )
 
 query_builder_agent = Agent(
@@ -32,7 +31,6 @@ query_builder_agent = Agent(
     backstory="You are an expert in translating natural language queries into structured queries for Apollo's person search tool",
     tools=[apollo_input_writer],
     allow_delegation=False,
-    cache=True,
 )
 
 
@@ -47,7 +45,6 @@ apollo_agent = Agent(
     ),
     tools=[apollo_person_search_context],
     allow_delegation=False,
-    cache=True,
 )
 
 
@@ -62,7 +59,6 @@ apollo_job_agent = Agent(
     ),
     tools=[apollo_person_search_context_job],
     allow_delegation=False,
-    cache=True,
 )
 
 
@@ -72,7 +68,6 @@ answer_agent = Agent(
     verbose=True,
     backstory="You are an expert in analyzing data and providing the best answers to questions",
     allow_delegation=False,
-    cache=True,
 )
 
 
@@ -127,7 +122,6 @@ gmail_input_builder_agent = Agent(
     backstory="You are an expert at looking at at a general input and extracting the correct parameters for the Gmail draft tool.",
     verbose=True,
     allow_delegation=False,
-    cache=True,
     tools=[gmail_input_from_input],
 )
 
@@ -138,7 +132,6 @@ gmail_draft_agent = Agent(
     backstory="You are an expert in sending emails that catch the readers eye by being engaging and informative by looking at customer data and creating a draft for the prospective customer. You should not use the customer contact information in the body of the message",
     verbose=True,
     allow_delegation=False,
-    cache=True,
     tools=[gmail_draft],
 )
 
@@ -149,7 +142,6 @@ gmail_send_agent = Agent(
     backstory="You are an expert in sending emails using the provided input.",
     verbose=True,
     allow_delegation=False,
-    cache=True,
     tools=[gmail_send],
 )
 
@@ -197,7 +189,6 @@ apollo_email_agent = Agent(
     backstory="You are an expert in sending emails that catch the readers eye by being engaging and informative by looking at customer data and creating a draft for the prospective customer. You should not use the customer contact information in the body of the message",
     verbose=True,
     allow_delegation=False,
-    cache=True,
     tools=[apollo_email_sender],
 )
 
