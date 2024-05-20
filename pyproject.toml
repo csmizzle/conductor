@@ -21,7 +21,7 @@ fire = "^0.6.0"
 langsmith = "^0.1.50"
 agentops = "^0.1.6"
 pytest = "^8.1.1"
-crewai = {version = "^0.28.8"}
+crewai = {version = "^0.30.8"}
 jmespath = "^1.0.1"
 google-auth-oauthlib = "^1.2.0"
 google-api-python-client = "^2.127.0"
