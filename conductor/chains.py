@@ -11,7 +11,7 @@ from conductor.prompts import (
 from conductor.llms import claude_v2_1
 from conductor.parsers import EngagementStrategy, HtmlSummary, html_summary_parser
 from langchain.chains.llm import LLMChain
-from langchain.chains.summarize import (
+from langchain.chains.summarize.chain import (
     MapReduceDocumentsChain,
     ReduceDocumentsChain,
     StuffDocumentsChain,
