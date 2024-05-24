@@ -8,7 +8,7 @@ from conductor.chains import (
     map_reduce_summarize,
     create_apollo_input_structured,
 )
-from conductor.parsers import HtmlSummary
+from conductor.parsers import HtmlSummary, ApolloInput
 from tests.vars import TEST_HTML_DATA
 from bs4 import BeautifulSoup
 from langsmith import unit
@@ -52,4 +52,4 @@ def test_create_apollo_input_structured() -> None:
     response = create_apollo_input_structured(
         "Find me a CEO in San Francisco",
     )
-    assert isinstance(response["text"], str)
+    assert isinstance(response, ApolloInput)

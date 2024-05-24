@@ -18,7 +18,7 @@ from conductor.parsers import (
     apollo_input_parser,
 )
 from langchain.chains.llm import LLMChain
-from langchain.chains.summarize.chain import (
+from langchain.chains.summarize import (
     MapReduceDocumentsChain,
     ReduceDocumentsChain,
     StuffDocumentsChain,
