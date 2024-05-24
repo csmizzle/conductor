@@ -3,6 +3,7 @@ from conductor.parsers import (
     engagement_strategy_parser,
     gmail_input_parser,
     html_summary_parser,
+    apollo_input_parser,
 )
 
 JSON_AGENT_PROMPT = """
@@ -77,6 +78,19 @@ Apollo Input Parameters:
 - Location
 
 {general_input}
+"""
+
+APOLLO_INPUT_STRUCTURED_PROMPT = """
+Extract Apollo input parameters from the query below.
+
+
+Apollo Input Parameters:
+- Titles
+- Location
+
+{query}
+\n
+{format_instructions}
 """
 
 
@@ -212,3 +226,11 @@ summary_prompt = PromptTemplate(
 )
 
 reduce_prompt = PromptTemplate.from_template(REDUCE_SUMMARY_PROMPT)
+
+apollo_input_structured_prompt = PromptTemplate(
+    template=APOLLO_INPUT_STRUCTURED_PROMPT,
+    input_variables=["query"],
+    partial_variables={
+        "format_instructions": apollo_input_parser.get_format_instructions()
+    },
+)

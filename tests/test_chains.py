@@ -6,6 +6,7 @@ from conductor.chains import (
     create_html_summary,
     get_parsed_html_summary,
     map_reduce_summarize,
+    create_apollo_input_structured,
 )
 from conductor.parsers import HtmlSummary
 from tests.vars import TEST_HTML_DATA
@@ -28,12 +29,14 @@ def test_create_html_summary() -> None:
     assert isinstance(response["text"], str)
 
 
+@unit
 def test_get_parsed_html_summary() -> None:
     text = BeautifulSoup(TEST_HTML_DATA, "html.parser").get_text()
     summary = get_parsed_html_summary(text)
     assert isinstance(summary, HtmlSummary)
 
 
+@unit
 def test_map_reduce_summarize() -> None:
     contents = [
         BeautifulSoup(TEST_HTML_DATA, "html.parser").get_text(),
@@ -42,3 +45,11 @@ def test_map_reduce_summarize() -> None:
     response = map_reduce_summarize(contents)
     assert isinstance(response, dict)
     assert isinstance(response["output_text"], str)
+
+
+@unit
+def test_create_apollo_input_structured() -> None:
+    response = create_apollo_input_structured(
+        "Find me a CEO in San Francisco",
+    )
+    assert isinstance(response["text"], str)

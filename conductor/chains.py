@@ -2,6 +2,7 @@ from conductor.prompts import (
     input_prompt,
     apollo_with_job_id_input_prompt,
     apollo_input_prompt,
+    apollo_input_structured_prompt,
     gmail_input_prompt,
     html_summary_prompt,
     email_prompt,
@@ -9,9 +10,15 @@ from conductor.prompts import (
     reduce_prompt,
 )
 from conductor.llms import claude_v2_1
-from conductor.parsers import EngagementStrategy, HtmlSummary, html_summary_parser
+from conductor.parsers import (
+    EngagementStrategy,
+    HtmlSummary,
+    ApolloInput,
+    html_summary_parser,
+    apollo_input_parser,
+)
 from langchain.chains.llm import LLMChain
-from langchain.chains.summarize import (
+from langchain.chains.summarize.chain import (
     MapReduceDocumentsChain,
     ReduceDocumentsChain,
     StuffDocumentsChain,
@@ -82,6 +89,19 @@ def create_apollo_input(query: str) -> str:
     )
     response = chain.invoke({"general_input": query})
     return response
+
+
+@traceable
+def create_apollo_input_structured(query: str) -> ApolloInput:
+    """
+    Extract Apollo input parameters from a general input string
+    """
+    chain = LLMChain(
+        llm=claude_v2_1,
+        prompt=apollo_input_structured_prompt,
+    )
+    response = chain.invoke({"query": query})
+    return apollo_input_parser.parse(text=response["text"])
 
 
 @traceable
