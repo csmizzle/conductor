@@ -41,8 +41,15 @@ class Email(BaseModel):
     email_body: str = Field("The body of the email")
 
 
+class EmailDraft(BaseModel):
+    context: str = Field("The context to draft the email from")
+    tone: str = Field("The tone of the email")
+    sign_off: str = Field("The sign off of the email")
+
+
 engagement_strategy_parser = PydanticOutputParser(pydantic_object=EngagementStrategy)
 gmail_input_parser = PydanticOutputParser(pydantic_object=GmailInput)
 html_summary_parser = PydanticOutputParser(pydantic_object=HtmlSummary)
 email_parser = PydanticOutputParser(pydantic_object=Email)
 apollo_input_parser = PydanticOutputParser(pydantic_object=ApolloInput)
+email_draft_parser = PydanticOutputParser(pydantic_object=EmailDraft)

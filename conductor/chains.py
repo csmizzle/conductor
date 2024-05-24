@@ -8,14 +8,16 @@ from conductor.prompts import (
     email_prompt,
     summary_prompt,
     reduce_prompt,
+    email_structured_prompt,
 )
-from conductor.llms import claude_v2_1
+from conductor.llms import claude_v2_1, openai_gpt_4
 from conductor.parsers import (
     EngagementStrategy,
     HtmlSummary,
     ApolloInput,
     html_summary_parser,
     apollo_input_parser,
+    email_draft_parser,
 )
 from langchain.chains.llm import LLMChain
 from langchain.chains.summarize import (
@@ -141,6 +143,20 @@ def create_email_from_context(tone: str, context: str, sign_off: str) -> str:
     )
     response = chain.invoke({"tone": tone, "context": context, "sign_off": sign_off})
     return response
+
+
+@traceable
+def create_email_from_context_structured(tone: str, context: str, sign_off: str) -> str:
+    """
+    Create an email from a context
+    """
+    chain = LLMChain(
+        llm=openai_gpt_4,
+        prompt=email_structured_prompt,
+    )
+    response = chain.invoke({"tone": tone, "context": context, "sign_off": sign_off})
+    email_draft = email_draft_parser.parse(text=response["text"])
+    return email_draft
 
 
 @traceable

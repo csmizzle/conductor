@@ -7,8 +7,9 @@ from conductor.chains import (
     get_parsed_html_summary,
     map_reduce_summarize,
     create_apollo_input_structured,
+    create_email_from_context_structured,
 )
-from conductor.parsers import HtmlSummary, ApolloInput
+from conductor.parsers import HtmlSummary, ApolloInput, EmailDraft
 from tests.vars import TEST_HTML_DATA
 from bs4 import BeautifulSoup
 from langsmith import unit
@@ -53,3 +54,18 @@ def test_create_apollo_input_structured() -> None:
         "Find me a CEO in San Francisco",
     )
     assert isinstance(response, ApolloInput)
+
+
+@unit
+def test_create_email_from_context_structured() -> None:
+    response = create_email_from_context_structured(
+        "formal",
+        """
+Turtles All the Way Down: Frames & iFrames
+Some older sites might still use frames to break up thier pages. Modern ones might be using iFrames to expose data. Learn about turtles as you scrape content inside frames.
+Advanced Topics: Real World Challenges You'll Encounter
+Scraping real websites, you're likely run into a number of common gotchas. Get practice with spoofing headers, handling logins & session cookies, finding CSRF tokens, and other common network errors.
+        """,
+        "Best regards,",
+    )
+    assert isinstance(response, EmailDraft)
