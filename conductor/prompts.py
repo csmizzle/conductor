@@ -76,6 +76,9 @@ Extract Apollo input parameters from a general input string below and provide a 
 
 Apollo Input Parameters:
 - Titles
+  - Job Titles such as CEO, CTO, Software Engineer
+  - Titles should be singular
+    - If plural, convert to singular
 - Location
 
 {general_input}
