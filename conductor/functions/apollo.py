@@ -15,7 +15,7 @@ from langsmith import traceable
 
 
 def apollo_api_person_search(
-    person_titles: list[str], person_locations: list[str]
+    person_titles: list[str], person_locations: list[str], per_page: int = 3
 ) -> Union[str, None]:
     """
     Call Apollo API to search for people
@@ -26,7 +26,7 @@ def apollo_api_person_search(
             "api_key": os.getenv("APOLLO_API_KEY"),
             # "q_organization_domains": '\n'.join(q_organization_domains),
             "page": 1,
-            "per_page": 3,
+            "per_page": per_page,
             # "organization_locations": organization_locations,
             # "person_seniorities": person_seniorties,
             "person_titles": person_titles,
@@ -34,6 +34,27 @@ def apollo_api_person_search(
             # "q_keywords" : q_keywords,
             # "prospected_by_current_team": prospected_by_current_team,
             # "contact_email_status": contact_email_status
+        },
+        headers={"Cache-Control": "no-cache", "Content-Type": "application/json"},
+    )
+    if response.ok:
+        return response.json()
+
+
+def apollo_api_person_domain_search(
+    company_domains: list[str],
+    per_page: int = 3,
+) -> Union[str, None]:
+    """
+    Call Apollo API to search for companies
+    """
+    response = requests.post(
+        url="https://api.apollo.io/v1/mixed_people/search",
+        json={
+            "api_key": os.getenv("APOLLO_API_KEY"),
+            "q_organization_domains": "\n".join(company_domains),
+            "page": 1,
+            "per_page": per_page,
         },
         headers={"Cache-Control": "no-cache", "Content-Type": "application/json"},
     )
@@ -107,6 +128,22 @@ def generate_apollo_person_search_context(
     people_data = apollo_api_person_search(
         person_titles=person_titles, person_locations=person_locations
     )
+    engagement_strategies = create_apollo_engagement_strategies(people_data)
+    if len(engagement_strategies) > 0:
+        dict_data = [
+            engagement_strategy.dict() for engagement_strategy in engagement_strategies
+        ]
+        enriched_context_creator = ApolloPersonSearchContext()
+        return f"Successfully ran Apollo Person Search Tool. Results {"\n".join(enriched_context_creator.create_context(data=dict_data))}"
+    else:
+        return "No results found for Apollo Person Search Tool."
+
+
+@traceable
+def generate_apollo_person_domain_search_context(
+    company_domains: list[str],
+) -> str:
+    people_data = apollo_api_person_domain_search(company_domains=company_domains)
     engagement_strategies = create_apollo_engagement_strategies(people_data)
     if len(engagement_strategies) > 0:
         dict_data = [

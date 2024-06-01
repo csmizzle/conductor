@@ -46,7 +46,7 @@ INDUSTRIES: {industries}
 CONDUCTOR_APOLLO_CUSTOMER_PROMPT = """
 Use to following potential customer inputs JSON to create an engagement strategy for this product:
 
-Product: Conductor - an automated market research tool
+Product: Conductor - A dual use market research platform that facilitates active listening, discovery, enrichment, and engagement.
 
 - Engagement Strategy
   - Break down the engagement strategy for each person for pitching them how Conductor can help them.

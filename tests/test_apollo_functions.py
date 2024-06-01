@@ -3,9 +3,11 @@ Test tool
 """
 from conductor.functions.apollo import (
     apollo_api_person_search,
+    apollo_api_person_domain_search,
     create_apollo_engagement_strategies,
     generate_apollo_person_search_job_context,
     generate_apollo_person_search_context,
+    generate_apollo_person_domain_search_context,
 )
 from conductor.parsers import PersonEngagementStrategy
 from tests.vars import (
@@ -22,6 +24,11 @@ def test_apollo_person_search():
         person_titles=["CEO", "CTO"],
         person_locations=["San Francisco, CA"],
     )
+    assert isinstance(results, dict)
+
+
+def test_apollo_person_domain_search():
+    results = apollo_api_person_domain_search(company_domains=["trssllc.com"])
     assert isinstance(results, dict)
 
 
@@ -54,6 +61,18 @@ def test_apollo_person_search_context():
     results = generate_apollo_person_search_context(
         person_titles=["CEO", "CTO"],
         person_locations=["San Francisco, CA"],
+    )
+    assert (
+        len(results) > 0
+        and isinstance(results, str)
+        and results.startswith("Successfully")
+    )
+
+
+@unit
+def test_apollo_person_domain_search_context():
+    results = generate_apollo_person_domain_search_context(
+        company_domains=["trssllc.com"]
     )
     assert (
         len(results) > 0
