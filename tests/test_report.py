@@ -1,4 +1,7 @@
 from conductor.reports.generators import ConductorUrlReportGenerator, Paragraph
+from conductor.reports.html_ import report_to_html
+from conductor.reports.outputs import report_to_pdf
+import os
 
 
 def test_conductor_url_report_generator():
@@ -27,3 +30,55 @@ def test_conductor_url_report_generator():
     assert report.paragraphs[1].title == f"Personnel Summary of {urls[0]}"
     assert report.paragraphs[0].content is not None
     assert report.paragraphs[1].content is not None
+
+
+def test_report_to_html() -> None:
+    urls = ["trssllc.com"]
+    report_title = "Test Report"
+    report_description = "This is a test report."
+    generator = ConductorUrlReportGenerator(
+        paragraphs=[
+            Paragraph(
+                title=f"Website Summary of {urls[0]}",
+                content="This is a summary of the website.",
+            ),
+            Paragraph(
+                title=f"Personnel Summary of {urls[0]}",
+                content="This is a summary of the personnel.",
+            ),
+        ],
+        report_title=report_title,
+        report_description=report_description,
+    )
+    report = generator.generate()
+    html = report_to_html(report)
+    assert report_title in html
+    assert report_description in html
+    assert report.paragraphs[0].title in html
+    assert report.paragraphs[0].content in html
+    assert report.paragraphs[1].title in html
+    assert report.paragraphs[1].content in html
+
+
+def test_report_to_pdf() -> None:
+    urls = ["trssllc.com"]
+    report_title = "Test Report"
+    report_description = "This is a test report."
+    generator = ConductorUrlReportGenerator(
+        paragraphs=[
+            Paragraph(
+                title=f"Website Summary of {urls[0]}",
+                content="This is a summary of the website.",
+            ),
+            Paragraph(
+                title=f"Personnel Summary of {urls[0]}",
+                content="This is a summary of the personnel.",
+            ),
+        ],
+        report_title=report_title,
+        report_description=report_description,
+    )
+    report = generator.generate()
+    report_to_pdf(report, "test.pdf")
+    os.remove("test.pdf")
+    assert not os.path.exists("test.pdf")
