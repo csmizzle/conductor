@@ -1,6 +1,6 @@
 from conductor.reports.generators import ConductorUrlReportGenerator, Paragraph
 from conductor.reports.html_ import report_to_html
-from conductor.reports.outputs import report_to_pdf
+from conductor.reports.outputs import report_to_pdf, report_to_pdf_binary
 import os
 
 
@@ -82,3 +82,26 @@ def test_report_to_pdf() -> None:
     report_to_pdf(report, "test.pdf")
     os.remove("test.pdf")
     assert not os.path.exists("test.pdf")
+
+
+def test_report_to_pdf_binary() -> None:
+    urls = ["trssllc.com"]
+    report_title = "Test Report"
+    report_description = "This is a test report."
+    generator = ConductorUrlReportGenerator(
+        paragraphs=[
+            Paragraph(
+                title=f"Website Summary of {urls[0]}",
+                content="This is a summary of the website.",
+            ),
+            Paragraph(
+                title=f"Personnel Summary of {urls[0]}",
+                content="This is a summary of the personnel.",
+            ),
+        ],
+        report_title=report_title,
+        report_description=report_description,
+    )
+    report = generator.generate()
+    binary_ = report_to_pdf_binary(report)
+    return binary_
