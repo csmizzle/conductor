@@ -1,7 +1,7 @@
 """
 Test sync spider activity
 """
-from conductor.functions.apify_ import sync_summarize_urls
+from conductor.functions.crawl import sync_summarize_urls
 
 
 def test_collect_summarize_urls_without_task_id():
