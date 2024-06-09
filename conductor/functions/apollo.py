@@ -144,6 +144,18 @@ def generate_apollo_person_domain_search_context(
     company_domains: list[str],
 ) -> str:
     people_data = apollo_api_person_domain_search(company_domains=company_domains)
+    if people_data:
+        enriched_context_creator = ApolloPersonSearchContext()
+        return f"Successfully ran Apollo Person Search Tool. Results {"\n".join(enriched_context_creator.create_context(data=people_data))}"
+    else:
+        return "No results found for Apollo Person Search Tool."
+
+
+@traceable
+def generate_apollo_person_domain_search_strategy_context(
+    company_domains: list[str],
+) -> str:
+    people_data = apollo_api_person_domain_search(company_domains=company_domains)
     engagement_strategies = create_apollo_engagement_strategies(people_data)
     if len(engagement_strategies) > 0:
         dict_data = [
