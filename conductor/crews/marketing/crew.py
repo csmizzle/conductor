@@ -39,10 +39,3 @@ class UrlMarketingCrew:
         )
         result = crew.kickoff()
         return result
-
-
-if __name__ == "__main__":
-    url = "https://www.trssllc.com"
-    crew = UrlMarketingCrew(url)
-    result = crew.run()
-    print(result)
