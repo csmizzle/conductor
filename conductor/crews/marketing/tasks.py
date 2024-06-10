@@ -3,7 +3,6 @@ Tasks for the marketing crew.
 """
 from crewai import Task, Agent
 from textwrap import dedent
-from conductor.reports.models import Report
 
 
 class MarketingTasks:
@@ -79,5 +78,4 @@ class MarketingTasks:
             agent=agent,
             context=context,
             expected_output="Comprehensive report on the company.",
-            output_pydantic=Report,
         )
