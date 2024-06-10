@@ -3,6 +3,7 @@ Implementation of the LLM services
 """
 from langchain_openai.llms import OpenAI
 from langchain_community.llms.bedrock import Bedrock
+from langchain_community.chat_models.bedrock import BedrockChat
 from langchain_fireworks.llms import Fireworks
 import boto3
 
@@ -11,4 +12,7 @@ openai_gpt_4 = OpenAI(temperature=0, max_tokens=2048)
 claude_v2_1 = Bedrock(client=bedrock_runtime, model_id="anthropic.claude-v2:1")
 fireworks_mistral = Fireworks(
     model="accounts/fireworks/models/mixtral-8x7b-instruct", max_tokens=248
+)
+claude_sonnet = BedrockChat(
+    client=bedrock_runtime, model_id="anthropic.claude-3-sonnet-20240229-v1:0"
 )
