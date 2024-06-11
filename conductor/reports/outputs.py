@@ -20,6 +20,48 @@ def string_to_report(string: str) -> Report:
         template=dedent(
             """
         Convert the following string to a Report JSON object:
+        Each section of the report should be separated by a newline character.
+        Each Section should be be broken down into paragraphs.
+
+        #### Example:
+        Overview
+        Acme Corp is a company that specializes in making widgets.
+        Pricing
+        Acme Corp's pricing is competitive.
+        Key Personnel
+        John Doe is the CEO of Acme Corp.
+        Products/Services
+        Acme Corp makes widgets.
+        Competitors
+        Acme Corp's competitors are Widget Co and Widget Corp.
+        #### Example JSON Object:
+        {{
+            "title": "Acme Corp Report",
+            "description": "This is a report on Acme Corp.",
+            "paragraphs": [
+                {{
+                    "title": "Overview",
+                    "content": "Acme Corp is a company that specializes in making widgets."
+                }},
+                {{
+                    "title": "Pricing",
+                    "content": "Acme Corp's pricing is competitive."
+                }},
+                {{
+                    "title": "Key Personnel",
+                    "content": "John Doe is the CEO of Acme Corp."
+                }},
+                {{
+                    "title": "Products/Services",
+                    "content": "Acme Corp makes widgets."
+                }},
+                {{
+                    "title": "Competitors",
+                    "content": "Acme Corp's competitors are Widget Co and Widget Corp."
+                }}
+            ]
+        }}
+        #### End of example
         {string}
         \n
         {format_instructions}

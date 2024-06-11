@@ -47,3 +47,5 @@ TEST_EMAIL_CONTEXT = pathlib.Path(
 ).read_text()
 #### JSON
 TEST_JSON = json.load(open(os.path.join(BASEDIR, "data", "json_data.json")))
+#### Text data
+TEST_REPORT_RESPONSE = open(os.path.join(BASEDIR, "data", "output.txt")).read()

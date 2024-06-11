@@ -1,6 +1,11 @@
 from conductor.reports.generators import ConductorUrlReportGenerator, Paragraph
+from test_vars import TEST_REPORT_RESPONSE
 from conductor.reports.html_ import report_to_html
-from conductor.reports.outputs import report_to_pdf, report_to_pdf_binary
+from conductor.reports.outputs import (
+    report_to_pdf,
+    report_to_pdf_binary,
+    string_to_report,
+)
 import os
 
 
@@ -105,3 +110,11 @@ def test_report_to_pdf_binary() -> None:
     report = generator.generate()
     binary_ = report_to_pdf_binary(report)
     return binary_
+
+
+def test_string_to_response() -> None:
+    report = string_to_report(TEST_REPORT_RESPONSE)
+    print(report)
+
+
+test_string_to_response()
