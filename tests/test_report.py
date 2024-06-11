@@ -6,6 +6,7 @@ from conductor.reports.outputs import (
     report_to_pdf_binary,
     string_to_report,
 )
+from conductor.reports.models import Report
 import os
 
 
@@ -114,7 +115,5 @@ def test_report_to_pdf_binary() -> None:
 
 def test_string_to_response() -> None:
     report = string_to_report(TEST_REPORT_RESPONSE)
-    print(report)
-
-
-test_string_to_response()
+    assert isinstance(report, Report)
+    assert report.title == "Thomson Reuters Special Services (TRSS) Report"
