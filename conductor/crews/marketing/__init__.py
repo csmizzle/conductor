@@ -2,7 +2,7 @@ from conductor.crews.marketing.crew import UrlMarketingCrew
 from conductor.reports import outputs
 
 
-def run_url_marketing_report(url: str) -> str:
+def url_marketing_report(url: str) -> str:
     """
     Run a marketing report on a URL
     """
