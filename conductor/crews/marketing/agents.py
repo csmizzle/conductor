@@ -3,6 +3,7 @@ Marketing agents
 """
 from crewai import Agent
 from crewai_tools.tools import ScrapeWebsiteTool
+from conductor.crews.marketing.tools import SerpSearchTool
 
 
 class MarketingAgents:
@@ -16,6 +17,16 @@ class MarketingAgents:
             goal="Create a SWOT analysis for a company",
             backstory="An expert in analyzing company data to create SWOT analysis",
             verbose=True,
+            llm=llm,
+        )
+
+    def search_engine_agent(self, llm=None):
+        return Agent(
+            role="Search Engine Agent",
+            goal="Provide URLs for a additional company research",
+            backstory="An expert in searching for information about companies. Generate great search engine questions that will get the best results.",
+            verbose=True,
+            tools=[SerpSearchTool()],
             llm=llm,
         )
 

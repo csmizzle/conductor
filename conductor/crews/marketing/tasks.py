@@ -10,6 +10,19 @@ class MarketingTasks:
     Marketing crew
     """
 
+    def search_engine_task(self, agent: Agent, context: list[Task]):
+        return Task(
+            description=dedent(
+                """
+            Find additional links that can be used to research the company.
+            These links should be passed to the company research agent for further investigation.
+            """
+            ),
+            agent=agent,
+            context=context,
+            expected_output="Additional URLs and data for more company research.",
+        )
+
     def company_research_task(self, agent: Agent, company_url: str):
         return Task(
             description=dedent(
@@ -56,6 +69,7 @@ class MarketingTasks:
             description=dedent(
                 """
             Write a comprehensive report on the company.
+            The report should be a mixture of long form and bullet points, capturing the key points.
             The report should include a SWOT analysis, key personnel, company history, and key products and services.
             The report should be well-structured and easy to read.
             The report should be broken in three main sections:
