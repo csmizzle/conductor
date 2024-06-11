@@ -1,5 +1,5 @@
 from conductor.reports.generators import ConductorUrlReportGenerator, Paragraph
-from test_vars import TEST_REPORT_RESPONSE
+from tests.vars import TEST_REPORT_RESPONSE
 from conductor.reports.html_ import report_to_html
 from conductor.reports.outputs import (
     report_to_pdf,
