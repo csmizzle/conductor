@@ -91,5 +91,5 @@ class MarketingTasks:
             ),
             agent=agent,
             context=context,
-            expected_output="Comprehensive report on the company.",
+            expected_output="Comprehensive report on the company with the sections overview, swot analysis, and competitors.",
         )
