@@ -8,7 +8,7 @@ from conductor.functions.google import (
     send_gmail,
     send_gmail_from_input,
 )
-from tests.vars import TEST_GMAIL_INPUT, TEST_GMAIL_CREW_PROMPT, TEST_APOLLO_DATA
+from tests.constants import TEST_GMAIL_INPUT, TEST_GMAIL_CREW_PROMPT, TEST_APOLLO_DATA
 from langsmith import expect, unit
 
 

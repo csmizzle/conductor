@@ -1,5 +1,5 @@
 from conductor.utils import clean_string
-from tests.vars import TEST_NEWLINE_HTML_DATA
+from tests.constants import TEST_NEWLINE_HTML_DATA
 
 
 def test_clean_string():

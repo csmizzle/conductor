@@ -4,7 +4,7 @@ Test email functions
 from langsmith import unit
 from conductor.chains import create_email_from_context
 from conductor.context.apollo import ApolloPersonSearchContext
-from tests.vars import TEST_EMAIL_CONTEXT, TEST_APOLLO_DATA
+from tests.constants import TEST_EMAIL_CONTEXT, TEST_APOLLO_DATA
 
 
 @unit

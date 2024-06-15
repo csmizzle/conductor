@@ -13,8 +13,3 @@ def test_url_marketing_crew():
     result = crew.run()
     assert isinstance(result, str)
     return result
-
-
-result = test_url_marketing_crew()
-with open("./output.txt", "w") as f:
-    f.write(result)

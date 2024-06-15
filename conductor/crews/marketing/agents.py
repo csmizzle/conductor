@@ -23,8 +23,8 @@ class MarketingAgents:
     def search_engine_agent(self, llm=None):
         return Agent(
             role="Search Engine Agent",
-            goal="Provide URLs for a additional company research",
-            backstory="An expert in searching for information about companies. Generate great search engine questions that will get the best results.",
+            goal="Provide URLs for a additional company research and extract all useful research information to support company analysis",
+            backstory="An expert in searching for information about companies. Generate great search engine questions that will get the best results. Provide summaries with key information about the company.",
             verbose=True,
             tools=[SerpSearchTool()],
             llm=llm,
@@ -34,9 +34,9 @@ class MarketingAgents:
         return Agent(
             role="Company Agent",
             goal="Retrieve information about a company",
-            backstory="An expert in looking up company information",
+            backstory="An expert in looking up company information using the internet.",
             verbose=True,
-            tools=[ScrapeWebsiteTool()],
+            tools=[ScrapeWebsiteTool(), SerpSearchTool()],
             llm=llm,
         )
 
@@ -45,6 +45,7 @@ class MarketingAgents:
             role="Competitor Agent",
             goal="Retrieve information about a companies competitor",
             backstory="An expert in looking up competitor information",
+            tools=[ScrapeWebsiteTool(), SerpSearchTool()],
             verbose=True,
             llm=llm,
         )
@@ -52,8 +53,9 @@ class MarketingAgents:
     def writer_agent(self, llm=None):
         return Agent(
             role="Writer Agent",
-            goal="Write a report about a company",
-            backstory="An expert in writing comprehensive reports about companies",
+            goal="Write a report about a company using the provided context in a task.",
+            backstory="An expert in writing comprehensive reports about companies. Focuses on key points but also provides a detailed analysis. Also includes all sources used.",
             verbose=True,
             llm=llm,
+            allow_delegation=False,
         )

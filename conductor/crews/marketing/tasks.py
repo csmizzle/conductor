@@ -20,7 +20,7 @@ class MarketingTasks:
             ),
             agent=agent,
             context=context,
-            expected_output="Additional URLs and data for more company research.",
+            expected_output="Additional URLs and data for more company research with source links.",
         )
 
     def company_research_task(self, agent: Agent, company_url: str):
@@ -29,12 +29,14 @@ class MarketingTasks:
                 f"""
             Determine which company the URL belongs to and do in-depth research on the company.
             Find key personnel, company history, any pricing information available, and key products and services.
-            Also find any competitors as well.
+            Look for the key personnel on the linkedin or company website.
+            Find the competitors of the company.
+            Determine which market the company operates in and what their TAM/SAM/SOM is.
             Use the URL: {company_url} to find the company.
             """
             ),
             agent=agent,
-            expected_output="Detailed company information.",
+            expected_output="Detailed company information with source links.",
         )
 
     def company_swot_task(self, agent: Agent, context: list[Task]):
@@ -48,7 +50,7 @@ class MarketingTasks:
             ),
             agent=agent,
             context=context,
-            expected_output="SWOT analysis of the company.",
+            expected_output="SWOT analysis of the company with source links.",
         )
 
     def company_competitor_task(self, agent: Agent, context: list[Task]):
@@ -61,32 +63,38 @@ class MarketingTasks:
             ),
             agent=agent,
             context=context,
-            expected_output="List of competitors with strengths and weaknesses.",
+            expected_output="List of competitors with strengths and weaknesses and source links.",
         )
 
     def company_report_task(self, agent: Agent, context: list[Task]):
         return Task(
             description=dedent(
                 """
-            Write a comprehensive report on the company.
+            Write a comprehensive report on the company using only the provided context.
             The report should be a mixture of long form and bullet points, capturing the key points.
             The report should include a SWOT analysis, key personnel, company history, and key products and services.
             The report should be well-structured and easy to read.
-            The report should be broken in three main sections:
-                - Overview
+            The report should include all source URLs used as well from the provided context.
+            The report should be broken into 5 main sections:
+                1. Overview
                     - Background
                     - Key Personnel
                     - Products/Services
                     - Pricing
-                - SWOT Analysis
+                2. Market Analysis
+                    - Market
+                    - TAM/SAM/SOM
+                3. SWOT Analysis
                     - Strengths
                     - Weaknesses
                     - Opportunities
                     - Threats
-                - Competitors
+                4. Competitors
                     - Competitor
                         - Strengths
                         - Weaknesses
+                5. Sources
+                    - Links
             """
             ),
             agent=agent,

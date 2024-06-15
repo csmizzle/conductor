@@ -14,5 +14,7 @@ fireworks_mistral = Fireworks(
     model="accounts/fireworks/models/mixtral-8x7b-instruct", max_tokens=248
 )
 claude_sonnet = BedrockChat(
-    client=bedrock_runtime, model_id="anthropic.claude-3-sonnet-20240229-v1:0"
+    client=bedrock_runtime,
+    model_id="anthropic.claude-3-sonnet-20240229-v1:0",
+    model_kwargs={"max_tokens": 2048},
 )

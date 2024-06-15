@@ -2,7 +2,7 @@ from conductor.context.apollo import (
     ApolloPersonSearchContext,
     ApolloPersonSearchRawContext,
 )
-from tests.vars import TEST_APOLLO_DATA, TEST_APOLLO_RAW_DATA
+from tests.constants import TEST_APOLLO_DATA, TEST_APOLLO_RAW_DATA
 from conductor.functions.apollo import apollo_api_person_domain_search
 
 

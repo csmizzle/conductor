@@ -10,7 +10,7 @@ from conductor.chains import (
     create_email_from_context_structured,
 )
 from conductor.parsers import HtmlSummary, ApolloInput, EmailDraft
-from tests.vars import TEST_HTML_DATA
+from tests.constants import TEST_HTML_DATA
 from bs4 import BeautifulSoup
 from langsmith import unit
 

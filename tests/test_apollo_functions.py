@@ -10,7 +10,7 @@ from conductor.functions.apollo import (
     generate_apollo_person_domain_search_context,
 )
 from conductor.parsers import PersonEngagementStrategy
-from tests.vars import (
+from tests.constants import (
     TEST_APOLLO_JOB_ID,
     TEST_RAW_DATA_BUCKET,
     TEST_ENGAGEMENT_STRATEGIES_BUCKET,

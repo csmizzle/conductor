@@ -1,119 +1,74 @@
-from conductor.reports.generators import ConductorUrlReportGenerator, Paragraph
-from tests.vars import TEST_REPORT_RESPONSE
-from conductor.reports.html_ import report_to_html
+from tests.constants import TEST_REPORT_RESPONSE, REPORT_JSON
 from conductor.reports.outputs import (
-    report_to_pdf,
-    report_to_pdf_binary,
     string_to_report,
 )
-from conductor.reports.models import Report
-import os
+from conductor.reports.models import Report, Section, Paragraph
+from conductor.reports.html_ import report_to_html
+from langsmith import unit
 
 
 def test_conductor_url_report_generator():
     urls = ["trssllc.com"]
     report_title = "Test Report"
     report_description = "This is a test report."
-    generator = ConductorUrlReportGenerator(
-        paragraphs=[
-            Paragraph(
-                title=f"Website Summary of {urls[0]}",
-                content="This is a summary of the website.",
-            ),
-            Paragraph(
-                title=f"Personnel Summary of {urls[0]}",
-                content="This is a summary of the personnel.",
-            ),
+    section_title = "This is a test section title"
+    report = Report(
+        title=report_title,
+        description=report_description,
+        sections=[
+            Section(
+                title=section_title,
+                paragraphs=[
+                    Paragraph(
+                        title=f"Website Summary of {urls[0]}",
+                        content="This is a summary of the website.",
+                    ),
+                    Paragraph(
+                        title=f"Personnel Summary of {urls[0]}",
+                        content="This is a summary of the personnel.",
+                    ),
+                ],
+            )
         ],
-        report_title=report_title,
-        report_description=report_description,
     )
-    report = generator.generate()
     assert report.title == report_title
     assert report.description == report_description
-    assert len(report.paragraphs) == 2
-    assert report.paragraphs[0].title == f"Website Summary of {urls[0]}"
-    assert report.paragraphs[1].title == f"Personnel Summary of {urls[0]}"
-    assert report.paragraphs[0].content is not None
-    assert report.paragraphs[1].content is not None
+    assert len(report.sections) == 1
+    assert report.sections[0].title == section_title
+    assert len(report.sections[0].paragraphs) == 2
+    assert report.sections[0].paragraphs[0].title == f"Website Summary of {urls[0]}"
+    assert report.sections[0].paragraphs[1].title == f"Personnel Summary of {urls[0]}"
+    assert report.sections[0].paragraphs[0].content is not None
+    assert report.sections[0].paragraphs[1].content is not None
+
+
+@unit
+def test_string_to_report() -> None:
+    report = string_to_report(TEST_REPORT_RESPONSE)
+    assert isinstance(report, Report)
+    assert report.title == "Thomson Reuters Special Services (TRSS) Company Report"
+    # test for section structure
+    assert len(report.sections) == 5
+    # Overview Section
+    assert report.sections[0].title == "1. Overview"
+    assert len(report.sections[0].paragraphs) == 4
+    # Market Analysis Section
+    assert report.sections[1].title == "2. Market Analysis"
+    assert len(report.sections[1].paragraphs) == 2
+    # SWOT Analysis Section
+    assert report.sections[2].title == "3. SWOT Analysis"
+    assert len(report.sections[2].paragraphs) == 4
+    # Competitors Section
+    assert report.sections[3].title == "4. Competitors"
+    assert len(report.sections[3].paragraphs) == 2
+    assert report.raw == TEST_REPORT_RESPONSE
+    # Sources Section
+    assert report.sections[4].title == "5. Sources"
+    assert len(report.sections[4].paragraphs) == 1
 
 
 def test_report_to_html() -> None:
-    urls = ["trssllc.com"]
-    report_title = "Test Report"
-    report_description = "This is a test report."
-    generator = ConductorUrlReportGenerator(
-        paragraphs=[
-            Paragraph(
-                title=f"Website Summary of {urls[0]}",
-                content="This is a summary of the website.",
-            ),
-            Paragraph(
-                title=f"Personnel Summary of {urls[0]}",
-                content="This is a summary of the personnel.",
-            ),
-        ],
-        report_title=report_title,
-        report_description=report_description,
-    )
-    report = generator.generate()
+    # read in the json data
+    report = Report(**REPORT_JSON)
     html = report_to_html(report)
-    assert report_title in html
-    assert report_description in html
-    assert report.paragraphs[0].title in html
-    assert report.paragraphs[0].content in html
-    assert report.paragraphs[1].title in html
-    assert report.paragraphs[1].content in html
-
-
-def test_report_to_pdf() -> None:
-    urls = ["trssllc.com"]
-    report_title = "Test Report"
-    report_description = "This is a test report."
-    generator = ConductorUrlReportGenerator(
-        paragraphs=[
-            Paragraph(
-                title=f"Website Summary of {urls[0]}",
-                content="This is a summary of the website.",
-            ),
-            Paragraph(
-                title=f"Personnel Summary of {urls[0]}",
-                content="This is a summary of the personnel.",
-            ),
-        ],
-        report_title=report_title,
-        report_description=report_description,
-    )
-    report = generator.generate()
-    report_to_pdf(report, "test.pdf")
-    os.remove("test.pdf")
-    assert not os.path.exists("test.pdf")
-
-
-def test_report_to_pdf_binary() -> None:
-    urls = ["trssllc.com"]
-    report_title = "Test Report"
-    report_description = "This is a test report."
-    generator = ConductorUrlReportGenerator(
-        paragraphs=[
-            Paragraph(
-                title=f"Website Summary of {urls[0]}",
-                content="This is a summary of the website.",
-            ),
-            Paragraph(
-                title=f"Personnel Summary of {urls[0]}",
-                content="This is a summary of the personnel.",
-            ),
-        ],
-        report_title=report_title,
-        report_description=report_description,
-    )
-    report = generator.generate()
-    binary_ = report_to_pdf_binary(report)
-    return binary_
-
-
-def test_string_to_response() -> None:
-    report = string_to_report(TEST_REPORT_RESPONSE)
-    assert isinstance(report, Report)
-    assert report.title == "Thomson Reuters Special Services (TRSS) Report"
+    assert isinstance(html, str)

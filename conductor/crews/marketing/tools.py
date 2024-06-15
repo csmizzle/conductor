@@ -4,6 +4,8 @@ from pydantic.v1 import BaseModel, Field
 from typing import Optional, Any, Type
 from textwrap import dedent
 import os
+import requests
+from bs4 import BeautifulSoup
 
 
 class FixedSerpSearchToolSchema(BaseModel):
@@ -25,6 +27,16 @@ class SerpSearchTool(BaseTool):
     name: str = "Search Engine Results Page (SERP) Tool"
     description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query."
     args_schema: Type[BaseModel] = SerpSearchToolSchema
+    cookies: Optional[dict] = None
+    headers: Optional[dict] = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com/",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Accept-Encoding": "gzip, deflate, br",
+    }
 
     def __init__(self, search_query: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
@@ -34,6 +46,19 @@ class SerpSearchTool(BaseTool):
                 "A tool that can be used to scrape search engine results page (SERP)."
             )
             self._generate_description()
+
+    def _get_page_content(self, url: str) -> str:
+        page = requests.get(
+            url,
+            timeout=15,
+            headers=self.headers,
+            cookies=self.cookies if self.cookies else {},
+        )
+        parsed = BeautifulSoup(page.content, "html.parser")
+        text = parsed.get_text()
+        text = "\n".join([i for i in text.split("\n") if i.strip() != ""])
+        text = " ".join([i for i in text.split(" ") if i.strip() != ""])
+        return text
 
     def _run(self, **kwargs: Any) -> Any:
         if os.getenv("SERPAPI_API_KEY") is None:
@@ -62,12 +87,14 @@ class SerpSearchTool(BaseTool):
         # add organic results to search context
         if "organic_results" in results_dict:
             for result in results_dict["organic_results"]:
+                page_content = self._get_page_content(result["link"])
                 search_context.append(
                     dedent(
                         f"""
                 Title: {result["title"]}
                 Link: {result["link"]}
                 Snippet: {result["snippet"]}
+                Content: {page_content}
                 """
                     )
                 )

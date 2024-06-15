@@ -6,7 +6,7 @@ from conductor.pipelines.vectorestores import (
     DiscordPineconeCreateDestroyUpdatePipeline,
     ApifyBulkPineconeCreateDestroyPipeline,
 )
-from tests.vars import (
+from tests.constants import (
     TEST_APOLLO_JOB_ID,
     TEST_PINECONE_INDEX,
     TEST_RAW_DATA_BUCKET,

@@ -19,8 +19,15 @@ def report_to_html(report: Report) -> str:
             <p>{report.description}</p>
             <ul>
     """
-    for paragraph in report.paragraphs:
-        html_string += f"<li><h2>{paragraph.title}</h2><p>{paragraph.content}</p></li>"
+    # write section and paragraphs to html
+    for section in report.sections:
+        html_string += f"<h2>{section.title}</h2>"
+        for paragraph in section.paragraphs:
+            html_string += f"<li><h3>{paragraph.title}</h3>"
+            split_content = paragraph.content.split("\n")
+            for content in split_content:
+                html_string += f"\n<br><p>{content}</p></li>\n"
+    # close html tags
     html_string += """
             </ul>
         </body>
