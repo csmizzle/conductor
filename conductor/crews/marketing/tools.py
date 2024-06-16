@@ -9,6 +9,16 @@ from bs4 import BeautifulSoup
 from conductor.functions.apollo import generate_apollo_person_domain_search_context
 
 
+CONTEXT_LIMIT = os.getenv("CONTEXT_LIMIT", 200000)
+
+
+def check_context_limit(context: str) -> str:
+    if len(context) > CONTEXT_LIMIT:
+        return context[:CONTEXT_LIMIT]
+    else:
+        return context
+
+
 class FixedSerpSearchToolSchema(BaseModel):
     """Input for SerpSearchTool."""
 
@@ -114,7 +124,7 @@ class SerpSearchTool(BaseTool):
                 """
                     )
                 )
-        return "\n".join(search_context)
+        return check_context_limit("\n".join(search_context))
 
 
 class ApolloPersonDomainSearchTool(BaseTool):

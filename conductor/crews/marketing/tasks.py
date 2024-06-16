@@ -3,6 +3,7 @@ Tasks for the marketing crew.
 """
 from crewai import Task, Agent
 from textwrap import dedent
+from conductor.reports.models import ReportStyle
 
 
 class MarketingTasks:
@@ -66,16 +67,18 @@ class MarketingTasks:
             expected_output="List of competitors with strengths and weaknesses and source links.",
         )
 
-    def company_report_task(self, agent: Agent, context: list[Task]):
+    def company_report_task(
+        self, agent: Agent, context: list[Task], report_style: ReportStyle
+    ):
         return Task(
             description=dedent(
-                """
+                f"""
             Write a comprehensive report on the company using only the provided context.
             The report should be a mixture of long form and bullet points, capturing the key points.
             The report should include a SWOT analysis, key personnel, company history, and key products and services.
             The report should be well-structured and easy to read.
-            The report should include all source URLs used as well from the provided context.
-            The report should be broken into 5 main sections:
+            The report should include all source URLs used as well from the provided context, do not leave any out from provided context.
+            The report should be broken into 5 main sections and each section should be written {report_style.value}. :
                 1. Overview
                     - Background
                     - Key Personnel

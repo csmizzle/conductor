@@ -1,12 +1,14 @@
 from conductor.crews.marketing.agents import MarketingAgents
+from conductor.reports.models import ReportStyle
 from conductor.crews.marketing.tasks import MarketingTasks
 from conductor.llms import claude_sonnet
 from crewai import Crew
 
 
 class UrlMarketingCrew:
-    def __init__(self, url: str) -> None:
+    def __init__(self, url: str, report_style: ReportStyle) -> None:
         self.url = url
+        self.report_style = report_style
 
     def run(self) -> dict:
         agents = MarketingAgents()
@@ -40,6 +42,7 @@ class UrlMarketingCrew:
                 competitor_task,
                 search_engine_task,
             ],
+            report_style=self.report_style,
         )
         # create crew
         crew = Crew(
