@@ -12,7 +12,7 @@
                 <h2>{{ section.title }}</h2>
                 {% for paragraph in section.paragraphs %}
                     <h3>{{ paragraph.title }}</h3>
-                    <p>{{ paragraph.content }}</p>
+                    <pre>{{ paragraph.content }}</pre>
                 {% endfor %}
             {% endfor %}
             </li>
