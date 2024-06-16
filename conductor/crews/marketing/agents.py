@@ -3,7 +3,7 @@ Marketing agents
 """
 from crewai import Agent
 from crewai_tools.tools import ScrapeWebsiteTool
-from conductor.crews.marketing.tools import SerpSearchTool
+from conductor.crews.marketing.tools import SerpSearchTool, ApolloPersonDomainSearchTool
 
 
 class MarketingAgents:
@@ -36,7 +36,11 @@ class MarketingAgents:
             goal="Retrieve information about a company",
             backstory="An expert in looking up company information using the internet.",
             verbose=True,
-            tools=[ScrapeWebsiteTool(), SerpSearchTool()],
+            tools=[
+                ScrapeWebsiteTool(),
+                SerpSearchTool(),
+                ApolloPersonDomainSearchTool(),
+            ],
             llm=llm,
         )
 

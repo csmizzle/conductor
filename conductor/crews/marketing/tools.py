@@ -6,6 +6,7 @@ from textwrap import dedent
 import os
 import requests
 from bs4 import BeautifulSoup
+from conductor.functions.apollo import generate_apollo_person_domain_search_context
 
 
 class FixedSerpSearchToolSchema(BaseModel):
@@ -20,6 +21,21 @@ class SerpSearchToolSchema(FixedSerpSearchToolSchema):
     search_query: str = Field(
         ...,
         description="Mandatory search query that will retrieve search engine results page",
+    )
+
+
+class FixedApolloPersonDomainSearchToolSchema(BaseModel):
+    """Input for ApolloPersonDomainSearchTool."""
+
+    pass
+
+
+class ApolloPersonDomainSearchToolSchema(FixedApolloPersonDomainSearchToolSchema):
+    """Input for ApolloPersonDomainSearchTool."""
+
+    company_domain: str = Field(
+        ...,
+        description="Company domain to search for people associated with the company",
     )
 
 
@@ -99,3 +115,26 @@ class SerpSearchTool(BaseTool):
                     )
                 )
         return "\n".join(search_context)
+
+
+class ApolloPersonDomainSearchTool(BaseTool):
+    """
+    Find people and their contact information associated with a company domain
+    """
+
+    name: str = "Apollo Person Domain Search"
+    description: str = "A tool that can be used to find people and their contact information associated with a company domain."
+    args_schema: Type[BaseModel] = ApolloPersonDomainSearchToolSchema
+
+    def __init__(self, company_domain: Optional[str] = None, **kwargs):
+        super().__init__(**kwargs)
+        if company_domain is not None:
+            self.args_schema = FixedApolloPersonDomainSearchToolSchema
+            self.description = "A tool that can be used to find people and their contact information associated with a company domain."
+            self._generate_description()
+
+    def _run(self, **kwargs: Any) -> Any:
+        company_domain = kwargs.get("company_domain")
+        return generate_apollo_person_domain_search_context(
+            company_domains=[company_domain], results=10
+        )
