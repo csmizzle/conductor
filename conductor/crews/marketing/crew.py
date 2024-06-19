@@ -3,6 +3,10 @@ from conductor.reports.models import ReportStyle
 from conductor.crews.marketing.tasks import MarketingTasks
 from conductor.llms import claude_sonnet
 from crewai import Crew
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class UrlMarketingCrew:
@@ -11,6 +15,7 @@ class UrlMarketingCrew:
         self.report_style = report_style
 
     def run(self) -> dict:
+        # create agents and tasks
         agents = MarketingAgents()
         tasks = MarketingTasks()
 

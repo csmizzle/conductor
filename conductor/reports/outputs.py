@@ -4,9 +4,9 @@ Conductor Report Outputs
 """
 import pdfkit
 from langchain.prompts import PromptTemplate
-from conductor.reports.models import Report
+from conductor.reports.models import Report, ReportStyle
 from conductor.reports.html_ import report_to_html
-from conductor.llms import claude_sonnet
+from conductor.llms import claude_sonnet, claude_haiku
 from textwrap import dedent
 import tempfile
 from langchain.output_parsers import PydanticOutputParser
@@ -15,7 +15,9 @@ from langsmith import traceable
 
 
 @traceable
-def string_to_report(string: str) -> Report:
+def string_to_report(
+    string: str, report_style: ReportStyle, haiku: bool = True
+) -> Report:
     report_parser = PydanticOutputParser(pydantic_object=Report)
     string_to_report_prompt = PromptTemplate(
         input_variables=["string"],
@@ -118,13 +120,15 @@ def string_to_report(string: str) -> Report:
         },
     )
     chain = LLMChain(
-        llm=claude_sonnet,
+        llm=claude_haiku if haiku else claude_sonnet,
         prompt=string_to_report_prompt,
     )
     response = chain.invoke({"string": string})
     parsed_result = report_parser.parse(text=response["text"])
     # write raw string to object
     parsed_result.raw = string
+    # add report style
+    parsed_result.style = report_style
     return parsed_result
 
 

@@ -4,6 +4,7 @@ Tasks for the marketing crew.
 from crewai import Task, Agent
 from textwrap import dedent
 from conductor.reports.models import ReportStyle
+from conductor.crews.marketing.utils import create_report_prompt
 
 
 class MarketingTasks:
@@ -33,6 +34,7 @@ class MarketingTasks:
             Look for the key personnel on the linkedin or company website.
             Find the competitors of the company.
             Determine which market the company operates in and what their TAM/SAM/SOM is.
+            Find estimates if exact numbers are not available.
             Use the URL: {company_url} to find the company.
             """
             ),
@@ -71,35 +73,7 @@ class MarketingTasks:
         self, agent: Agent, context: list[Task], report_style: ReportStyle
     ):
         return Task(
-            description=dedent(
-                f"""
-            Write a comprehensive report on the company using only the provided context.
-            The report should be a mixture of long form and bullet points, capturing the key points.
-            The report should include a SWOT analysis, key personnel, company history, and key products and services.
-            The report should be well-structured and easy to read.
-            The report should include all source URLs used as well from the provided context, do not leave any out from provided context.
-            The report should be broken into 5 main sections and each section should be written {report_style.value}. :
-                1. Overview
-                    - Background
-                    - Key Personnel
-                    - Products/Services
-                    - Pricing
-                2. Market Analysis
-                    - Market
-                    - TAM/SAM/SOM
-                3. SWOT Analysis
-                    - Strengths
-                    - Weaknesses
-                    - Opportunities
-                    - Threats
-                4. Competitors
-                    - Competitor
-                        - Strengths
-                        - Weaknesses
-                5. Sources
-                    - Links
-            """
-            ),
+            description=create_report_prompt(report_style),
             agent=agent,
             context=context,
             expected_output="Comprehensive report on the company with the sections overview, swot analysis, and competitors.",
