@@ -14,13 +14,15 @@ def create_report_prompt(report_style: ReportStyle):
         The report should be broken into 5 main sections and each section should be written {report_style.value}:
             1. Overview
                 - Background
-                    - 5 bullet points
+                    - Background of the company in bullet points
                 - Key Personnel
                     - All identified personnel in bullet points
                 - Products/Services
                     - All identified products/services in bullet points
                 - Pricing
                     - All identified pricing in bullet points
+                - Recent Events
+                    - All identified recent events in bullet points
             2. Market Analysis
                 - Market
                     - Identified market(s) in bullet points
@@ -60,6 +62,8 @@ def create_report_prompt(report_style: ReportStyle):
                         Paragraphs on products/services
                     - Pricing
                         Paragraphs on pricing
+                    - Recent Events
+                        Paragraphs on recent events
                 2. Market Analysis
                     - Market
                         Identified market(s) in paragraphs

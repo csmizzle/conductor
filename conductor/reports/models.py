@@ -23,10 +23,14 @@ class Section(BaseModel):
     paragraphs: List[Paragraph] = Field(description="List of paragraphs")
 
 
-class Report(BaseModel):
+class ParsedReport(BaseModel):
     title: str = Field(description="Title of the report")
     description: str = Field(description="Description of the report")
-    sections: list[Section] = Field(description="Sections in the report")
+    sections: List[Section] = Field(description="Sections in the report")
+
+
+class Report(BaseModel):
+    report: Optional[ParsedReport] = Field(description="Parsed report")
     raw: Optional[str] = Field(description="Raw report")
     style: ReportStyle = Field(
         default=ReportStyle.BULLETED, description="Style of the report"

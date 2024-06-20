@@ -17,19 +17,22 @@ def url_marketing_report(
     )
     result = crew.run()
     try:
-        report = string_to_report(
+        parsed_report = string_to_report(
             string=result,
             report_style=report_style,
             haiku=haiku,
+        )
+        report = Report(
+            report=parsed_report,
+            style=report_style,
+            raw=result,
         )
     except Exception as e:
         print("Error parsing report. Returning report with raw output.")
         print(e)
         report = Report(
-            title="",
-            description="",
-            sections=[],
-            raw=result,
+            report=None,
             style=report_style,
+            raw=result,
         )
     return report

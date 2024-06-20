@@ -2,6 +2,7 @@
 Implementation of the LLM services
 """
 from langchain_openai.llms import OpenAI
+from langchain_openai.chat_models import ChatOpenAI
 from langchain_community.llms.bedrock import Bedrock
 from langchain_community.chat_models.bedrock import BedrockChat
 from langchain_fireworks.llms import Fireworks
@@ -21,5 +22,6 @@ claude_sonnet = BedrockChat(
 claude_haiku = BedrockChat(
     client=bedrock_runtime,
     model_id="anthropic.claude-3-haiku-20240307-v1:0",
-    model_kwargs={"max_tokens": 5000},
+    model_kwargs={"max_tokens": 10000},
 )
+openai_gpt_4o = ChatOpenAI(temperature=0, max_tokens=4000, model="gpt-4o")
