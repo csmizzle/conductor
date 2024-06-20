@@ -32,7 +32,7 @@ class ParsedReport(BaseModel):
 class Report(BaseModel):
     report: Optional[ParsedReport] = Field(description="Parsed report")
     raw: Optional[str] = Field(description="Raw report")
-    style: ReportStyle = Field(
+    style: Optional[ReportStyle] = Field(
         default=ReportStyle.BULLETED, description="Style of the report"
     )
 

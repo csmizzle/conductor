@@ -71,7 +71,8 @@ def test_string_to_report() -> None:
 
 def test_report_to_html() -> None:
     # read in the json data
-    report = Report(**REPORT_JSON)
+    parsed_report = ParsedReport(**REPORT_JSON)
+    report = Report(report=parsed_report)
     html = report_to_html(report)
     assert isinstance(html, str)
 

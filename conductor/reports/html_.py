@@ -17,8 +17,8 @@ def report_to_html(report: Report) -> str:
     env = Environment(loader=FileSystemLoader(os.path.join(BASEDIR, "templates")))
     report_template = env.get_template("report.html")
     output_from_parsed_template = report_template.render(
-        report_title=report.title,
-        report_description=report.description,
-        report_sections=[section.dict() for section in report.sections],
+        report_title=report.report.title,
+        report_description=report.report.description,
+        report_sections=[section.dict() for section in report.report.sections],
     )
     return html.unescape(output_from_parsed_template)
