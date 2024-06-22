@@ -18,7 +18,6 @@ def url_marketing_report(
     try:
         parsed_report = string_to_report(
             string=result,
-            report_style=report_style,
         )
         report = Report(
             report=parsed_report,
