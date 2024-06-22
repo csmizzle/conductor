@@ -1724,13 +1724,13 @@ files = [
 
 [[package]]
 name = "embedchain"
-version = "0.1.111"
+version = "0.1.112"
 description = "Simplest open source retrieval (RAG) framework"
 optional = false
 python-versions = "<=3.13,>=3.9"
 files = [
-    {file = "embedchain-0.1.111-py3-none-any.whl", hash = "sha256:1b77156ca660360a068488433283532c1a53dd66d46d99cf004109b6b4ca1285"},
-    {file = "embedchain-0.1.111.tar.gz", hash = "sha256:1e319f6ef01bea9c383a70133173ab1d5f4283ffcc4f22ef2e9b3dd5349b22a3"},
+    {file = "embedchain-0.1.112-py3-none-any.whl", hash = "sha256:6f893d193eb868de8fdd58b646604f5b9b577c73129cc2174a173971a9ac585c"},
+    {file = "embedchain-0.1.112.tar.gz", hash = "sha256:a511a400f8753e61428bce36672d6b478009ec1ac6186ccd2c3cc87498045df6"},
 ]
 
 [package.dependencies]
@@ -1769,6 +1769,7 @@ gmail = ["google-api-core (>=2.15.0,<3.0.0)", "google-api-python-client (>=2.111
 google = ["google-generativeai (>=0.3.0,<0.4.0)"]
 googledrive = ["google-api-python-client (>=2.111.0,<3.0.0)", "google-auth-httplib2 (>=0.2.0,<0.3.0)", "google-auth-oauthlib (>=1.2.0,<2.0.0)"]
 huggingface-hub = ["huggingface_hub (>=0.17.3,<0.18.0)"]
+lancedb = ["lancedb (>=0.6.2,<0.7.0)"]
 llama2 = ["replicate (>=0.15.4,<0.16.0)"]
 milvus = ["pymilvus (==2.4.3)"]
 mistralai = ["langchain-mistralai (>=0.0.3,<0.0.4)"]

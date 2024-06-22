@@ -16,7 +16,7 @@ fireworks_mistral = Fireworks(
 )
 claude_sonnet = BedrockChat(
     client=bedrock_runtime,
-    model_id="anthropic.claude-3-sonnet-20240229-v1:0",
+    model_id="anthropic.claude-3-5-sonnet-20240620-v1:0",
     model_kwargs={"max_tokens": 5000},
 )
 claude_haiku = BedrockChat(

@@ -6,7 +6,6 @@ from conductor.reports.models import Report, ReportStyle
 def url_marketing_report(
     url: str,
     report_style: ReportStyle,
-    haiku: bool = True,
 ) -> Report:
     """
     Run a marketing report on a URL
@@ -20,7 +19,6 @@ def url_marketing_report(
         parsed_report = string_to_report(
             string=result,
             report_style=report_style,
-            haiku=haiku,
         )
         report = Report(
             report=parsed_report,
