@@ -7,6 +7,7 @@ import os
 import requests
 from bs4 import BeautifulSoup
 from conductor.functions.apollo import generate_apollo_person_domain_search_context
+import re
 
 
 CONTEXT_LIMIT = os.getenv("CONTEXT_LIMIT", 200000)
@@ -56,7 +57,7 @@ class SerpSearchTool(BaseTool):
     cookies: Optional[dict] = None
     headers: Optional[dict] = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+        "Accept": "text/html",
         "Accept-Language": "en-US,en;q=0.9",
         "Referer": "https://www.google.com/",
         "Connection": "keep-alive",
@@ -84,6 +85,8 @@ class SerpSearchTool(BaseTool):
         text = parsed.get_text()
         text = "\n".join([i for i in text.split("\n") if i.strip() != ""])
         text = " ".join([i for i in text.split(" ") if i.strip() != ""])
+        # remove all the special characters using regex
+        text = re.sub(r"[^a-zA-Z0-9\s]", "", text)
         return text
 
     def _run(self, **kwargs: Any) -> Any:
