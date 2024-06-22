@@ -80,7 +80,7 @@ class SerpSearchTool(BaseTool):
             headers=self.headers,
             cookies=self.cookies if self.cookies else {},
         )
-        parsed = BeautifulSoup(page.content, "html.parser")
+        parsed = BeautifulSoup(page.content, "html.parser", from_encoding="iso-8859-1")
         text = parsed.get_text()
         text = "\n".join([i for i in text.split("\n") if i.strip() != ""])
         text = " ".join([i for i in text.split(" ") if i.strip() != ""])
