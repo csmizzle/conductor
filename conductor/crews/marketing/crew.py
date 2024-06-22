@@ -2,6 +2,7 @@ from conductor.crews.marketing.agents import MarketingAgents
 from conductor.reports.models import ReportStyle
 from conductor.crews.marketing.tasks import MarketingTasks
 from conductor.crews.models import CrewRun
+from conductor.crews.marketing.utils import task_to_task_run
 from conductor.llms import claude_sonnet
 from crewai import Crew
 import logging
@@ -91,13 +92,7 @@ class UrlMarketingCrew:
 
         # create and return crew run
         crew_run = CrewRun(
-            task_outputs=[
-                company_research_task.output,
-                search_engine_task.output,
-                swot_task.output,
-                competitor_task.output,
-                writer_task.output,
-            ],
+            tasks=[task_to_task_run(task) for task in crew.tasks],
             result=result,
         )
         return crew_run

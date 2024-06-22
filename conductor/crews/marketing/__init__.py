@@ -2,8 +2,10 @@ from conductor.reports.outputs import string_to_report
 from conductor.crews.marketing.crew import UrlMarketingCrew
 from conductor.reports.models import Report, ReportStyle
 from conductor.crews.models import CrewRun
+from langsmith import traceable
 
 
+@traceable
 def run_marketing_crew(
     url: str,
     report_style: ReportStyle,

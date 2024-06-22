@@ -1,9 +1,14 @@
 from pydantic import BaseModel, Field
-from crewai.task import TaskOutput
+
+
+class TaskRun(BaseModel):
+    agent_role: str = Field(description="The name of the agent that ran the task")
+    description: str = Field(description="The description of the task that was run")
+    result: str = Field(description="The result of the task run")
 
 
 class CrewRun(BaseModel):
-    task_outputs: list[TaskOutput] = Field(
+    tasks: list[TaskRun] = Field(
         description="List of tasks that were completed by the crew"
     )
     result: str = Field(description="The result of the crew run")

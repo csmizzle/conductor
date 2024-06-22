@@ -1,5 +1,7 @@
 from textwrap import dedent
 from conductor.reports.models import ReportStyle
+from conductor.crews.models import TaskRun
+from crewai import Task
 
 
 def create_report_prompt(report_style: ReportStyle):
@@ -85,3 +87,11 @@ def create_report_prompt(report_style: ReportStyle):
                     - Links to sources as bullet points
             """
         )
+
+
+def task_to_task_run(task: Task) -> TaskRun:
+    return TaskRun(
+        agent_role=task.agent.role,
+        description=task.description,
+        result=task.output.raw_output,
+    )
