@@ -32,6 +32,7 @@ class MarketingTasks:
             Determine which company the URL belongs to and do in-depth research on the company.
             Find key personnel, company history, any pricing information available, and key products and services.
             Look for the key personnel on the linkedin or company website.
+            Find any relevant contact information with key personnel.
             Find the competitors of the company.
             Find the most recent events of the company as well.
             Determine which market the company operates in and what their TAM/SAM/SOM is.
