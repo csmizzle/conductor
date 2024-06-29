@@ -2,6 +2,8 @@ from textwrap import dedent
 from conductor.reports.models import ReportStyle
 from conductor.crews.models import TaskRun
 from crewai import Task
+import requests
+from requests import Response
 
 
 def create_report_prompt(report_style: ReportStyle):
@@ -95,3 +97,25 @@ def task_to_task_run(task: Task) -> TaskRun:
         description=task.description,
         result=task.output.raw_output,
     )
+
+
+def oxylabs_request(
+    method: str,
+    oxylabs_username: str,
+    oxylabs_password: str,
+    oxylabs_country: str,
+    oxylabs_port: str,
+    **kwargs,
+) -> Response:
+    """
+    Run Oxylabs request
+    """
+    response = requests.request(
+        method=method,
+        proxies={
+            "http": f"http://{oxylabs_username}:{oxylabs_password}@{oxylabs_country}.oxylabs.io:{oxylabs_port}",
+            "https": f"https://{oxylabs_username}:{oxylabs_password}@{oxylabs_country}.oxylabs.io:{oxylabs_port}",
+        },
+        **kwargs,
+    )
+    return response

@@ -1,4 +1,5 @@
 from crewai_tools.tools.base_tool import BaseTool
+from crewai_tools.tools import ScrapeWebsiteTool
 from serpapi import GoogleSearch
 from pydantic.v1 import BaseModel, Field
 from typing import Optional, Any, Type
@@ -151,3 +152,29 @@ class ApolloPersonDomainSearchTool(BaseTool):
         return generate_apollo_person_domain_search_context(
             company_domains=[company_domain], results=10
         )
+
+
+class OxyLabsScrapePage(ScrapeWebsiteTool):
+    """
+    Scrape websites through OxyLabs Proxy
+    """
+
+    def __init__(website_url: Optional[str] = None, **kwargs) -> None:
+        super().__init__(website_url=website_url, **kwargs)
+
+    def _run(
+        self,
+        **kwargs: Any,
+    ) -> Any:
+        website_url = kwargs.get("website_url", self.website_url)
+        page = requests.get(
+            website_url,
+            timeout=15,
+            headers=self.headers,
+            cookies=self.cookies if self.cookies else {},
+        )
+        parsed = BeautifulSoup(page.content, "html.parser")
+        text = parsed.get_text()
+        text = "\n".join([i for i in text.split("\n") if i.strip() != ""])
+        text = " ".join([i for i in text.split(" ") if i.strip() != ""])
+        return text
