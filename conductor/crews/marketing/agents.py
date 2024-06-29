@@ -2,8 +2,11 @@
 Marketing agents
 """
 from crewai import Agent
-from crewai_tools.tools import ScrapeWebsiteTool
-from conductor.crews.marketing.tools import SerpSearchTool, ApolloPersonDomainSearchTool
+from conductor.crews.marketing.tools import (
+    SerpSearchTool,
+    ApolloPersonDomainSearchTool,
+    OxyLabsScrapePageTool,
+)
 
 
 class MarketingAgents:
@@ -14,8 +17,9 @@ class MarketingAgents:
     def swot_agent(self, llm=None):
         return Agent(
             role="SWOT Agent",
-            goal="Create a SWOT analysis for a company",
-            backstory="An expert in analyzing company data to create SWOT analysis",
+            goal="Create a SWOT analysis for a company and returning source links.",
+            backstory="An expert in analyzing company data to create SWOT analysis.",
+            tools=[SerpSearchTool()],
             verbose=True,
             llm=llm,
         )
@@ -23,7 +27,7 @@ class MarketingAgents:
     def search_engine_agent(self, llm=None):
         return Agent(
             role="Search Engine Agent",
-            goal="Provide URLs for a additional company research and extract all useful research information to support company analysis",
+            goal="Provide URLs for a additional company research and extract all useful research information to support company analysis. Search engine queries should be analytical and insightful.",
             backstory="An expert in searching for information about companies. Generate great search engine questions that will get the best results. Provide summaries with key information about the company.",
             verbose=True,
             tools=[SerpSearchTool()],
@@ -33,11 +37,11 @@ class MarketingAgents:
     def company_research_agent(self, llm=None):
         return Agent(
             role="Company Agent",
-            goal="Retrieve information about a company",
-            backstory="An expert in looking up company information using the internet.",
+            goal="Retrieve comprehensive information about a company and returning source links.",
+            backstory="An expert in looking up company information using the internet. Comes up with creative ways to find information about a company.",
             verbose=True,
             tools=[
-                ScrapeWebsiteTool(),
+                OxyLabsScrapePageTool(),
                 SerpSearchTool(),
                 ApolloPersonDomainSearchTool(),
             ],
@@ -49,7 +53,7 @@ class MarketingAgents:
             role="Competitor Agent",
             goal="Retrieve information about a companies competitor",
             backstory="An expert in looking up competitor information",
-            tools=[ScrapeWebsiteTool(), SerpSearchTool()],
+            tools=[OxyLabsScrapePageTool(), SerpSearchTool()],
             verbose=True,
             llm=llm,
         )

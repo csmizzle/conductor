@@ -3,7 +3,9 @@ from conductor.reports.models import ReportStyle
 from conductor.crews.models import TaskRun
 from crewai import Task
 import requests
-from requests import Response
+from requests.models import Response
+from bs4 import BeautifulSoup
+import re
 
 
 def create_report_prompt(report_style: ReportStyle):
@@ -119,3 +121,43 @@ def oxylabs_request(
         **kwargs,
     )
     return response
+
+
+def send_request(
+    method: str, url: str, oxylabs_username: str, oxylabs_password: str, **kwargs
+) -> Response:
+    """
+    Send a request to the specified URL.
+    """
+    try:
+        page = oxylabs_request(
+            method=method,
+            oxylabs_username=oxylabs_username,
+            oxylabs_password=oxylabs_password,
+            oxylabs_country="pr",
+            oxylabs_port=7777,
+            url=url,
+            **kwargs,
+        )
+        return page
+    except Exception as e:
+        # send normal request if oxylabs request fails
+        print("Oxylabs request failed, sending normal request")
+        print(e)
+        try:
+            print("Trying normal request ...")
+            page = requests.request(method=method, url=url, **kwargs)
+            return page
+        except Exception as e:
+            print(e)
+            return "Error: Unable to fetch page content for {url}."
+
+
+def clean_html(response: Response) -> str:
+    parsed = BeautifulSoup(response.content, "html.parser", from_encoding="iso-8859-1")
+    text = parsed.get_text()
+    text = "\n".join([i for i in text.split("\n") if i.strip() != ""])
+    text = " ".join([i for i in text.split(" ") if i.strip() != ""])
+    # remove all the special characters using regex
+    text = re.sub(r"[^a-zA-Z0-9\s]", "", text)
+    return text

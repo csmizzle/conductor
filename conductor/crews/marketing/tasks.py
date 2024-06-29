@@ -17,12 +17,13 @@ class MarketingTasks:
             description=dedent(
                 """
             Find additional links that can be used to research the company.
+            Ask questions that will lead to more information about the company, industry, and competitors.
             These links should be passed to the company research agent for further investigation.
             """
             ),
             agent=agent,
             context=context,
-            expected_output="Additional URLs and data for more company research with source links.",
+            expected_output="Additional URLs and insights for more company research with source links.",
         )
 
     def company_research_task(self, agent: Agent, company_url: str):

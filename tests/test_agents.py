@@ -2,14 +2,10 @@
 Test the agents module.
 """
 from conductor.crews.marketing.crew import UrlMarketingCrew
-from tests.constants import BASEDIR
 from conductor.crews.models import CrewRun, TaskRun
 from conductor.reports.models import ReportStyle
-import vcr
-import os
 
 
-@vcr.use_cassette(os.path.join(BASEDIR, "cassettes", "test_url_marketing_crew.yaml"))
 def test_url_marketing_crew():
     """
     Test the UrlMarketingCrew class.
