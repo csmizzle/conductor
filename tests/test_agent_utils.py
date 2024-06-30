@@ -45,6 +45,3 @@ def test_send_request() -> None:
         oxylabs_password=oxylabs_password,
     )
     assert response.status_code == 200
-
-
-test_send_request()
