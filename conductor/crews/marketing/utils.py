@@ -107,6 +107,8 @@ def oxylabs_request(
     oxylabs_password: str,
     oxylabs_country: str,
     oxylabs_port: str,
+    headers=None,
+    cookies=None,
     **kwargs,
 ) -> Response:
     """
@@ -118,13 +120,21 @@ def oxylabs_request(
             "http": f"http://{oxylabs_username}:{oxylabs_password}@{oxylabs_country}.oxylabs.io:{oxylabs_port}",
             "https": f"https://{oxylabs_username}:{oxylabs_password}@{oxylabs_country}.oxylabs.io:{oxylabs_port}",
         },
+        headers=headers,
+        cookies=cookies,
         **kwargs,
     )
     return response
 
 
 def send_request(
-    method: str, url: str, oxylabs_username: str, oxylabs_password: str, **kwargs
+    method: str,
+    url: str,
+    oxylabs_username: str,
+    oxylabs_password: str,
+    headers=None,
+    cookies=None,
+    **kwargs,
 ) -> Response:
     """
     Send a request to the specified URL.
@@ -137,6 +147,8 @@ def send_request(
             oxylabs_country="pr",
             oxylabs_port=7777,
             url=url,
+            headers=headers,
+            cookies=cookies,
             **kwargs,
         )
         return page
@@ -149,6 +161,7 @@ def send_request(
             page = requests.request(method=method, url=url, **kwargs)
             return page
         except Exception as e:
+            print("Normal request failed, returning error message.")
             print(e)
             return "Error: Unable to fetch page content for {url}."
 

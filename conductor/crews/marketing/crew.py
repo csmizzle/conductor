@@ -3,12 +3,36 @@ from conductor.reports.models import ReportStyle
 from conductor.crews.marketing.tasks import MarketingTasks
 from conductor.crews.models import CrewRun
 from conductor.crews.marketing.utils import task_to_task_run
+from conductor.crews.cache import RedisCrewCacheHandler
 from conductor.llms import claude_sonnet
 from crewai import Crew
+from crewai.telemetry import Telemetry
+from crewai.utilities import FileHandler, Logger, RPMController
 import logging
+from pydantic import PrivateAttr, model_validator
 
 
 logger = logging.getLogger(__name__)
+
+
+class RedisCacheHandlerCrew(Crew):
+    _cache_handler: RedisCrewCacheHandler = PrivateAttr()
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @model_validator(mode="after")
+    def set_private_attrs(self) -> "RedisCacheHandlerCrew":
+        """Set private attributes."""
+        self._cache_handler = RedisCrewCacheHandler()
+        self._logger = Logger(self.verbose)
+        if self.output_log_file:
+            self._file_handler = FileHandler(self.output_log_file)
+        self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
+        self._telemetry = Telemetry()
+        self._telemetry.set_tracer()
+        self._telemetry.crew_creation(self)
+        return self
 
 
 class UrlMarketingCrew:
@@ -20,15 +44,21 @@ class UrlMarketingCrew:
         self,
         url: str,
         report_style: ReportStyle,
+        verbose: bool = True,
         output_log_file: bool | str = None,
         step_callback=None,
         task_callback=None,
+        cache=None,
     ) -> None:
         self.url = url
         self.report_style = report_style
         self.output_log_file = output_log_file
         self.step_callback = step_callback
         self.task_callback = task_callback
+        self.cache = cache
+        if self.cache:
+            self.cache_handler = RedisCrewCacheHandler()
+        self.verbose = verbose
 
     def run(self) -> CrewRun:
         # create agents and tasks
@@ -36,11 +66,31 @@ class UrlMarketingCrew:
         tasks = MarketingTasks()
 
         # agents
-        company_research_agent = agents.company_research_agent(claude_sonnet)
-        search_engine_agent = agents.search_engine_agent(claude_sonnet)
-        swot_agent = agents.swot_agent(claude_sonnet)
-        competitor_agent = agents.competitor_agent(claude_sonnet)
-        writer_agent = agents.writer_agent(claude_sonnet)
+        company_research_agent = agents.company_research_agent(
+            llm=claude_sonnet,
+            cache=self.cache,
+            cache_handler=self.cache_handler,
+        )
+        search_engine_agent = agents.search_engine_agent(
+            llm=claude_sonnet,
+            cache=self.cache,
+            cache_handler=self.cache_handler,
+        )
+        swot_agent = agents.swot_agent(
+            llm=claude_sonnet,
+            cache=self.cache,
+            cache_handler=self.cache_handler,
+        )
+        competitor_agent = agents.competitor_agent(
+            llm=claude_sonnet,
+            cache=self.cache,
+            cache_handler=self.cache_handler,
+        )
+        writer_agent = agents.writer_agent(
+            llm=claude_sonnet,
+            cache=self.cache,
+            cache_handler=self.cache_handler,
+        )
 
         # tasks
         company_research_task = tasks.company_research_task(
@@ -68,26 +118,51 @@ class UrlMarketingCrew:
         )
 
         # create crew
-        crew = Crew(
-            agents=[
-                company_research_agent,
-                search_engine_agent,
-                swot_agent,
-                competitor_agent,
-                writer_agent,
-            ],
-            tasks=[
-                company_research_task,
-                search_engine_task,
-                swot_task,
-                competitor_task,
-                writer_task,
-            ],
-            verbose=True,
-            step_callback=self.step_callback,
-            output_log_file=self.output_log_file,
-            task_callback=self.task_callback,
-        )
+        if self.cache:
+            crew = RedisCacheHandlerCrew(
+                agents=[
+                    company_research_agent,
+                    search_engine_agent,
+                    swot_agent,
+                    competitor_agent,
+                    writer_agent,
+                ],
+                tasks=[
+                    company_research_task,
+                    search_engine_task,
+                    swot_task,
+                    competitor_task,
+                    writer_task,
+                ],
+                verbose=self.verbose,
+                step_callback=self.step_callback,
+                output_log_file=self.output_log_file,
+                task_callback=self.task_callback,
+                cache=self.cache,
+                _cache_handler=self.cache_handler,
+            )
+        else:
+            crew = Crew(
+                agents=[
+                    company_research_agent,
+                    search_engine_agent,
+                    swot_agent,
+                    competitor_agent,
+                    writer_agent,
+                ],
+                tasks=[
+                    company_research_task,
+                    search_engine_task,
+                    swot_task,
+                    competitor_task,
+                    writer_task,
+                ],
+                verbose=self.verbose,
+                step_callback=self.step_callback,
+                output_log_file=self.output_log_file,
+                task_callback=self.task_callback,
+            )
+
         result = crew.kickoff()
 
         # create and return crew run
