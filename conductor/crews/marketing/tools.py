@@ -172,8 +172,11 @@ class ApolloPersonDomainSearchTool(BaseTool):
         )
 
 
+# TODO: add cache to the base tools
+
+
 # OxyLabs Proxy Tools
-class OxyLabsScrapePageTool(BaseTool):
+class ScrapePageOxyLabsTool(BaseTool):
     """
     Scrape websites through OxyLabs Proxy
     """
@@ -227,7 +230,7 @@ class OxyLabsScrapePageTool(BaseTool):
         return clean_html(content)
 
 
-class OxyLabsSerpSearchTool(SerpSearchTool):
+class SerpSearchOxyLabsTool(SerpSearchTool):
     name: str = "Search Engine Results Page (SERP) Tool"
     description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query."
     args_schema: Type[BaseModel] = SerpSearchToolSchema
@@ -266,7 +269,7 @@ class OxyLabsSerpSearchTool(SerpSearchTool):
 
 
 # Cached & OxyLabs version of the tools
-class SerpSearchCacheTool(SerpSearchTool):
+class SerpSearchOxylabsCacheTool(SerpSearchTool):
     name: str = "Search Engine Results Page (SERP) Tool"
     description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query."
     args_schema: Type[BaseModel] = SerpSearchToolSchema
@@ -299,7 +302,7 @@ class SerpSearchCacheTool(SerpSearchTool):
         )
 
 
-class OxyLabsScrapePageCacheTool(BaseTool):
+class ScrapePageOxylabsCacheTool(BaseTool):
     name: str = "Read website content"
     description: str = "A tool that can be used to read a website content."
     args_schema: Type[BaseModel] = ScrapeWebsiteToolSchema

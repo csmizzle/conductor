@@ -2,6 +2,15 @@
 Test the agents module.
 """
 from conductor.crews.marketing.crew import UrlMarketingCrew
+from conductor.crews.marketing.agents import MarketingAgents
+from conductor.crews.marketing.tools import (
+    SerpSearchOxylabsCacheTool,
+    ScrapePageOxylabsCacheTool,
+    SerpSearchOxyLabsTool,
+    ScrapePageOxyLabsTool,
+    SerpSearchTool,
+)
+from crewai_tools import ScrapeWebsiteTool
 from conductor.crews.models import CrewRun, TaskRun
 from conductor.reports.models import ReportStyle
 
@@ -36,3 +45,21 @@ def test_url_marketing_crew_with_redis_cache():
     assert isinstance(result.result, str)
     for task in result.tasks:
         assert isinstance(task, TaskRun)
+
+
+def test_set_scraping_tools() -> None:
+    """
+    Test that the set_scraping_tools function returns the correct tools.
+    """
+    tools = MarketingAgents.set_scraping_tools(cache=True, proxy=True)
+    assert len(tools) == 2
+    assert isinstance(tools[0], SerpSearchOxylabsCacheTool)
+    assert isinstance(tools[1], ScrapePageOxylabsCacheTool)
+    tools = MarketingAgents.set_scraping_tools(cache=False, proxy=True)
+    assert len(tools) == 2
+    assert isinstance(tools[0], SerpSearchOxyLabsTool)
+    assert isinstance(tools[1], ScrapePageOxyLabsTool)
+    tools = MarketingAgents.set_scraping_tools(cache=False, proxy=False)
+    assert len(tools) == 2
+    assert isinstance(tools[0], SerpSearchTool)
+    assert isinstance(tools[1], ScrapeWebsiteTool)

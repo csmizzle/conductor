@@ -49,6 +49,7 @@ class UrlMarketingCrew:
         step_callback=None,
         task_callback=None,
         cache=None,
+        proxy=None,
     ) -> None:
         self.url = url
         self.report_style = report_style
@@ -59,16 +60,17 @@ class UrlMarketingCrew:
         if self.cache:
             self.cache_handler = RedisCrewCacheHandler()
         self.verbose = verbose
+        self.proxy = proxy
 
     def run(self) -> CrewRun:
         # create agents and tasks
         agents = MarketingAgents()
         tasks = MarketingTasks()
-
         # agents
         company_research_agent = agents.company_research_agent(
             llm=claude_sonnet,
             cache=self.cache,
+            proxy=self.proxy,
             cache_handler=self.cache_handler,
         )
         search_engine_agent = agents.search_engine_agent(
@@ -79,16 +81,19 @@ class UrlMarketingCrew:
         swot_agent = agents.swot_agent(
             llm=claude_sonnet,
             cache=self.cache,
+            proxy=self.proxy,
             cache_handler=self.cache_handler,
         )
         competitor_agent = agents.competitor_agent(
             llm=claude_sonnet,
             cache=self.cache,
+            proxy=self.proxy,
             cache_handler=self.cache_handler,
         )
         writer_agent = agents.writer_agent(
             llm=claude_sonnet,
             cache=self.cache,
+            proxy=self.proxy,
             cache_handler=self.cache_handler,
         )
 
