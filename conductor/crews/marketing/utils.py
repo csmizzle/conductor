@@ -149,6 +149,7 @@ def send_request(
             page = requests.request(method=method, url=url, **kwargs)
             return page
         except Exception as e:
+            print("Normal request failed, returning error message.")
             print(e)
             return "Error: Unable to fetch page content for {url}."
 

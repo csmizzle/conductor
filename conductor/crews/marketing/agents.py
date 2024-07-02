@@ -14,7 +14,7 @@ class MarketingAgents:
     Marketing agents
     """
 
-    def swot_agent(self, llm=None):
+    def swot_agent(self, llm=None, cache=None, cache_handler=None):
         return Agent(
             role="SWOT Agent",
             goal="Create a SWOT analysis for a company and returning source links.",
@@ -22,9 +22,11 @@ class MarketingAgents:
             tools=[SerpSearchTool()],
             verbose=True,
             llm=llm,
+            cache=cache,
+            cache_handler=cache_handler,
         )
 
-    def search_engine_agent(self, llm=None):
+    def search_engine_agent(self, llm=None, cache=None, cache_handler=None):
         return Agent(
             role="Search Engine Agent",
             goal="Provide URLs for a additional company research and extract all useful research information to support company analysis. Search engine queries should be analytical and insightful.",
@@ -32,9 +34,11 @@ class MarketingAgents:
             verbose=True,
             tools=[SerpSearchTool()],
             llm=llm,
+            cache=cache,
+            cache_handler=cache_handler,
         )
 
-    def company_research_agent(self, llm=None):
+    def company_research_agent(self, llm=None, cache=None, cache_handler=None):
         return Agent(
             role="Company Agent",
             goal="Retrieve comprehensive information about a company and returning source links.",
@@ -46,9 +50,11 @@ class MarketingAgents:
                 ApolloPersonDomainSearchTool(),
             ],
             llm=llm,
+            cache=cache,
+            cache_handler=cache_handler,
         )
 
-    def competitor_agent(self, llm=None):
+    def competitor_agent(self, llm=None, cache=None, cache_handler=None):
         return Agent(
             role="Competitor Agent",
             goal="Retrieve information about a companies competitor",
@@ -56,9 +62,11 @@ class MarketingAgents:
             tools=[OxyLabsScrapePageTool(), SerpSearchTool()],
             verbose=True,
             llm=llm,
+            cache=cache,
+            cache_handler=cache_handler,
         )
 
-    def writer_agent(self, llm=None):
+    def writer_agent(self, llm=None, cache=None, cache_handler=None):
         return Agent(
             role="Writer Agent",
             goal="Write a report about a company using the provided context in a task.",
@@ -66,4 +74,6 @@ class MarketingAgents:
             verbose=True,
             llm=llm,
             allow_delegation=False,
+            cache=cache,
+            cache_handler=cache_handler,
         )
