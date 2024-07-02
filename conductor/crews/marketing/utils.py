@@ -4,6 +4,7 @@ from conductor.crews.models import TaskRun
 from crewai import Task
 import requests
 from requests.models import Response
+from redis import Redis
 from bs4 import BeautifulSoup
 import re
 
@@ -174,3 +175,36 @@ def clean_html(response: Response) -> str:
     # remove all the special characters using regex
     text = re.sub(r"[^a-zA-Z0-9\s]", "", text)
     return text
+
+
+def send_request_with_cache(
+    url: str,
+    method: str,
+    cache: Redis,
+    oxylabs_username: str,
+    oxylabs_password: str,
+    headers: dict,
+    cookies: dict,
+    timeout: int,
+    **kwargs,
+) -> str:
+    cached_content = cache.get(url)
+    if cached_content:
+        return cached_content.decode("utf-8")
+    else:
+        content = send_request(
+            url=url,
+            method=method,
+            oxylabs_username=oxylabs_username,
+            oxylabs_password=oxylabs_password,
+            headers=headers,
+            cookies=cookies if cookies else {},
+            timeout=timeout,
+            **kwargs,
+        )
+        if isinstance(content, Response) and content.ok:
+            clean_content = clean_html(content)
+            cache.set(url, clean_content)
+            return clean_content
+        else:
+            return content

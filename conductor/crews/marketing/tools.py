@@ -5,14 +5,19 @@ from typing import Optional, Any, Type
 from textwrap import dedent
 import os
 from conductor.functions.apollo import generate_apollo_person_domain_search_context
-from conductor.crews.marketing.utils import send_request, clean_html
-from requests.models import Response
+from conductor.crews.marketing.utils import (
+    send_request,
+    clean_html,
+    send_request_with_cache,
+)
 from redis import Redis
+import requests
 
 
 CONTEXT_LIMIT = os.getenv("CONTEXT_LIMIT", 200000)
 
 
+# Utility Functions
 def check_context_limit(context: str) -> str:
     if len(context) > CONTEXT_LIMIT:
         return context[:CONTEXT_LIMIT]
@@ -20,6 +25,7 @@ def check_context_limit(context: str) -> str:
         return context
 
 
+# Tool Inputs
 class FixedSerpSearchToolSchema(BaseModel):
     """Input for SerpSearchTool."""
 
@@ -62,6 +68,7 @@ class ApolloPersonDomainSearchToolSchema(FixedApolloPersonDomainSearchToolSchema
     )
 
 
+# Tools
 class SerpSearchTool(BaseTool):
     name: str = "Search Engine Results Page (SERP) Tool"
     description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query."
@@ -87,7 +94,7 @@ class SerpSearchTool(BaseTool):
             self._generate_description()
 
     def _get_page_content(self, url: str) -> str:
-        content = send_request(
+        response = requests.request(
             url=url,
             method="GET",
             oxylabs_username=os.getenv("OXYLABS_USERNAME"),
@@ -96,7 +103,10 @@ class SerpSearchTool(BaseTool):
             cookies=self.cookies if self.cookies else {},
             timeout=5,
         )
-        return clean_html(content)
+        if response.ok:
+            return clean_html(response)
+        else:
+            return f"Error: Unable to fetch page content for {url}."
 
     def _run(self, **kwargs: Any) -> Any:
         if os.getenv("SERPAPI_API_KEY") is None:
@@ -162,6 +172,7 @@ class ApolloPersonDomainSearchTool(BaseTool):
         )
 
 
+# OxyLabs Proxy Tools
 class OxyLabsScrapePageTool(BaseTool):
     """
     Scrape websites through OxyLabs Proxy
@@ -203,6 +214,7 @@ class OxyLabsScrapePageTool(BaseTool):
         self,
         **kwargs: Any,
     ) -> Any:
+        # try to request with oxylabs proxy first and if it fails, send normal request
         content = send_request(
             url=kwargs.get("website_url", self.website_url),
             method="GET",
@@ -215,7 +227,45 @@ class OxyLabsScrapePageTool(BaseTool):
         return clean_html(content)
 
 
-### Add cached version of the tools
+class OxyLabsSerpSearchTool(SerpSearchTool):
+    name: str = "Search Engine Results Page (SERP) Tool"
+    description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query."
+    args_schema: Type[BaseModel] = SerpSearchToolSchema
+    cookies: Optional[dict] = None
+    headers: Optional[dict] = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+        "Accept": "text/html",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com/",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Accept-Encoding": "gzip, deflate, br",
+    }
+
+    def __init__(self, search_query: Optional[str] = None, **kwargs):
+        super().__init__(**kwargs)
+        if search_query is not None:
+            self.args_schema = FixedSerpSearchToolSchema
+            self.description = (
+                "A tool that can be used to scrape search engine results page (SERP)."
+            )
+            self._generate_description()
+
+    def _get_page_content(self, url: str) -> str:
+        # try to request with oxylabs proxy first and if it fails, send normal request
+        response = send_request(
+            url=url,
+            method="GET",
+            oxylabs_username=os.getenv("OXYLABS_USERNAME"),
+            oxylabs_password=os.getenv("OXYLABS_PASSWORD"),
+            headers=self.headers,
+            cookies=self.cookies,
+            timeout=5,
+        )
+        return clean_html(response)
+
+
+# Cached & OxyLabs version of the tools
 class SerpSearchCacheTool(SerpSearchTool):
     name: str = "Search Engine Results Page (SERP) Tool"
     description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query."
@@ -237,25 +287,16 @@ class SerpSearchCacheTool(SerpSearchTool):
 
     def _get_page_content(self, url: str) -> str:
         # check cache for url
-        cached_content = self._cache.get(url)
-        if cached_content:
-            return cached_content.decode("utf-8")
-        else:
-            content = send_request(
-                url=url,
-                method="GET",
-                oxylabs_username=os.getenv("OXYLABS_USERNAME"),
-                oxylabs_password=os.getenv("OXYLABS_PASSWORD"),
-                headers=self.headers,
-                cookies=self.cookies if self.cookies else {},
-                timeout=5,
-            )
-            if isinstance(content, Response) and content.ok:
-                clean_content = clean_html(content)
-                self._cache.set(url, clean_content)
-                return clean_content
-            else:
-                return content
+        return send_request_with_cache(
+            url=url,
+            method="GET",
+            oxylabs_username=os.getenv("OXYLABS_USERNAME"),
+            oxylabs_password=os.getenv("OXYLABS_PASSWORD"),
+            cache=self._cache,
+            headers=self.headers,
+            cookies=self.cookies,
+            timeout=5,
+        )
 
 
 class OxyLabsScrapePageCacheTool(BaseTool):
@@ -284,22 +325,13 @@ class OxyLabsScrapePageCacheTool(BaseTool):
     ) -> Any:
         url = kwargs.get("website_url")
         # check cache for url
-        cached_content = self._cache.get(url)
-        if cached_content:
-            return cached_content.decode("utf-8")
-        else:
-            content = send_request(
-                url=url,
-                method="GET",
-                oxylabs_username=os.getenv("OXYLABS_USERNAME"),
-                oxylabs_password=os.getenv("OXYLABS_PASSWORD"),
-                headers=self.headers,
-                cookies=self.cookies if self.cookies else {},
-                timeout=5,
-            )
-            if isinstance(content, Response) and content.ok:
-                clean_content = clean_html(content)
-                self._cache.set(url, clean_content)
-                return clean_content
-            else:
-                return content
+        return send_request_with_cache(
+            url=url,
+            method="GET",
+            oxylabs_username=os.getenv("OXYLABS_USERNAME"),
+            oxylabs_password=os.getenv("OXYLABS_PASSWORD"),
+            cache=self._cache,
+            headers=self.headers,
+            cookies=self.cookies,
+            timeout=5,
+        )
