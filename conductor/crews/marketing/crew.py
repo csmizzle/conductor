@@ -49,7 +49,6 @@ class UrlMarketingCrew:
         step_callback=None,
         task_callback=None,
         cache=None,
-        cache_handler=None,
     ) -> None:
         self.url = url
         self.report_style = report_style
@@ -57,7 +56,8 @@ class UrlMarketingCrew:
         self.step_callback = step_callback
         self.task_callback = task_callback
         self.cache = cache
-        self.cache_handler = cache_handler
+        if self.cache:
+            self.cache_handler = RedisCrewCacheHandler()
         self.verbose = verbose
 
     def run(self) -> CrewRun:
@@ -118,28 +118,51 @@ class UrlMarketingCrew:
         )
 
         # create crew
-        crew = RedisCacheHandlerCrew(
-            agents=[
-                company_research_agent,
-                search_engine_agent,
-                swot_agent,
-                competitor_agent,
-                writer_agent,
-            ],
-            tasks=[
-                company_research_task,
-                search_engine_task,
-                swot_task,
-                competitor_task,
-                writer_task,
-            ],
-            verbose=self.verbose,
-            step_callback=self.step_callback,
-            output_log_file=self.output_log_file,
-            task_callback=self.task_callback,
-            cache=self.cache,
-            _cache_handler=self.cache_handler,
-        )
+        if self.cache:
+            crew = RedisCacheHandlerCrew(
+                agents=[
+                    company_research_agent,
+                    search_engine_agent,
+                    swot_agent,
+                    competitor_agent,
+                    writer_agent,
+                ],
+                tasks=[
+                    company_research_task,
+                    search_engine_task,
+                    swot_task,
+                    competitor_task,
+                    writer_task,
+                ],
+                verbose=self.verbose,
+                step_callback=self.step_callback,
+                output_log_file=self.output_log_file,
+                task_callback=self.task_callback,
+                cache=self.cache,
+                _cache_handler=self.cache_handler,
+            )
+        else:
+            crew = Crew(
+                agents=[
+                    company_research_agent,
+                    search_engine_agent,
+                    swot_agent,
+                    competitor_agent,
+                    writer_agent,
+                ],
+                tasks=[
+                    company_research_task,
+                    search_engine_task,
+                    swot_task,
+                    competitor_task,
+                    writer_task,
+                ],
+                verbose=self.verbose,
+                step_callback=self.step_callback,
+                output_log_file=self.output_log_file,
+                task_callback=self.task_callback,
+            )
+
         result = crew.kickoff()
 
         # create and return crew run

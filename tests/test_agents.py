@@ -4,8 +4,6 @@ Test the agents module.
 from conductor.crews.marketing.crew import UrlMarketingCrew
 from conductor.crews.models import CrewRun, TaskRun
 from conductor.reports.models import ReportStyle
-from conductor.crews.cache import RedisCrewCacheHandler
-import os
 
 
 def test_url_marketing_crew():
@@ -31,7 +29,6 @@ def test_url_marketing_crew_with_redis_cache():
         url=url,
         report_style=ReportStyle.BULLETED,
         cache=True,
-        cache_handler=RedisCrewCacheHandler(url=os.getenv("REDIS_CREW_CACHE_URL")),
     )
     result = crew.run()
     assert isinstance(result, CrewRun)

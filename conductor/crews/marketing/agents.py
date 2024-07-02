@@ -6,6 +6,8 @@ from conductor.crews.marketing.tools import (
     SerpSearchTool,
     ApolloPersonDomainSearchTool,
     OxyLabsScrapePageTool,
+    OxyLabsScrapePageCacheTool,
+    SerpSearchCacheTool,
 )
 
 
@@ -19,7 +21,10 @@ class MarketingAgents:
             role="SWOT Agent",
             goal="Create a SWOT analysis for a company and returning source links.",
             backstory="An expert in analyzing company data to create SWOT analysis.",
-            tools=[SerpSearchTool()],
+            tools=[
+                SerpSearchTool() if not cache else SerpSearchCacheTool(),
+                OxyLabsScrapePageTool() if not cache else OxyLabsScrapePageCacheTool(),
+            ],
             verbose=True,
             llm=llm,
             cache=cache,
@@ -32,7 +37,7 @@ class MarketingAgents:
             goal="Provide URLs for a additional company research and extract all useful research information to support company analysis. Search engine queries should be analytical and insightful.",
             backstory="An expert in searching for information about companies. Generate great search engine questions that will get the best results. Provide summaries with key information about the company.",
             verbose=True,
-            tools=[SerpSearchTool()],
+            tools=[SerpSearchTool() if not cache else SerpSearchCacheTool()],
             llm=llm,
             cache=cache,
             cache_handler=cache_handler,
@@ -45,8 +50,8 @@ class MarketingAgents:
             backstory="An expert in looking up company information using the internet. Comes up with creative ways to find information about a company.",
             verbose=True,
             tools=[
-                OxyLabsScrapePageTool(),
-                SerpSearchTool(),
+                OxyLabsScrapePageTool() if not cache else OxyLabsScrapePageCacheTool(),
+                SerpSearchTool() if not cache else SerpSearchCacheTool(),
                 ApolloPersonDomainSearchTool(),
             ],
             llm=llm,
@@ -59,7 +64,10 @@ class MarketingAgents:
             role="Competitor Agent",
             goal="Retrieve information about a companies competitor",
             backstory="An expert in looking up competitor information",
-            tools=[OxyLabsScrapePageTool(), SerpSearchTool()],
+            tools=[
+                OxyLabsScrapePageTool() if not cache else OxyLabsScrapePageCacheTool(),
+                SerpSearchTool() if not cache else SerpSearchCacheTool(),
+            ],
             verbose=True,
             llm=llm,
             cache=cache,

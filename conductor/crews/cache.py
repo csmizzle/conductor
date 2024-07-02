@@ -13,6 +13,8 @@ class RedisCrewCacheHandler(CacheHandler):
             url = os.getenv("REDIS_CREW_CACHE_URL")
             if url is None:
                 raise ValueError("Redis URL is required, set REDIS_CREW_CACHE_URL.")
+        else:
+            self.url = url
         self._cache = Redis.from_url(url)
 
     def add(self, tool: str, input: str, output: str) -> None:

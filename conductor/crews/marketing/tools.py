@@ -6,6 +6,8 @@ from textwrap import dedent
 import os
 from conductor.functions.apollo import generate_apollo_person_domain_search_context
 from conductor.crews.marketing.utils import send_request, clean_html
+from requests.models import Response
+from redis import Redis
 
 
 CONTEXT_LIMIT = os.getenv("CONTEXT_LIMIT", 200000)
@@ -211,3 +213,93 @@ class OxyLabsScrapePageTool(BaseTool):
             timeout=5,
         )
         return clean_html(content)
+
+
+### Add cached version of the tools
+class SerpSearchCacheTool(SerpSearchTool):
+    name: str = "Search Engine Results Page (SERP) Tool"
+    description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query."
+    args_schema: Type[BaseModel] = SerpSearchToolSchema
+    cookies: Optional[dict] = None
+    headers: Optional[dict] = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+        "Accept": "text/html",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com/",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Accept-Encoding": "gzip, deflate, br",
+    }
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._cache = Redis.from_url(os.getenv("REDIS_TOOL_CACHE_URL"))
+
+    def _get_page_content(self, url: str) -> str:
+        # check cache for url
+        cached_content = self._cache.get(url)
+        if cached_content:
+            return cached_content.decode("utf-8")
+        else:
+            content = send_request(
+                url=url,
+                method="GET",
+                oxylabs_username=os.getenv("OXYLABS_USERNAME"),
+                oxylabs_password=os.getenv("OXYLABS_PASSWORD"),
+                headers=self.headers,
+                cookies=self.cookies if self.cookies else {},
+                timeout=5,
+            )
+            if isinstance(content, Response) and content.ok:
+                clean_content = clean_html(content)
+                self._cache.set(url, clean_content)
+                return clean_content
+            else:
+                return content
+
+
+class OxyLabsScrapePageCacheTool(BaseTool):
+    name: str = "Read website content"
+    description: str = "A tool that can be used to read a website content."
+    args_schema: Type[BaseModel] = ScrapeWebsiteToolSchema
+    website_url: Optional[str] = None
+    cookies: Optional[dict] = None
+    headers: Optional[dict] = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com/",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Accept-Encoding": "gzip, deflate, br",
+    }
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._cache = Redis.from_url(os.getenv("REDIS_TOOL_CACHE_URL"))
+
+    def _run(
+        self,
+        **kwargs: Any,
+    ) -> Any:
+        url = kwargs.get("website_url")
+        # check cache for url
+        cached_content = self._cache.get(url)
+        if cached_content:
+            return cached_content.decode("utf-8")
+        else:
+            content = send_request(
+                url=url,
+                method="GET",
+                oxylabs_username=os.getenv("OXYLABS_USERNAME"),
+                oxylabs_password=os.getenv("OXYLABS_PASSWORD"),
+                headers=self.headers,
+                cookies=self.cookies if self.cookies else {},
+                timeout=5,
+            )
+            if isinstance(content, Response) and content.ok:
+                clean_content = clean_html(content)
+                self._cache.set(url, clean_content)
+                return clean_content
+            else:
+                return content
