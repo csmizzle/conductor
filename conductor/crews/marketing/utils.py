@@ -102,6 +102,30 @@ def task_to_task_run(task: Task) -> TaskRun:
     )
 
 
+def send_request_with_cache(
+    method: str,
+    url: str,
+    cache: Redis,
+    headers=None,
+    cookies=None,
+) -> str:
+    # check if url in redis
+    cached_content = cache.get(url)
+    if cached_content:
+        return cached_content.decode("utf-8")
+    # if not in redis, send request
+    else:
+        response = requests.request(
+            method=method, url=url, headers=headers, cookies=cookies
+        )
+        if response.ok:
+            clean_content = clean_html(response)
+            cache.set(url, clean_content)
+            return clean_content
+        else:
+            return f"Error: Unable to fetch page content for {url}."
+
+
 def oxylabs_request(
     method: str,
     oxylabs_username: str,
@@ -128,7 +152,7 @@ def oxylabs_request(
     return response
 
 
-def send_request(
+def send_request_proxy(
     method: str,
     url: str,
     oxylabs_username: str,
@@ -177,7 +201,7 @@ def clean_html(response: Response) -> str:
     return text
 
 
-def send_request_with_cache(
+def send_request_proxy_with_cache(
     url: str,
     method: str,
     cache: Redis,
@@ -192,7 +216,7 @@ def send_request_with_cache(
     if cached_content:
         return cached_content.decode("utf-8")
     else:
-        content = send_request(
+        content = send_request_proxy(
             url=url,
             method=method,
             oxylabs_username=oxylabs_username,

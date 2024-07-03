@@ -27,4 +27,6 @@ class RedisCrewCacheHandler(CacheHandler):
         """
         Read a cache entry.
         """
-        return self._cache.get(f"{tool}-{input}")
+        result = self._cache.get(f"{tool}-{input}")
+        if result:
+            return result.decode("utf-8")

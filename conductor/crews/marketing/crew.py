@@ -93,7 +93,6 @@ class UrlMarketingCrew:
         writer_agent = agents.writer_agent(
             llm=claude_sonnet,
             cache=self.cache,
-            proxy=self.proxy,
             cache_handler=self.cache_handler,
         )
 

@@ -6,7 +6,8 @@ from textwrap import dedent
 import os
 from conductor.functions.apollo import generate_apollo_person_domain_search_context
 from conductor.crews.marketing.utils import (
-    send_request,
+    send_request_proxy,
+    send_request_proxy_with_cache,
     clean_html,
     send_request_with_cache,
 )
@@ -172,7 +173,82 @@ class ApolloPersonDomainSearchTool(BaseTool):
         )
 
 
-# TODO: add cache to the base tools
+# Cache Tools
+class ScrapePageCacheTool(BaseTool):
+    """
+    Scrape websites and cache the content
+    """
+
+    name: str = "Read website content"
+    description: str = "A tool that can be used to read a website content."
+    args_schema: Type[BaseModel] = ScrapeWebsiteToolSchema
+    website_url: Optional[str] = None
+    cookies: Optional[dict] = None
+    headers: Optional[dict] = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com/",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Accept-Encoding": "gzip, deflate, br",
+    }
+
+    def __init__(self, website_url: Optional[str] = None, **kwargs):
+        super().__init__(**kwargs)
+        if website_url is not None:
+            self.website_url = website_url
+            self.description = (
+                f"A tool that can be used to read {website_url}'s content."
+            )
+            self.args_schema = FixedScrapeWebsiteToolSchema
+            self._generate_description()
+        self._cache = Redis.from_url(os.getenv("REDIS_TOOL_CACHE_URL"))
+
+    def _run(self, **kwargs: Any) -> Any:
+        url = kwargs.get("website_url")
+        return send_request_with_cache(
+            url=url,
+            method="GET",
+            cache=self._cache,
+            headers=self.headers,
+            cookies=self.cookies,
+        )
+
+
+class SerpSearchCacheTool(SerpSearchTool):
+    name: str = "Search Engine Results Page (SERP) Tool"
+    description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query."
+    args_schema: Type[BaseModel] = SerpSearchToolSchema
+    cookies: Optional[dict] = None
+    headers: Optional[dict] = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+        "Accept": "text/html",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com/",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Accept-Encoding": "gzip, deflate, br",
+    }
+
+    def __init__(self, search_query: Optional[str] = None, **kwargs):
+        super().__init__(**kwargs)
+        if search_query is not None:
+            self.args_schema = FixedSerpSearchToolSchema
+            self.description = (
+                "A tool that can be used to scrape search engine results page (SERP)."
+            )
+            self._generate_description()
+        self._cache = Redis.from_url(os.getenv("REDIS_TOOL_CACHE_URL"))
+
+    def _get_page_content(self, url: str) -> str:
+        return send_request_with_cache(
+            url=url,
+            method="GET",
+            cache=self._cache,
+            headers=self.headers,
+            cookies=self.cookies,
+        )
 
 
 # OxyLabs Proxy Tools
@@ -218,7 +294,7 @@ class ScrapePageOxyLabsTool(BaseTool):
         **kwargs: Any,
     ) -> Any:
         # try to request with oxylabs proxy first and if it fails, send normal request
-        content = send_request(
+        content = send_request_proxy(
             url=kwargs.get("website_url", self.website_url),
             method="GET",
             oxylabs_username=os.getenv("OXYLABS_USERNAME"),
@@ -256,7 +332,7 @@ class SerpSearchOxyLabsTool(SerpSearchTool):
 
     def _get_page_content(self, url: str) -> str:
         # try to request with oxylabs proxy first and if it fails, send normal request
-        response = send_request(
+        response = send_request_proxy(
             url=url,
             method="GET",
             oxylabs_username=os.getenv("OXYLABS_USERNAME"),
@@ -290,7 +366,7 @@ class SerpSearchOxylabsCacheTool(SerpSearchTool):
 
     def _get_page_content(self, url: str) -> str:
         # check cache for url
-        return send_request_with_cache(
+        return send_request_proxy_with_cache(
             url=url,
             method="GET",
             oxylabs_username=os.getenv("OXYLABS_USERNAME"),
@@ -328,7 +404,7 @@ class ScrapePageOxylabsCacheTool(BaseTool):
     ) -> Any:
         url = kwargs.get("website_url")
         # check cache for url
-        return send_request_with_cache(
+        return send_request_proxy_with_cache(
             url=url,
             method="GET",
             oxylabs_username=os.getenv("OXYLABS_USERNAME"),
