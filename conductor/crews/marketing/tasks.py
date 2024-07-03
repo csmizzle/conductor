@@ -12,7 +12,20 @@ class MarketingTasks:
     Marketing crew
     """
 
-    def search_engine_task(self, agent: Agent, context: list[Task]):
+    def company_identification_task(self, agent: Agent, company_url: str) -> Task:
+        return Task(
+            description=dedent(
+                f"""
+            Determine what company a URL belongs to.
+            Use the URL to find the company and then provide detailed information about the company.
+            URL to find the company: {company_url}
+            """
+            ),
+            agent=agent,
+            expected_output="Detailed company identification with source links.",
+        )
+
+    def search_engine_task(self, agent: Agent, context: list[Task]) -> Task:
         return Task(
             description=dedent(
                 """
@@ -26,11 +39,12 @@ class MarketingTasks:
             expected_output="Additional URLs and insights for more company research with source links.",
         )
 
-    def company_research_task(self, agent: Agent, company_url: str):
+    def company_research_task(
+        self, agent: Agent, company_url: str, context: list[Task]
+    ) -> Task:
         return Task(
             description=dedent(
                 f"""
-            Determine which company the URL belongs to and do in-depth research on the company.
             Find key personnel, company history, any pricing information available, and key products and services.
             Look for the key personnel on the linkedin or company website.
             Find any relevant contact information with key personnel.
@@ -43,9 +57,10 @@ class MarketingTasks:
             ),
             agent=agent,
             expected_output="Detailed company information with source links.",
+            context=context,
         )
 
-    def company_swot_task(self, agent: Agent, context: list[Task]):
+    def company_swot_task(self, agent: Agent, context: list[Task]) -> Task:
         return Task(
             description=dedent(
                 """
@@ -59,7 +74,7 @@ class MarketingTasks:
             expected_output="SWOT analysis of the company with source links.",
         )
 
-    def company_competitor_task(self, agent: Agent, context: list[Task]):
+    def company_competitor_task(self, agent: Agent, context: list[Task]) -> Task:
         return Task(
             description=dedent(
                 """
@@ -74,10 +89,30 @@ class MarketingTasks:
 
     def company_report_task(
         self, agent: Agent, context: list[Task], report_style: ReportStyle
-    ):
+    ) -> Task:
         return Task(
             description=create_report_prompt(report_style),
             agent=agent,
             context=context,
             expected_output="Comprehensive report on the company with the sections overview, swot analysis, and competitors.",
+        )
+
+    def review_task(
+        self, agent: Agent, context: list[Task], report_style: ReportStyle
+    ) -> Task:
+        return Task(
+            description=dedent(
+                f"""
+            Review and make changes to final report ensuring three main concepts:
+            - The report is well-structured and easy to read.
+                - The edits of the report should not change the structure of the report.
+            - The report includes all key points and important details.
+            - The report includes accurate, up to date, and relevant information.
+            Ensure the final report stays true to this style and structure:
+            {create_report_prompt(report_style)}
+            """
+            ),
+            agent=agent,
+            context=context,
+            expected_output="Final reviewed report ready for delivery.",
         )

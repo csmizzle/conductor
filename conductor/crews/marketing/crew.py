@@ -67,6 +67,12 @@ class UrlMarketingCrew:
         agents = MarketingAgents()
         tasks = MarketingTasks()
         # agents
+        company_identification_agent = agents.url_research_agent(
+            llm=claude_sonnet,
+            cache=self.cache,
+            proxy=self.proxy,
+            cache_handler=self.cache_handler,
+        )
         company_research_agent = agents.company_research_agent(
             llm=claude_sonnet,
             cache=self.cache,
@@ -95,17 +101,31 @@ class UrlMarketingCrew:
             cache=self.cache,
             cache_handler=self.cache_handler,
         )
+        editor_agent = agents.editor_agent(
+            llm=claude_sonnet,
+        )
 
         # tasks
+        company_identification_task = tasks.company_identification_task(
+            agent=company_identification_agent,
+            company_url=self.url,
+        )
         company_research_task = tasks.company_research_task(
-            agent=company_research_agent, company_url=self.url
+            agent=company_research_agent,
+            company_url=self.url,
+            context=[company_identification_task],
         )
         search_engine_task = tasks.search_engine_task(
             agent=search_engine_agent,
-            context=[company_research_task],
+            context=[company_identification_task, company_research_task],
         )
         swot_task = tasks.company_swot_task(
-            agent=swot_agent, context=[company_research_task, search_engine_task]
+            agent=swot_agent,
+            context=[
+                company_identification_task,
+                company_research_task,
+                search_engine_task,
+            ],
         )
         competitor_task = tasks.company_competitor_task(
             agent=competitor_agent, context=[company_research_task, search_engine_task]
@@ -113,6 +133,7 @@ class UrlMarketingCrew:
         writer_task = tasks.company_report_task(
             agent=writer_agent,
             context=[
+                company_identification_task,
                 company_research_task,
                 swot_task,
                 competitor_task,
@@ -120,23 +141,38 @@ class UrlMarketingCrew:
             ],
             report_style=self.report_style,
         )
-
+        review_task = tasks.review_task(
+            agent=editor_agent,
+            context=[
+                company_identification_task,
+                writer_task,
+                company_research_task,
+                swot_task,
+                competitor_task,
+                search_engine_task,
+            ],
+            report_style=self.report_style,
+        )
         # create crew
         if self.cache:
             crew = RedisCacheHandlerCrew(
                 agents=[
+                    company_identification_agent,
                     company_research_agent,
                     search_engine_agent,
                     swot_agent,
                     competitor_agent,
                     writer_agent,
+                    editor_agent,
                 ],
                 tasks=[
+                    company_identification_task,
                     company_research_task,
                     search_engine_task,
                     swot_task,
                     competitor_task,
                     writer_task,
+                    review_task,
                 ],
                 verbose=self.verbose,
                 step_callback=self.step_callback,
@@ -148,18 +184,22 @@ class UrlMarketingCrew:
         else:
             crew = Crew(
                 agents=[
+                    company_identification_agent,
                     company_research_agent,
                     search_engine_agent,
                     swot_agent,
                     competitor_agent,
                     writer_agent,
+                    editor_agent,
                 ],
                 tasks=[
+                    company_identification_task,
                     company_research_task,
                     search_engine_task,
                     swot_task,
                     competitor_task,
                     writer_task,
+                    review_task,
                 ],
                 verbose=self.verbose,
                 step_callback=self.step_callback,

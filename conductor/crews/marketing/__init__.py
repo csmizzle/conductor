@@ -13,7 +13,7 @@ def run_marketing_crew(
     step_callback=None,
     task_callback=None,
     cache=None,
-    cache_handler=None,
+    proxy=None,
 ) -> CrewRun:
     """Start with a url and generate a marketing report
 
@@ -24,7 +24,7 @@ def run_marketing_crew(
         step_callback (_type_, optional): For each step, execute a callback function. Defaults to None.
         task_callback (_type_, optional): For each task, execute a function. Defaults to None.
         cache (_type_, optional): Boolean on whether to cache results from tools. Defaults to None which will default to True.
-        cache_handler (_type_, optional): _description_. Defaults to None.
+        proxy (_type_, optional): _description_. Defaults to None.
 
     Returns:
         CrewRun: Data about the crew run including the results.
@@ -36,7 +36,7 @@ def run_marketing_crew(
         step_callback=step_callback,
         task_callback=task_callback,
         cache=cache,
-        cache_handler=cache_handler,
+        proxy=proxy,
     )
     crew_run = crew.run()
     return crew_run

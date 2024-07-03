@@ -31,6 +31,24 @@ def test_url_marketing_crew():
         assert isinstance(task, TaskRun)
 
 
+def test_url_marketing_crew_with_proxy():
+    """
+    Test the UrlMarketingCrew class.
+    """
+    url = "https://www.trssllc.com"
+    crew = UrlMarketingCrew(
+        url=url,
+        report_style=ReportStyle.BULLETED,
+        proxy=True,
+    )
+    result = crew.run()
+    assert isinstance(result, CrewRun)
+    assert result.result is not None
+    assert isinstance(result.result, str)
+    for task in result.tasks:
+        assert isinstance(task, TaskRun)
+
+
 def test_url_marketing_crew_with_redis_cache():
     """
     Test the UrlMarketingCrew class.

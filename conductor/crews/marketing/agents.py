@@ -35,6 +35,22 @@ class MarketingAgents:
         else:
             return [SerpSearchTool(), ScrapeWebsiteTool()]
 
+    def url_research_agent(
+        self, llm=None, cache=None, proxy=None, cache_handler=None
+    ) -> Agent:
+        return Agent(
+            role="URL Research Agent",
+            goal="Determine what company a URL belongs to.",
+            backstory="An expert in finding out what company a URL belongs to. Uses the URL to find the company and then provides detailed information about the company.",
+            tools=[
+                self.set_scraping_tools(cache=cache, proxy=proxy)[1]
+            ],  # get only the ScrapePage tool
+            verbose=True,
+            cache=cache,
+            cache_handler=cache_handler,
+            llm=llm,
+        )
+
     def swot_agent(self, llm=None, cache=None, proxy=None, cache_handler=None) -> Agent:
         return Agent(
             role="SWOT Agent",
@@ -47,7 +63,9 @@ class MarketingAgents:
             cache_handler=cache_handler,
         )
 
-    def search_engine_agent(self, llm=None, cache=None, proxy=None, cache_handler=None):
+    def search_engine_agent(
+        self, llm=None, cache=None, proxy=None, cache_handler=None
+    ) -> Agent:
         return Agent(
             role="Search Engine Agent",
             goal="Provide URLs for a additional company research and extract all useful research information to support company analysis. Search engine queries should be analytical and insightful.",
@@ -61,7 +79,7 @@ class MarketingAgents:
 
     def company_research_agent(
         self, llm=None, cache=None, proxy=None, cache_handler=None
-    ):
+    ) -> Agent:
         return Agent(
             role="Company Agent",
             goal="Retrieve comprehensive information about a company and returning source links.",
@@ -73,7 +91,9 @@ class MarketingAgents:
             cache_handler=cache_handler,
         )
 
-    def competitor_agent(self, llm=None, cache=None, proxy=None, cache_handler=None):
+    def competitor_agent(
+        self, llm=None, cache=None, proxy=None, cache_handler=None
+    ) -> Agent:
         return Agent(
             role="Competitor Agent",
             goal="Retrieve information about a companies competitor",
@@ -85,7 +105,7 @@ class MarketingAgents:
             cache_handler=cache_handler,
         )
 
-    def writer_agent(self, llm=None, cache=None, cache_handler=None):
+    def writer_agent(self, llm=None, cache=None, cache_handler=None) -> Agent:
         return Agent(
             role="Writer Agent",
             goal="Write a report about a company using the provided context in a task.",
@@ -95,4 +115,14 @@ class MarketingAgents:
             allow_delegation=False,
             cache=cache,
             cache_handler=cache_handler,
+        )
+
+    def editor_agent(self, llm=None) -> Agent:
+        return Agent(
+            role="Editor Agent",
+            goal="Edit a report about a company. Make sure the statements are accurate, sourced, and well-written.",
+            backstory="An expert in editing reports. Makes sure the report is accurate, well-written, and sourced. Use the provided context and tools to make the report better and more accurate.",
+            verbose=True,
+            llm=llm,
+            allow_delegation=True,
         )
