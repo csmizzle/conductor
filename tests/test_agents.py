@@ -58,6 +58,7 @@ def test_url_marketing_crew_with_redis_cache():
         url=url,
         report_style=ReportStyle.BULLETED,
         cache=True,
+        redis=True,
     )
     result = crew.run()
     assert isinstance(result, CrewRun)
@@ -73,7 +74,11 @@ def test_url_marketing_crew_with_redis_and_proxy():
     """
     url = "https://www.trssllc.com"
     crew = UrlMarketingCrew(
-        url=url, report_style=ReportStyle.BULLETED, cache=True, proxy=True
+        url=url,
+        report_style=ReportStyle.BULLETED,
+        cache=True,
+        proxy=True,
+        redis=True,
     )
     result = crew.run()
     assert isinstance(result, CrewRun)

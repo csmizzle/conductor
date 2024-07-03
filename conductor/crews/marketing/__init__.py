@@ -36,6 +36,7 @@ def run_marketing_crew(
         step_callback=step_callback,
         task_callback=task_callback,
         cache=cache,
+        redis=False if not cache else True,
         proxy=proxy,
     )
     crew_run = crew.run()

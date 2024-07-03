@@ -8,6 +8,7 @@ from conductor.llms import claude_sonnet
 from crewai import Crew
 from crewai.telemetry import Telemetry
 from crewai.utilities import FileHandler, Logger, RPMController
+from crewai.agents.cache.cache_handler import CacheHandler
 import logging
 from pydantic import PrivateAttr, model_validator
 
@@ -47,6 +48,7 @@ class UrlMarketingCrew:
         verbose: bool = True,
         output_log_file: bool | str = None,
         cache: bool = False,
+        redis: bool = False,
         step_callback=None,
         task_callback=None,
         proxy=None,
@@ -57,7 +59,10 @@ class UrlMarketingCrew:
         self.step_callback = step_callback
         self.task_callback = task_callback
         self.cache = cache
-        self.cache_handler = RedisCrewCacheHandler()
+        if redis:
+            self.cache_handler = RedisCrewCacheHandler()
+        else:
+            self.cache_handler = CacheHandler()
         self.verbose = verbose
         self.proxy = proxy
 
