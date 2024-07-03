@@ -46,9 +46,9 @@ class UrlMarketingCrew:
         report_style: ReportStyle,
         verbose: bool = True,
         output_log_file: bool | str = None,
+        cache: bool = False,
         step_callback=None,
         task_callback=None,
-        cache=None,
         proxy=None,
     ) -> None:
         self.url = url
@@ -57,10 +57,7 @@ class UrlMarketingCrew:
         self.step_callback = step_callback
         self.task_callback = task_callback
         self.cache = cache
-        if self.cache:
-            self.cache_handler = RedisCrewCacheHandler()
-        else:
-            self.cache_handler = None
+        self.cache_handler = RedisCrewCacheHandler()
         self.verbose = verbose
         self.proxy = proxy
 
