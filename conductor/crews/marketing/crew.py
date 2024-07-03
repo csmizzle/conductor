@@ -59,6 +59,8 @@ class UrlMarketingCrew:
         self.cache = cache
         if self.cache:
             self.cache_handler = RedisCrewCacheHandler()
+        else:
+            self.cache_handler = None
         self.verbose = verbose
         self.proxy = proxy
 
