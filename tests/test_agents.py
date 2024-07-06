@@ -2,6 +2,7 @@
 Test the agents module.
 """
 from conductor.crews.marketing.crew import UrlMarketingCrew
+from conductor.crews.marketing import run_marketing_crew
 from conductor.crews.marketing.agents import MarketingAgents
 from conductor.crews.marketing.tools import (
     SerpSearchOxylabsCacheTool,
@@ -112,3 +113,21 @@ def test_set_scraping_tools() -> None:
     assert len(tools) == 2
     assert isinstance(tools[0], SerpSearchTool)
     assert isinstance(tools[1], ScrapeWebsiteTool)
+
+
+def test_run_marketing_crew_with_proxy_and_cache() -> None:
+    """
+    Test the run_marketing_crew function with proxy and cache.
+    """
+    url = "https://www.trssllc.com"
+    result = run_marketing_crew(
+        url=url,
+        report_style=ReportStyle.BULLETED,
+        cache=True,
+        proxy=True,
+    )
+    assert isinstance(result, CrewRun)
+    assert result.result is not None
+    assert isinstance(result.result, str)
+    for task in result.tasks:
+        assert isinstance(task, TaskRun)

@@ -98,7 +98,11 @@ class MarketingTasks:
         )
 
     def review_task(
-        self, agent: Agent, context: list[Task], report_style: ReportStyle
+        self,
+        company_url: str,
+        agent: Agent,
+        context: list[Task],
+        report_style: ReportStyle,
     ) -> Task:
         return Task(
             description=dedent(
@@ -107,7 +111,8 @@ class MarketingTasks:
             - The report is well-structured and easy to read.
                 - The edits of the report should not change the structure of the report.
             - The report includes all key points and important details.
-            - The report includes accurate, up to date, and relevant information.
+            - The report includes accurate, up to date, and relevant information for this URL {company_url}.
+                - If similar companies are found, make sure to differentiate the information but focus on {company_url}.
             Ensure the final report stays true to this style and structure:
             {create_report_prompt(report_style)}
             """

@@ -146,6 +146,7 @@ class UrlMarketingCrew:
             report_style=self.report_style,
         )
         review_task = tasks.review_task(
+            company_url=self.url,
             agent=editor_agent,
             context=[
                 company_identification_task,
