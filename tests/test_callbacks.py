@@ -6,8 +6,12 @@ from conductor.crews.callbacks import (
     send_task_output_to_thread,
 )
 from crewai.tasks.task_output import TaskOutput
+from discord.file import File
 import os
 
+BASEDIR = os.path.abspath(os.path.dirname(__file__))
+
+TEST_REPORT = os.path.join(BASEDIR, "data", "test_report.pdf")
 TEST_THREAD = os.getenv("TEST_THREAD")
 
 
@@ -54,3 +58,13 @@ def test_send_long_output_to_thread():
     assert sent_messages[1][1] == "A" * 2000
     assert sent_messages[2][0] is True
     assert sent_messages[2][1] == "A" * 1000
+
+
+def test_send_file_to_thread() -> None:
+    sent_message = send_webhook_to_thread_sync(
+        thread_id=TEST_THREAD,
+        content="Hello for the Test Suite! With a file this time!",
+        file=File(TEST_REPORT),
+        username="Test Team",
+    )
+    assert sent_message is True

@@ -4,6 +4,7 @@ Task callbacks
 """
 from aiohttp import ClientSession
 from discord import Webhook
+from discord.file import File
 import os
 import asyncio
 import discord
@@ -14,7 +15,9 @@ intents.guilds = True  # Ensure GUILDS intent is enabled
 client = discord.Client(intents=intents)
 
 
-async def send_webhook_to_thread(thread_id: int, content: str, username: str) -> bool:
+async def send_webhook_to_thread(
+    thread_id: int, content: str, username: str, file: File = None
+) -> bool:
     """
     Send task output to discord thread
     """
@@ -22,12 +25,14 @@ async def send_webhook_to_thread(thread_id: int, content: str, username: str) ->
     thread = await client.fetch_channel(thread_id)
     session = ClientSession()
     webhook = Webhook.from_url(url=os.getenv("DISCORD_WEBHOOK_URL"), session=session)
-    await webhook.send(thread=thread, content=content, username=username)
+    await webhook.send(thread=thread, content=content, username=username, file=file)
     await session.close()
     return True
 
 
-def send_webhook_to_thread_sync(thread_id: str, content: str, username: str) -> None:
+def send_webhook_to_thread_sync(
+    thread_id: str, content: str, username: str, file: File = None
+) -> None:
     """
     Send task output to discord thread
     """
@@ -36,13 +41,16 @@ def send_webhook_to_thread_sync(thread_id: str, content: str, username: str) -> 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
     sent_webhook = loop.run_until_complete(
-        send_webhook_to_thread(thread_id, content, username)
+        send_webhook_to_thread(
+            thread_id=thread_id, content=content, username=username, file=file
+        )
     )
     return sent_webhook
 
 
 def send_task_output_to_thread(
-    task_output: TaskOutput, thread_id: str
+    task_output: TaskOutput,
+    thread_id: str,
 ) -> list[tuple[bool, str]]:
     """
     Send task output to discord thread
