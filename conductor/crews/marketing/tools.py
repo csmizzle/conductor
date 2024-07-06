@@ -98,8 +98,6 @@ class SerpSearchTool(BaseTool):
         response = requests.request(
             url=url,
             method="GET",
-            oxylabs_username=os.getenv("OXYLABS_USERNAME"),
-            oxylabs_password=os.getenv("OXYLABS_PASSWORD"),
             headers=self.headers,
             cookies=self.cookies if self.cookies else {},
             timeout=5,

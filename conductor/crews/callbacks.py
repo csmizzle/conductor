@@ -7,6 +7,7 @@ from discord import Webhook
 import os
 import asyncio
 import discord
+from crewai.task import TaskOutput
 
 intents = discord.Intents.default()
 intents.guilds = True  # Ensure GUILDS intent is enabled
@@ -31,4 +32,15 @@ def send_webhook_to_thread_sync(thread_id: str, content: str, username: str) -> 
     """
     Send task output to discord thread
     """
-    asyncio.run(send_webhook_to_thread(thread_id, content, username))
+    return asyncio.run(send_webhook_to_thread(thread_id, content, username))
+
+
+def send_task_output_to_thread(task_output: TaskOutput, thread_id: str) -> None:
+    """
+    Send task output to discord thread
+    """
+    return send_webhook_to_thread_sync(
+        thread_id=thread_id,
+        content=task_output.raw_output[0:2000],
+        username="Research Team",
+    )
