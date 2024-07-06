@@ -41,12 +41,20 @@ def send_webhook_to_thread_sync(thread_id: str, content: str, username: str) -> 
     return sent_webhook
 
 
-def send_task_output_to_thread(task_output: TaskOutput, thread_id: str) -> None:
+def send_task_output_to_thread(
+    task_output: TaskOutput, thread_id: str
+) -> list[tuple[bool, str]]:
     """
     Send task output to discord thread
     """
-    return send_webhook_to_thread_sync(
-        thread_id=thread_id,
-        content=task_output.raw_output[0:2000],
-        username="Research Team",
-    )
+    # break the content into 2000 character chunks and send them
+    sent_content_chunks = []
+    for i in range(0, len(task_output.raw_output), 2000):
+        content_chunk = task_output.raw_output[i : i + 2000]
+        sent_message = send_webhook_to_thread_sync(
+            thread_id=thread_id,
+            content=content_chunk,
+            username="Marketing Team",
+        )
+        sent_content_chunks.append((sent_message, content_chunk))
+    return sent_content_chunks

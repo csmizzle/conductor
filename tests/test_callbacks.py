@@ -1,7 +1,11 @@
 """
 Test callback for crewai
 """
-from conductor.crews.callbacks import send_webhook_to_thread_sync
+from conductor.crews.callbacks import (
+    send_webhook_to_thread_sync,
+    send_task_output_to_thread,
+)
+from crewai.tasks.task_output import TaskOutput
 import os
 
 TEST_THREAD = os.getenv("TEST_THREAD")
@@ -18,3 +22,35 @@ def test_send_webhooks_to_thread_sync():
         username="Test Team",
     )
     assert sent_another_message is True
+
+
+def test_send_task_output_to_thread():
+    test_task_output = TaskOutput(
+        description="Test Task Output",
+        raw_output="Test Task Output Raw",
+        exported_output="None",
+    )
+    sent_messages = send_task_output_to_thread(
+        task_output=test_task_output, thread_id=TEST_THREAD
+    )
+    assert len(sent_messages) == 1
+    assert sent_messages[0][0] is True
+    assert sent_messages[0][1] == "Test Task Output Raw"
+
+
+def test_send_long_output_to_thread():
+    test_task_output = TaskOutput(
+        description="Test Task Output",
+        raw_output="A" * 5000,
+        exported_output="None",
+    )
+    sent_messages = send_task_output_to_thread(
+        task_output=test_task_output, thread_id=TEST_THREAD
+    )
+    assert len(sent_messages) == 3
+    assert sent_messages[0][0] is True
+    assert sent_messages[0][1] == "A" * 2000
+    assert sent_messages[1][0] is True
+    assert sent_messages[1][1] == "A" * 2000
+    assert sent_messages[2][0] is True
+    assert sent_messages[2][1] == "A" * 1000
