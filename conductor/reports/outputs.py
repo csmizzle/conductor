@@ -12,6 +12,7 @@ import tempfile
 from langchain.output_parsers import PydanticOutputParser
 from langchain.chains.llm import LLMChain
 from langsmith import traceable
+from docx import Document
 
 
 @traceable
@@ -203,3 +204,18 @@ def report_to_pdf_binary(report: Report) -> bytes:
     with tempfile.NamedTemporaryFile() as f:
         pdfkit.from_string(html, f.name)
         return f.read()
+
+
+def report_to_docx(report: Report) -> Document:
+    """
+    Convert a report to a DOCX
+    """
+    document = Document()
+    document.add_heading(report.report.title, level=1)
+    for section in report.report.sections:
+        document.add_heading(section.title, level=2)
+        for paragraph in section.paragraphs:
+            if paragraph.title and paragraph.title != "":
+                document.add_heading(paragraph.title, level=3)
+            document.add_paragraph(paragraph.content)
+    return document

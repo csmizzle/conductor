@@ -4,7 +4,9 @@ from conductor.reports.outputs import (
 )
 from conductor.reports.models import ParsedReport, Report, Section, Paragraph
 from conductor.reports.html_ import report_to_html
+from conductor.reports.outputs import report_to_docx
 from langsmith import unit
+from docx.document import Document as DocumentObject
 
 
 def test_conductor_url_report_generator():
@@ -82,3 +84,11 @@ def test_complex_narrative_to_report() -> None:
         TEST_COMPLEX_NARRATIVE,
     )
     assert isinstance(report, ParsedReport)
+
+
+def test_report_to_docx() -> None:
+    # read in the json data
+    parsed_report = ParsedReport(**REPORT_JSON)
+    report = Report(report=parsed_report)
+    document = report_to_docx(report)
+    assert isinstance(document, DocumentObject)
