@@ -25,7 +25,11 @@ async def send_webhook_to_thread(
     thread = await client.fetch_channel(thread_id)
     session = ClientSession()
     webhook = Webhook.from_url(url=os.getenv("DISCORD_WEBHOOK_URL"), session=session)
-    await webhook.send(thread=thread, content=content, username=username, file=file)
+    # omit file if not provided
+    if file:
+        await webhook.send(thread=thread, content=content, username=username, file=file)
+    else:
+        await webhook.send(thread=thread, content=content, username=username)
     await session.close()
     return True
 

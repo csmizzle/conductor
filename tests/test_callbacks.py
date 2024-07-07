@@ -68,3 +68,13 @@ def test_send_file_to_thread() -> None:
         username="Test Team",
     )
     assert sent_message is True
+
+
+def test_send_no_file_to_thread() -> None:
+    sent_message = send_webhook_to_thread_sync(
+        thread_id=TEST_THREAD,
+        content="Hello for the Test Suite! With a file this time!",
+        file=None,
+        username="Test Team",
+    )
+    assert sent_message is True
