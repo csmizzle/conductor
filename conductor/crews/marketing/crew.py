@@ -105,9 +105,9 @@ class UrlMarketingCrew:
             cache=self.cache,
             cache_handler=self.cache_handler,
         )
-        editor_agent = agents.editor_agent(
-            llm=claude_sonnet,
-        )
+        # editor_agent = agents.editor_agent(
+        #     llm=claude_sonnet,
+        # )
 
         # tasks
         company_identification_task = tasks.company_identification_task(
@@ -145,19 +145,19 @@ class UrlMarketingCrew:
             ],
             report_style=self.report_style,
         )
-        review_task = tasks.review_task(
-            company_url=self.url,
-            agent=editor_agent,
-            context=[
-                company_identification_task,
-                writer_task,
-                company_research_task,
-                swot_task,
-                competitor_task,
-                search_engine_task,
-            ],
-            report_style=self.report_style,
-        )
+        # review_task = tasks.review_task(
+        #     company_url=self.url,
+        #     agent=editor_agent,
+        #     context=[
+        #         company_identification_task,
+        #         writer_task,
+        #         company_research_task,
+        #         swot_task,
+        #         competitor_task,
+        #         search_engine_task,
+        #     ],
+        #     report_style=self.report_style,
+        # )
         # create crew
         if self.cache:
             crew = RedisCacheHandlerCrew(
@@ -168,7 +168,7 @@ class UrlMarketingCrew:
                     swot_agent,
                     competitor_agent,
                     writer_agent,
-                    editor_agent,
+                    # editor_agent,
                 ],
                 tasks=[
                     company_identification_task,
@@ -177,7 +177,7 @@ class UrlMarketingCrew:
                     swot_task,
                     competitor_task,
                     writer_task,
-                    review_task,
+                    # review_task,
                 ],
                 verbose=self.verbose,
                 step_callback=self.step_callback,
@@ -195,7 +195,7 @@ class UrlMarketingCrew:
                     swot_agent,
                     competitor_agent,
                     writer_agent,
-                    editor_agent,
+                    # editor_agent,
                 ],
                 tasks=[
                     company_identification_task,
@@ -204,7 +204,7 @@ class UrlMarketingCrew:
                     swot_task,
                     competitor_task,
                     writer_task,
-                    review_task,
+                    # review_task,
                 ],
                 verbose=self.verbose,
                 step_callback=self.step_callback,
