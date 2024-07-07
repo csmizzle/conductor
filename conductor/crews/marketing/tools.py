@@ -205,13 +205,14 @@ class ScrapePageCacheTool(BaseTool):
 
     def _run(self, **kwargs: Any) -> Any:
         url = kwargs.get("website_url")
-        return send_request_with_cache(
+        content = send_request_with_cache(
             url=url,
             method="GET",
             cache=self._cache,
             headers=self.headers,
             cookies=self.cookies,
         )
+        return check_context_limit(content)
 
 
 class SerpSearchCacheTool(SerpSearchTool):
@@ -240,13 +241,14 @@ class SerpSearchCacheTool(SerpSearchTool):
         self._cache = Redis.from_url(os.getenv("REDIS_TOOL_CACHE_URL"))
 
     def _get_page_content(self, url: str) -> str:
-        return send_request_with_cache(
+        content = send_request_with_cache(
             url=url,
             method="GET",
             cache=self._cache,
             headers=self.headers,
             cookies=self.cookies,
         )
+        return check_context_limit(content)
 
 
 # OxyLabs Proxy Tools
@@ -301,7 +303,8 @@ class ScrapePageOxyLabsTool(BaseTool):
             cookies=self.cookies if self.cookies else {},
             timeout=5,
         )
-        return clean_html(content)
+        content = clean_html(content)
+        return check_context_limit(content)
 
 
 class SerpSearchOxyLabsTool(SerpSearchTool):
@@ -339,7 +342,8 @@ class SerpSearchOxyLabsTool(SerpSearchTool):
             cookies=self.cookies,
             timeout=5,
         )
-        return clean_html(response)
+        content = clean_html(response)
+        return check_context_limit(content)
 
 
 # Cached & OxyLabs version of the tools
@@ -364,7 +368,7 @@ class SerpSearchOxylabsCacheTool(SerpSearchTool):
 
     def _get_page_content(self, url: str) -> str:
         # check cache for url
-        return send_request_proxy_with_cache(
+        content = send_request_proxy_with_cache(
             url=url,
             method="GET",
             oxylabs_username=os.getenv("OXYLABS_USERNAME"),
@@ -374,6 +378,7 @@ class SerpSearchOxylabsCacheTool(SerpSearchTool):
             cookies=self.cookies,
             timeout=5,
         )
+        return check_context_limit(content)
 
 
 class ScrapePageOxylabsCacheTool(BaseTool):
@@ -402,7 +407,7 @@ class ScrapePageOxylabsCacheTool(BaseTool):
     ) -> Any:
         url = kwargs.get("website_url")
         # check cache for url
-        return send_request_proxy_with_cache(
+        content = send_request_proxy_with_cache(
             url=url,
             method="GET",
             oxylabs_username=os.getenv("OXYLABS_USERNAME"),
@@ -412,3 +417,4 @@ class ScrapePageOxylabsCacheTool(BaseTool):
             cookies=self.cookies,
             timeout=5,
         )
+        return check_context_limit(content)
