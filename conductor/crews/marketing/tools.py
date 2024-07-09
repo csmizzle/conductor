@@ -211,6 +211,7 @@ class ScrapePageCacheTool(BaseTool):
             cache=self._cache,
             headers=self.headers,
             cookies=self.cookies,
+            timeout=30,
         )
         return check_context_limit(content)
 
@@ -247,6 +248,7 @@ class SerpSearchCacheTool(SerpSearchTool):
             cache=self._cache,
             headers=self.headers,
             cookies=self.cookies,
+            timeout=30,
         )
         return check_context_limit(content)
 
@@ -301,7 +303,7 @@ class ScrapePageOxyLabsTool(BaseTool):
             oxylabs_password=os.getenv("OXYLABS_PASSWORD"),
             headers=self.headers,
             cookies=self.cookies if self.cookies else {},
-            timeout=5,
+            timeout=30,
         )
         content = clean_html(content)
         return check_context_limit(content)
@@ -340,7 +342,7 @@ class SerpSearchOxyLabsTool(SerpSearchTool):
             oxylabs_password=os.getenv("OXYLABS_PASSWORD"),
             headers=self.headers,
             cookies=self.cookies,
-            timeout=5,
+            timeout=30,
         )
         content = clean_html(response)
         return check_context_limit(content)
@@ -376,7 +378,7 @@ class SerpSearchOxylabsCacheTool(SerpSearchTool):
             cache=self._cache,
             headers=self.headers,
             cookies=self.cookies,
-            timeout=5,
+            timeout=30,
         )
         return check_context_limit(content)
 
@@ -415,6 +417,6 @@ class ScrapePageOxylabsCacheTool(BaseTool):
             cache=self._cache,
             headers=self.headers,
             cookies=self.cookies,
-            timeout=5,
+            timeout=30,
         )
         return check_context_limit(content)
