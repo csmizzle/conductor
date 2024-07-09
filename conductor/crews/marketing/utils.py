@@ -103,11 +103,7 @@ def task_to_task_run(task: Task) -> TaskRun:
 
 
 def send_request_with_cache(
-    method: str,
-    url: str,
-    cache: Redis,
-    headers=None,
-    cookies=None,
+    method: str, url: str, cache: Redis, headers=None, cookies=None, timeout: int = None
 ) -> str:
     # check if url in redis
     cached_content = cache.get(url)
@@ -116,7 +112,7 @@ def send_request_with_cache(
     # if not in redis, send request
     else:
         response = requests.request(
-            method=method, url=url, headers=headers, cookies=cookies
+            method=method, url=url, headers=headers, cookies=cookies, timeout=timeout
         )
         if response.ok:
             clean_content = clean_html(response)

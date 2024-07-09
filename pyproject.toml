@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "conductor"
-version = "0.1.14"
+version = "0.1.15"
 description = ""
 authors = ["csmizzle <chrissmith700@gmail.com>"]
 
