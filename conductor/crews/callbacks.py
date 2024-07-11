@@ -5,7 +5,6 @@ Task callbacks
 from aiohttp import ClientSession
 from discord import Webhook
 from discord.file import File
-import os
 import asyncio
 import discord
 from crewai.task import TaskOutput
@@ -16,15 +15,20 @@ client = discord.Client(intents=intents)
 
 
 async def send_webhook_to_thread(
-    thread_id: int, content: str, username: str, file: File = None
+    token: str,
+    webhook_url: str,
+    thread_id: int,
+    content: str,
+    username: str,
+    file: File = None,
 ) -> bool:
     """
     Send task output to discord thread
     """
-    await client.login(token=os.getenv("DISCORD_BOT_TOKEN"))
+    await client.login(token=token)
     thread = await client.fetch_channel(thread_id)
     session = ClientSession()
-    webhook = Webhook.from_url(url=os.getenv("DISCORD_WEBHOOK_URL"), session=session)
+    webhook = Webhook.from_url(url=webhook_url, session=session)
     # omit file if not provided
     if file:
         await webhook.send(thread=thread, content=content, username=username, file=file)
