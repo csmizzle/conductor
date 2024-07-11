@@ -17,10 +17,16 @@ TEST_THREAD = os.getenv("TEST_THREAD")
 
 def test_send_webhooks_to_thread_sync():
     sent_message = send_webhook_to_thread_sync(
-        thread_id=TEST_THREAD, content="Hello for the Test Suite!", username="Test Team"
+        webhook_url=os.getenv("DISCORD_WEBHOOK_URL"),
+        token=os.getenv("DISCORD_BOT_TOKEN"),
+        thread_id=TEST_THREAD,
+        content="Hello for the Test Suite!",
+        username="Test Team",
     )
     assert sent_message is True
     sent_another_message = send_webhook_to_thread_sync(
+        webhook_url=os.getenv("DISCORD_WEBHOOK_URL"),
+        token=os.getenv("DISCORD_BOT_TOKEN"),
         thread_id=TEST_THREAD,
         content="Another message for the Test Suite!",
         username="Test Team",
@@ -35,7 +41,10 @@ def test_send_task_output_to_thread():
         exported_output="None",
     )
     sent_messages = send_task_output_to_thread(
-        task_output=test_task_output, thread_id=TEST_THREAD
+        webhook_url=os.getenv("DISCORD_WEBHOOK_URL"),
+        token=os.getenv("DISCORD_BOT_TOKEN"),
+        task_output=test_task_output,
+        thread_id=TEST_THREAD,
     )
     assert len(sent_messages) == 1
     assert sent_messages[0][0] is True
@@ -49,7 +58,10 @@ def test_send_long_output_to_thread():
         exported_output="None",
     )
     sent_messages = send_task_output_to_thread(
-        task_output=test_task_output, thread_id=TEST_THREAD
+        webhook_url=os.getenv("DISCORD_WEBHOOK_URL"),
+        token=os.getenv("DISCORD_BOT_TOKEN"),
+        task_output=test_task_output,
+        thread_id=TEST_THREAD,
     )
     assert len(sent_messages) == 3
     assert sent_messages[0][0] is True
@@ -62,6 +74,8 @@ def test_send_long_output_to_thread():
 
 def test_send_file_to_thread() -> None:
     sent_message = send_webhook_to_thread_sync(
+        webhook_url=os.getenv("DISCORD_WEBHOOK_URL"),
+        token=os.getenv("DISCORD_BOT_TOKEN"),
         thread_id=TEST_THREAD,
         content="Hello for the Test Suite! With a file this time!",
         file=File(TEST_REPORT),
@@ -72,6 +86,8 @@ def test_send_file_to_thread() -> None:
 
 def test_send_no_file_to_thread() -> None:
     sent_message = send_webhook_to_thread_sync(
+        webhook_url=os.getenv("DISCORD_WEBHOOK_URL"),
+        token=os.getenv("DISCORD_BOT_TOKEN"),
         thread_id=TEST_THREAD,
         content="Hello for the Test Suite! With a file this time!",
         file=None,

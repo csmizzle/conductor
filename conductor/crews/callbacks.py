@@ -39,7 +39,12 @@ async def send_webhook_to_thread(
 
 
 def send_webhook_to_thread_sync(
-    thread_id: str, content: str, username: str, file: File = None
+    token: str,
+    webhook_url: str,
+    thread_id: str,
+    content: str,
+    username: str,
+    file: File = None,
 ) -> None:
     """
     Send task output to discord thread
@@ -50,13 +55,20 @@ def send_webhook_to_thread_sync(
         asyncio.set_event_loop(loop)
     sent_webhook = loop.run_until_complete(
         send_webhook_to_thread(
-            thread_id=thread_id, content=content, username=username, file=file
+            token=token,
+            webhook_url=webhook_url,
+            thread_id=thread_id,
+            content=content,
+            username=username,
+            file=file,
         )
     )
     return sent_webhook
 
 
 def send_task_output_to_thread(
+    token: str,
+    webhook_url: str,
     task_output: TaskOutput,
     thread_id: str,
 ) -> list[tuple[bool, str]]:
@@ -68,6 +80,8 @@ def send_task_output_to_thread(
     for i in range(0, len(task_output.raw_output), 2000):
         content_chunk = task_output.raw_output[i : i + 2000]
         sent_message = send_webhook_to_thread_sync(
+            token=token,
+            webhook_url=webhook_url,
             thread_id=thread_id,
             content=content_chunk,
             username="Marketing Team",
