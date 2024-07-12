@@ -3,8 +3,7 @@ from conductor.reports.outputs import (
     string_to_report,
 )
 from conductor.reports.models import ParsedReport, Report, Section, Paragraph
-from conductor.reports.html_ import report_to_html
-from conductor.reports.outputs import report_to_docx
+from conductor.reports.outputs import report_to_docx, report_to_html
 from langsmith import unit
 from docx.document import Document as DocumentObject
 

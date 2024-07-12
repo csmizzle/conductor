@@ -4,7 +4,7 @@ from pydantic.v1 import BaseModel, Field
 from typing import Optional, Any, Type
 from textwrap import dedent
 import os
-from conductor.functions.apollo import generate_apollo_person_domain_search_context
+from conductor.crews.functions import generate_apollo_person_domain_search_context
 from conductor.crews.marketing.utils import (
     send_request_proxy,
     send_request_proxy_with_cache,
