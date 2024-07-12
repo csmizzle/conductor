@@ -1,4 +1,4 @@
-from constants import REPORT_JSON, BASEDIR
+from tests.constants import REPORT_JSON, BASEDIR
 from conductor.reports.outputs import report_to_pdf
 from conductor.reports.models import Report
 import os
