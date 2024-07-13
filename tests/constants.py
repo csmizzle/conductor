@@ -52,5 +52,11 @@ TEST_REPORT_RESPONSE = open(os.path.join(BASEDIR, "data", "output.txt")).read()
 TEST_COMPLEX_NARRATIVE = open(
     os.path.join(BASEDIR, "data", "complex_narrative.txt")
 ).read()
+TEST_KEY_QUESTIONS_BULLETED = open(
+    os.path.join(BASEDIR, "data", "key_questions_bulleted.txt")
+).read()
+TEST_KEY_QUESTIONS_NARRATIVE = open(
+    os.path.join(BASEDIR, "data", "key_questions_narrative.txt")
+).read()
 ### REPORT JSON
 REPORT_JSON = json.load(open(os.path.join(BASEDIR, "data", "json_report.json")))

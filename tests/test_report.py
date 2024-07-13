@@ -1,4 +1,10 @@
-from tests.constants import TEST_REPORT_RESPONSE, REPORT_JSON, TEST_COMPLEX_NARRATIVE
+from tests.constants import (
+    TEST_REPORT_RESPONSE,
+    REPORT_JSON,
+    TEST_COMPLEX_NARRATIVE,
+    TEST_KEY_QUESTIONS_BULLETED,
+    TEST_KEY_QUESTIONS_NARRATIVE,
+)
 from conductor.reports.outputs import (
     string_to_report,
 )
@@ -91,3 +97,17 @@ def test_report_to_docx() -> None:
     report = Report(report=parsed_report)
     document = report_to_docx(report)
     assert isinstance(document, DocumentObject)
+
+
+def test_key_questions_bulleted_to_report() -> None:
+    report = string_to_report(
+        TEST_KEY_QUESTIONS_BULLETED,
+    )
+    assert isinstance(report, ParsedReport)
+
+
+def test_key_questions_narrative_to_report() -> None:
+    report = string_to_report(
+        TEST_KEY_QUESTIONS_NARRATIVE,
+    )
+    assert isinstance(report, ParsedReport)

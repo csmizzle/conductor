@@ -32,7 +32,7 @@ def test_url_marketing_crew():
         assert isinstance(task, TaskRun)
 
 
-def test_url_with_key_questions_marketing_crew():
+def test_url_bulleted_with_key_questions_marketing_crew():
     """
     Test the UrlMarketingCrew class.
     """
@@ -44,6 +44,28 @@ def test_url_with_key_questions_marketing_crew():
     crew = UrlMarketingCrew(
         url=url,
         report_style=ReportStyle.BULLETED,
+        key_questions=key_questions,
+    )
+    result = crew.run()
+    assert isinstance(result, CrewRun)
+    assert result.result is not None
+    assert isinstance(result.result, str)
+    for task in result.tasks:
+        assert isinstance(task, TaskRun)
+
+
+def test_url_narrative_with_key_questions_marketing_crew():
+    """
+    Test the UrlMarketingCrew class.
+    """
+    url = "https://www.trssllc.com"
+    key_questions = [
+        "Who could potentially purchase this company?",
+        "Which industry does the company operate in?",
+    ]
+    crew = UrlMarketingCrew(
+        url=url,
+        report_style=ReportStyle.NARRATIVE,
         key_questions=key_questions,
     )
     result = crew.run()
