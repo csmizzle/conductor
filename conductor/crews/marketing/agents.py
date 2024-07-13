@@ -117,6 +117,21 @@ class MarketingAgents:
             cache_handler=cache_handler,
         )
 
+    def key_questions_answerer_agent(
+        self, llm=None, cache=None, proxy=None, cache_handler=None
+    ) -> Agent:
+        return Agent(
+            role="Key Questions Agent",
+            goal="Answer key questions about a company using the provided context in a task.",
+            backstory="An expert in answering key questions about companies. Focuses on key points but also provides a detailed analysis. Addresses common analytical pitfalls during its approach. Also includes all sources used.",
+            verbose=True,
+            llm=llm,
+            allow_delegation=False,
+            tools=self.set_scraping_tools(cache=cache, proxy=proxy),
+            cache=cache,
+            cache_handler=cache_handler,
+        )
+
     def editor_agent(self, llm=None) -> Agent:
         return Agent(
             role="Editor Agent",

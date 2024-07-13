@@ -9,13 +9,12 @@ from bs4 import BeautifulSoup
 import re
 
 
-def create_report_prompt(report_style: ReportStyle):
+def create_report_prompt(report_style: ReportStyle, key_questions: bool):
     if report_style == ReportStyle.BULLETED:
         return dedent(
             f"""
         Write a comprehensive report on the company using only the provided context.
         The report should be a world class and capture the key points along with important details.
-        The report should include a SWOT analysis, key personnel, company history, and key products and services.
         The report should be well-structured and easy to read.
         The report should include all source URLs used as well from the provided context, do not leave any out from provided context.
         The report should be broken into 5 main sections and each section should be written {report_style.value}:
@@ -56,7 +55,6 @@ def create_report_prompt(report_style: ReportStyle):
             f"""
             Write a comprehensive report on the company using only the provided context.
             The report should be a world class and capture the key points along with important details.
-            The report should include a SWOT analysis, key personnel, company history, and key products and services.
             The report should be well-structured and easy to read.
             The report should include all source URLs used as well from the provided context, do not leave any out from provided context.
             The report should be broken into 5 main sections and each section should be written {report_style.value}:

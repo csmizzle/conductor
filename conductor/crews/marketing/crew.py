@@ -5,7 +5,7 @@ from conductor.crews.models import CrewRun
 from conductor.crews.marketing.utils import task_to_task_run
 from conductor.crews.cache import RedisCrewCacheHandler
 from conductor.llms import claude_sonnet
-from crewai import Crew
+from crewai import Crew, Agent, Task
 from crewai.telemetry import Telemetry
 from crewai.utilities import FileHandler, Logger, RPMController
 from crewai.agents.cache.cache_handler import CacheHandler
@@ -46,6 +46,7 @@ class UrlMarketingCrew:
         url: str,
         report_style: ReportStyle,
         verbose: bool = True,
+        key_questions: str = None,
         output_log_file: bool | str = None,
         cache: bool = False,
         redis: bool = False,
@@ -54,6 +55,7 @@ class UrlMarketingCrew:
         proxy=None,
     ) -> None:
         self.url = url
+        self.key_questions = key_questions
         self.report_style = report_style
         self.output_log_file = output_log_file
         self.step_callback = step_callback
@@ -66,11 +68,10 @@ class UrlMarketingCrew:
         self.verbose = verbose
         self.proxy = proxy
 
-    def run(self) -> CrewRun:
-        # create agents and tasks
+    def build_team(self) -> tuple[list[Agent], list[Task]]:
+        team = []
         agents = MarketingAgents()
-        tasks = MarketingTasks()
-        # agents
+        # create all agents and add them to the team
         company_identification_agent = agents.url_research_agent(
             llm=claude_sonnet,
             cache=self.cache,
@@ -105,11 +106,29 @@ class UrlMarketingCrew:
             cache=self.cache,
             cache_handler=self.cache_handler,
         )
-        # editor_agent = agents.editor_agent(
-        #     llm=claude_sonnet,
-        # )
-
-        # tasks
+        # add agents to team list all at once
+        team.extend(
+            [
+                company_identification_agent,
+                company_research_agent,
+                search_engine_agent,
+                swot_agent,
+                competitor_agent,
+                writer_agent,
+            ]
+        )
+        # check if there are key questions
+        if self.key_questions:
+            key_question_answerer_agent = agents.key_question_answerer_agent(
+                llm=claude_sonnet,
+                cache=self.cache,
+                proxy=self.proxy,
+                cache_handler=self.cache_handler,
+            )
+            team.append(key_question_answerer_agent)
+        # create tasks
+        team_tasks = []
+        tasks = MarketingTasks()
         company_identification_task = tasks.company_identification_task(
             agent=company_identification_agent,
             company_url=self.url,
@@ -134,51 +153,55 @@ class UrlMarketingCrew:
         competitor_task = tasks.company_competitor_task(
             agent=competitor_agent, context=[company_research_task, search_engine_task]
         )
-        writer_task = tasks.company_report_task(
-            agent=writer_agent,
-            context=[
+        # add all tasks to team task list
+        team_tasks.extend(
+            [
                 company_identification_task,
                 company_research_task,
+                search_engine_task,
                 swot_task,
                 competitor_task,
-                search_engine_task,
-            ],
-            report_style=self.report_style,
+            ]
         )
-        # review_task = tasks.review_task(
-        #     company_url=self.url,
-        #     agent=editor_agent,
-        #     context=[
-        #         company_identification_task,
-        #         writer_task,
-        #         company_research_task,
-        #         swot_task,
-        #         competitor_task,
-        #         search_engine_task,
-        #     ],
-        #     report_style=self.report_style,
-        # )
-        # create crew
-        if self.cache:
-            crew = RedisCacheHandlerCrew(
-                agents=[
-                    company_identification_agent,
-                    company_research_agent,
-                    search_engine_agent,
-                    swot_agent,
-                    competitor_agent,
-                    writer_agent,
-                    # editor_agent,
-                ],
-                tasks=[
+        # create writer context with all tasks so far
+        writer_context = [
+            company_identification_task,
+            company_research_task,
+            swot_task,
+            competitor_task,
+            search_engine_task,
+        ]
+        # check if there are key questions
+        if self.key_questions:
+            answer_key_questions_task = tasks.answer_key_questions_task(
+                agent=key_question_answerer_agent,
+                key_questions=self.key_questions,
+                context=[
                     company_identification_task,
                     company_research_task,
                     search_engine_task,
                     swot_task,
                     competitor_task,
-                    writer_task,
-                    # review_task,
                 ],
+            )
+            # update writer context with key questions task
+            writer_context.append(answer_key_questions_task)
+        writer_task = tasks.company_report_task(
+            agent=writer_agent,
+            context=writer_context,
+            report_style=self.report_style,
+        )
+        # add writer task to team tasks
+        team_tasks.append(writer_task)
+        return team, team_tasks
+
+    def run(self) -> CrewRun:
+        # build team
+        team, team_tasks = self.build_team()
+        if self.cache:
+            crew = RedisCacheHandlerCrew(
+                agents=team,
+                tasks=team_tasks,
                 verbose=self.verbose,
                 step_callback=self.step_callback,
                 output_log_file=self.output_log_file,
@@ -188,32 +211,14 @@ class UrlMarketingCrew:
             )
         else:
             crew = Crew(
-                agents=[
-                    company_identification_agent,
-                    company_research_agent,
-                    search_engine_agent,
-                    swot_agent,
-                    competitor_agent,
-                    writer_agent,
-                    # editor_agent,
-                ],
-                tasks=[
-                    company_identification_task,
-                    company_research_task,
-                    search_engine_task,
-                    swot_task,
-                    competitor_task,
-                    writer_task,
-                    # review_task,
-                ],
+                agents=team,
+                tasks=team_tasks,
                 verbose=self.verbose,
                 step_callback=self.step_callback,
                 output_log_file=self.output_log_file,
                 task_callback=self.task_callback,
             )
-
         result = crew.kickoff()
-
         # create and return crew run
         crew_run = CrewRun(
             tasks=[task_to_task_run(task) for task in crew.tasks],

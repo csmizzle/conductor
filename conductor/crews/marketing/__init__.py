@@ -9,6 +9,7 @@ from langsmith import traceable
 def run_marketing_crew(
     url: str,
     report_style: ReportStyle,
+    key_questions: str = None,
     output_log_file: bool | str = None,
     step_callback=None,
     task_callback=None,
@@ -20,6 +21,7 @@ def run_marketing_crew(
     Args:
         url (str): URL of a company
         report_style (ReportStyle): style of the report
+        key_questions (str, optional): Key questions to ask. Defaults to None.
         output_log_file (bool | str, optional): Output log file to write results to. Defaults to None.
         step_callback (_type_, optional): For each step, execute a callback function. Defaults to None.
         task_callback (_type_, optional): For each task, execute a function. Defaults to None.
@@ -32,6 +34,7 @@ def run_marketing_crew(
     crew = UrlMarketingCrew(
         url=url,
         report_style=report_style,
+        key_questions=key_questions,
         output_log_file=output_log_file,
         step_callback=step_callback,
         task_callback=task_callback,

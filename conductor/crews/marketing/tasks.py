@@ -60,6 +60,23 @@ class MarketingTasks:
             context=context,
         )
 
+    def answer_key_questions_task(
+        self, agent: Agent, key_questions: str, context: list[Task]
+    ) -> Task:
+        return Task(
+            description=dedent(
+                f"""
+            Answer the provided key questions about the company.
+            To find the answers, use creative but detailed research techniques using the provided tools.
+            The answers should be detailed and provide a comprehensive overview of the company.
+            {key_questions}
+            """
+            ),
+            agent=agent,
+            context=context,
+            expected_output="Answers to key questions about the company with source links.",
+        )
+
     def company_swot_task(self, agent: Agent, context: list[Task]) -> Task:
         return Task(
             description=dedent(
