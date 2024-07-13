@@ -46,7 +46,7 @@ class UrlMarketingCrew:
         url: str,
         report_style: ReportStyle,
         verbose: bool = True,
-        key_questions: str = None,
+        key_questions: list[str] = None,
         output_log_file: bool | str = None,
         cache: bool = False,
         redis: bool = False,
@@ -119,7 +119,7 @@ class UrlMarketingCrew:
         )
         # check if there are key questions
         if self.key_questions:
-            key_question_answerer_agent = agents.key_question_answerer_agent(
+            key_question_answerer_agent = agents.key_questions_answerer_agent(
                 llm=claude_sonnet,
                 cache=self.cache,
                 proxy=self.proxy,
@@ -186,10 +186,12 @@ class UrlMarketingCrew:
             )
             # update writer context with key questions task
             writer_context.append(answer_key_questions_task)
+            team_tasks.append(answer_key_questions_task)
         writer_task = tasks.company_report_task(
             agent=writer_agent,
             context=writer_context,
             report_style=self.report_style,
+            key_questions=self.key_questions,
         )
         # add writer task to team tasks
         team_tasks.append(writer_task)

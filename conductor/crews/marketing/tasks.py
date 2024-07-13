@@ -4,7 +4,7 @@ Tasks for the marketing crew.
 from crewai import Task, Agent
 from textwrap import dedent
 from conductor.reports.models import ReportStyle
-from conductor.crews.marketing.utils import create_report_prompt
+from conductor.crews.marketing.utils import write_report_prompt
 
 
 class MarketingTasks:
@@ -61,7 +61,7 @@ class MarketingTasks:
         )
 
     def answer_key_questions_task(
-        self, agent: Agent, key_questions: str, context: list[Task]
+        self, agent: Agent, key_questions: list[str], context: list[Task]
     ) -> Task:
         return Task(
             description=dedent(
@@ -69,7 +69,7 @@ class MarketingTasks:
             Answer the provided key questions about the company.
             To find the answers, use creative but detailed research techniques using the provided tools.
             The answers should be detailed and provide a comprehensive overview of the company.
-            {key_questions}
+            {" ".join(key_questions)}
             """
             ),
             agent=agent,
@@ -105,36 +105,18 @@ class MarketingTasks:
         )
 
     def company_report_task(
-        self, agent: Agent, context: list[Task], report_style: ReportStyle
-    ) -> Task:
-        return Task(
-            description=create_report_prompt(report_style),
-            agent=agent,
-            context=context,
-            expected_output="Comprehensive report on the company with the sections overview, swot analysis, and competitors.",
-        )
-
-    def review_task(
         self,
-        company_url: str,
         agent: Agent,
         context: list[Task],
         report_style: ReportStyle,
+        key_questions: list[str] = None,
     ) -> Task:
         return Task(
-            description=dedent(
-                f"""
-            Review and make changes to final report ensuring three main concepts:
-            - The report is well-structured and easy to read.
-                - The edits of the report should not change the structure of the report.
-            - The report includes all key points and important details.
-            - The report includes accurate, up to date, and relevant information for this URL {company_url}.
-                - If similar companies are found, make sure to differentiate the information but focus on {company_url}.
-            Ensure the final report stays true to this style and structure:
-            {create_report_prompt(report_style)}
-            """
+            description=write_report_prompt(
+                report_style=report_style,
+                key_questions=key_questions,
             ),
             agent=agent,
             context=context,
-            expected_output="Final reviewed report ready for delivery.",
+            expected_output="Comprehensive report on the company with the sections overview, swot analysis, and competitors.",
         )

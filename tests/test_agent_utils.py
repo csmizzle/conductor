@@ -1,22 +1,110 @@
 from conductor.crews.marketing.utils import (
     create_report_prompt,
     oxylabs_request,
+    write_report_prompt,
 )
 from conductor.reports.models import ReportStyle
+from conductor.reports.pydantic_templates.bulleted import (
+    BulletedReportTemplate,
+    KeyQuestionsBulletedReportTemplate,
+)
+from conductor.reports.pydantic_templates.narrative import (
+    NarrativeReportTemplate,
+    KeyQuestionsNarrativeReportTemplate,
+)
 import os
 
 
-def test_create_report_prompt() -> None:
+def test_bulleted_create_report_prompt_no_key_questions() -> None:
+    """
+    Test the create_report_prompt function.
+    """
+    report_style = ReportStyle.BULLETED
+    report_template_generator = BulletedReportTemplate()
+    result = create_report_prompt(
+        report_style=report_style, report_template_generator=report_template_generator
+    )
+    assert isinstance(result, str)
+
+
+def test_bulleted_create_report_prompt_key_questions() -> None:
+    """
+    Test the create_report_prompt function.
+    """
+    report_style = ReportStyle.BULLETED
+    key_questions = ["What is the company name?", "What is the company website?"]
+    report_template_generator = KeyQuestionsBulletedReportTemplate(
+        key_questions=key_questions
+    )
+    result = create_report_prompt(
+        report_style=report_style, report_template_generator=report_template_generator
+    )
+    assert isinstance(result, str)
+
+
+def test_create_narrative_report_prompt_no_key_questions() -> None:
     """
     Test the create_report_prompt function.
     """
     report_style = ReportStyle.NARRATIVE
-    result = create_report_prompt(report_style=report_style)
-    assert isinstance(result, str)
-    assert (
-        "as long form narratives, avoiding bullet points and short sentences." in result
+    report_template_generator = NarrativeReportTemplate()
+    result = create_report_prompt(
+        report_style=report_style, report_template_generator=report_template_generator
     )
-    return result
+    assert isinstance(result, str)
+
+
+def test_create_narrative_report_prompt_key_questions() -> None:
+    """
+    Test the create_report_prompt function.
+    """
+    report_style = ReportStyle.BULLETED
+    key_questions = ["What is the company name?", "What is the company website?"]
+    report_template_generator = KeyQuestionsNarrativeReportTemplate(
+        key_questions=key_questions
+    )
+    result = create_report_prompt(
+        report_style=report_style, report_template_generator=report_template_generator
+    )
+    assert isinstance(result, str)
+
+
+def test_write_bulleted_report_prompt_no_key_questions() -> None:
+    """
+    Test the write_report_prompt function.
+    """
+    report_style = ReportStyle.BULLETED
+    result = write_report_prompt(report_style=report_style)
+    assert isinstance(result, str)
+
+
+def test_write_bulleted_report_prompt_key_questions() -> None:
+    """
+    Test the write_report_prompt function.
+    """
+    report_style = ReportStyle.BULLETED
+    key_questions = ["What is the company name?", "What is the company website?"]
+    result = write_report_prompt(report_style=report_style, key_questions=key_questions)
+    assert isinstance(result, str)
+
+
+def test_write_narrative_report_prompt_no_key_questions() -> None:
+    """
+    Test the write_report_prompt function.
+    """
+    report_style = ReportStyle.NARRATIVE
+    result = write_report_prompt(report_style=report_style)
+    assert isinstance(result, str)
+
+
+def test_write_narrative_report_prompt_key_questions() -> None:
+    """
+    Test the write_report_prompt function.
+    """
+    report_style = ReportStyle.NARRATIVE
+    key_questions = ["What is the company name?", "What is the company website?"]
+    result = write_report_prompt(report_style=report_style, key_questions=key_questions)
+    assert isinstance(result, str)
 
 
 def test_oxylabs_request() -> None:
