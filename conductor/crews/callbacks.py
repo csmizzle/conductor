@@ -69,8 +69,8 @@ def send_webhook_to_thread_sync(
 def send_task_output_to_thread(
     token: str,
     webhook_url: str,
-    task_output: TaskOutput,
     thread_id: str,
+    task_output: TaskOutput,
 ) -> list[tuple[bool, str]]:
     """
     Send task output to discord thread
