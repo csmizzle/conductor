@@ -7,6 +7,7 @@ from conductor.crews.callbacks import (
 )
 from crewai.tasks.task_output import TaskOutput
 from discord.file import File
+from functools import partial
 import os
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
@@ -96,3 +97,24 @@ def test_send_no_file_to_thread() -> None:
         username="Test Team",
     )
     assert sent_message is True
+
+
+def test_partial_task_to_thread() -> None:
+    """
+    This is how we use partial functions in conductor-server to send task outputs
+    """
+    test_task_output = TaskOutput(
+        description="Test Task Output",
+        raw_output="Test Task Output Raw",
+        exported_output="None",
+    )
+    partial_send_task_output = partial(
+        send_task_output_to_thread,
+        webhook_url=DISCORD_WEBHOOK_URL,
+        token=DISCORD_BOT_TOKEN,
+        thread_id=TEST_THREAD,
+    )
+    sent_messages = partial_send_task_output(task_output=test_task_output)
+    assert len(sent_messages) == 1
+    assert sent_messages[0][0] is True
+    assert sent_messages[0][1] == "Test Task Output Raw"
