@@ -78,14 +78,6 @@ class BulletedReportTemplate(ReportTemplatePromptGenerator):
                     title="Risk Analysis",
                     content_template="Risk analysis in bullet points",
                 ),
-                ParagraphTemplate(
-                    title="Competitive Advantage",
-                    content_template="All identified competitive advantages in long form narrative",
-                ),
-                ParagraphTemplate(
-                    title="Competitive Disadvantage",
-                    content_template="All identified competitive disadvantages in long form narrative",
-                ),
             ],
         ),
         SectionTemplate(
@@ -184,14 +176,6 @@ class KeyQuestionsBulletedReportTemplate(ReportTemplatePromptGenerator):
                     ParagraphTemplate(
                         title="Risk Analysis",
                         content_template="Risk analysis in bullet points",
-                    ),
-                    ParagraphTemplate(
-                        title="Competitive Advantage",
-                        content_template="All identified competitive advantages in long form narrative",
-                    ),
-                    ParagraphTemplate(
-                        title="Competitive Disadvantage",
-                        content_template="All identified competitive disadvantages in long form narrative",
                     ),
                 ],
             ),
