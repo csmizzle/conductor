@@ -175,3 +175,22 @@ def test_run_marketing_crew_with_proxy_and_cache() -> None:
     assert isinstance(result.result, str)
     for task in result.tasks:
         assert isinstance(task, TaskRun)
+
+
+def test_run_marketing_crew_with_key_questions_narrative() -> None:
+    url = "https://www.trssllc.com"
+    result = run_marketing_crew(
+        url=url,
+        key_questions=[
+            "Who could potentially purchase this company?",
+            "Which industry does the company operate in?",
+        ],
+        report_style=ReportStyle.NARRATIVE,
+        cache=True,
+        proxy=True,
+    )
+    assert isinstance(result, CrewRun)
+    assert result.result is not None
+    assert isinstance(result.result, str)
+    for task in result.tasks:
+        assert isinstance(task, TaskRun)

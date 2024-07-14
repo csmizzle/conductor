@@ -9,7 +9,7 @@ from langsmith import traceable
 def run_marketing_crew(
     url: str,
     report_style: ReportStyle,
-    key_questions: str = None,
+    key_questions: list[str] = None,
     output_log_file: bool | str = None,
     step_callback=None,
     task_callback=None,
