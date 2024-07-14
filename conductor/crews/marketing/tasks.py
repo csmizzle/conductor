@@ -46,13 +46,13 @@ class MarketingTasks:
             description=dedent(
                 f"""
             Find key personnel, company history, any pricing information available, and key products and services.
-            Look for the key personnel on the linkedin or company website.
+            Look for the key personnel on the linkedin or company website. Do not make mistakes here. If you can't find the information, state that.
             Find any relevant contact information with key personnel.
-            Find the competitors of the company.
             Find the most recent events of the company as well.
             Determine which market the company operates in and what their TAM/SAM/SOM is.
             Find estimates if exact numbers are not available.
             Use the URL: {company_url} to find the company.
+            Ensure that all identified information is accurate and up-to-date by double-checking before completing.
             """
             ),
             agent=agent,
@@ -69,6 +69,8 @@ class MarketingTasks:
             Answer the provided key questions about the company.
             To find the answers, use creative but detailed research techniques using the provided tools.
             The answers should be detailed and provide a comprehensive overview of the company.
+            All answers should be 100 percent accurate and up-to-date. If you can't find the information, state that.
+            Key questions:
             {" ".join(key_questions)}
             """
             ),
