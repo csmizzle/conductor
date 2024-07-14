@@ -33,6 +33,9 @@ class ReportTemplate(BaseModel):
     sections: List[SectionTemplate] = Field(
         description="Sections in the report template"
     )
+    key_questions: Optional[List[str]] = Field(
+        description="List of key questions for the report"
+    )
 
     def to_prompt_string(self) -> str:
         """
@@ -49,9 +52,13 @@ class ReportTemplate(BaseModel):
 
 class ReportTemplatePromptGenerator(ABC):
     sections: list[SectionTemplate]
+    key_questions: Optional[List[str]]
 
     def generate(self) -> ReportTemplate:
-        return ReportTemplate(sections=self.sections).to_prompt_string()
+        return ReportTemplate(
+            sections=self.sections,
+            key_questions=self.key_questions,
+        ).to_prompt_string()
 
 
 class ReportStyle(Enum):

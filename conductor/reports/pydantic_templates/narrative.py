@@ -6,6 +6,7 @@ from conductor.reports.models import (
 
 
 class NarrativeReportTemplate(ReportTemplatePromptGenerator):
+    key_questions = None
     sections = [
         SectionTemplate(
             title="Overview",
@@ -63,6 +64,32 @@ class NarrativeReportTemplate(ReportTemplatePromptGenerator):
                 ParagraphTemplate(
                     title="Threats",
                     content_template="All identified threats in long form narrative",
+                ),
+            ],
+        ),
+        SectionTemplate(
+            title="Competition",
+            paragraphs=[
+                ParagraphTemplate(
+                    title="Competitors",
+                    content_template="All identified competitors in long form narrative",
+                ),
+                ParagraphTemplate(
+                    title="Competitive Advantage",
+                    content_template="All identified competitive advantages in long form narrative",
+                ),
+                ParagraphTemplate(
+                    title="Competitive Disadvantage",
+                    content_template="All identified competitive disadvantages in long form narrative",
+                ),
+            ],
+        ),
+        SectionTemplate(
+            title="Sources",
+            paragraphs=[
+                ParagraphTemplate(
+                    title="Links",
+                    content_template="Links to sources in bulleted list",
                 ),
             ],
         ),
@@ -140,6 +167,32 @@ class KeyQuestionsNarrativeReportTemplate(ReportTemplatePromptGenerator):
                     ParagraphTemplate(
                         title="Threats",
                         content_template="All identified threats in long form narrative",
+                    ),
+                ],
+            ),
+            SectionTemplate(
+                title="Competition",
+                paragraphs=[
+                    ParagraphTemplate(
+                        title="Competitors",
+                        content_template="All identified competitors in long form narrative",
+                    ),
+                    ParagraphTemplate(
+                        title="Competitive Advantage",
+                        content_template="All identified competitive advantages in long form narrative",
+                    ),
+                    ParagraphTemplate(
+                        title="Competitive Disadvantage",
+                        content_template="All identified competitive disadvantages in long form narrative",
+                    ),
+                ],
+            ),
+            SectionTemplate(
+                title="Sources",
+                paragraphs=[
+                    ParagraphTemplate(
+                        title="Links",
+                        content_template="Links to sources in bulleted list",
                     ),
                 ],
             ),

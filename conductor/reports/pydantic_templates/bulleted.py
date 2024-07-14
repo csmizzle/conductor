@@ -6,6 +6,7 @@ from conductor.reports.models import (
 
 
 class BulletedReportTemplate(ReportTemplatePromptGenerator):
+    key_questions = None
     sections = [
         SectionTemplate(
             title="Overview",
@@ -162,11 +163,19 @@ class KeyQuestionsBulletedReportTemplate(ReportTemplatePromptGenerator):
                 ],
             ),
             SectionTemplate(
-                title="Competitors",
+                title="Competition",
                 paragraphs=[
                     ParagraphTemplate(
-                        title="Competitor",
-                        content_template="All identified strengths, weaknesses, opportunities, and threats, for competitors in bullet points",
+                        title="Competitors",
+                        content_template="All identified competitors in long form narrative",
+                    ),
+                    ParagraphTemplate(
+                        title="Competitive Advantage",
+                        content_template="All identified competitive advantages in long form narrative",
+                    ),
+                    ParagraphTemplate(
+                        title="Competitive Disadvantage",
+                        content_template="All identified competitive disadvantages in long form narrative",
                     ),
                 ],
             ),

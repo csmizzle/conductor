@@ -13,6 +13,8 @@ from conductor.reports.pydantic_templates.narrative import (
     KeyQuestionsNarrativeReportTemplate,
 )
 import os
+from pydantic.v1 import ValidationError
+import pytest
 
 
 def test_bulleted_create_report_prompt_no_key_questions() -> None:
@@ -69,6 +71,22 @@ def test_create_narrative_report_prompt_key_questions() -> None:
     assert isinstance(result, str)
 
 
+def test_bad_key_question_input_narrative() -> None:
+    """
+    Test the create_report_prompt function.
+    """
+    report_style = ReportStyle.NARRATIVE
+    key_questions = "What is the company name?"
+    report_template_generator = KeyQuestionsNarrativeReportTemplate(
+        key_questions=key_questions
+    )
+    with pytest.raises(ValidationError):
+        create_report_prompt(
+            report_style=report_style,
+            report_template_generator=report_template_generator,
+        )
+
+
 def test_write_bulleted_report_prompt_no_key_questions() -> None:
     """
     Test the write_report_prompt function.
@@ -105,6 +123,26 @@ def test_write_narrative_report_prompt_key_questions() -> None:
     key_questions = ["What is the company name?", "What is the company website?"]
     result = write_report_prompt(report_style=report_style, key_questions=key_questions)
     assert isinstance(result, str)
+
+
+def test_write_narrative_report_prompt_key_question() -> None:
+    """
+    Test the write_report_prompt function.
+    """
+    report_style = ReportStyle.NARRATIVE
+    key_questions = ["What is the company name?"]
+    result = write_report_prompt(report_style=report_style, key_questions=key_questions)
+    assert isinstance(result, str)
+
+
+def test_write_narrative_report_prompt_wrong_key_questions() -> None:
+    """
+    Test the write_report_prompt function.
+    """
+    report_style = ReportStyle.NARRATIVE
+    key_questions = "What is the company name?"
+    with pytest.raises(ValidationError):
+        write_report_prompt(report_style=report_style, key_questions=key_questions)
 
 
 def test_oxylabs_request() -> None:
