@@ -71,8 +71,8 @@ class ApolloPersonDomainSearchToolSchema(FixedApolloPersonDomainSearchToolSchema
 
 # Tools
 class SerpSearchTool(BaseTool):
-    name: str = "Search Engine Results Page (SERP) Tool"
-    description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query."
+    name: str = "Google Tool"
+    description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query on Google."
     args_schema: Type[BaseModel] = SerpSearchToolSchema
     cookies: Optional[dict] = None
     headers: Optional[dict] = {
@@ -89,9 +89,7 @@ class SerpSearchTool(BaseTool):
         super().__init__(**kwargs)
         if search_query is not None:
             self.args_schema = FixedSerpSearchToolSchema
-            self.description = (
-                "A tool that can be used to scrape search engine results page (SERP)."
-            )
+            self.description = "A tool that can be used to scrape search engine results page (SERP) using Google."
             self._generate_description()
 
     def _get_page_content(self, url: str) -> str:
@@ -117,6 +115,63 @@ class SerpSearchTool(BaseTool):
                 "q": search_query,
                 "hl": "en",
                 "gl": "us",
+                "api_key": os.getenv("SERPAPI_API_KEY"),
+            }
+        )
+        results_dict = search.get_dict()
+        # add answer box to search context
+        if "answer_box" in results_dict:
+            search_context.append(
+                dedent(
+                    f"""
+            Answer Box: {results_dict["answer_box"]["answer"] if "answer" in results_dict["answer_box"] else "No answer found"}
+            Answer Box Source Link: {results_dict["answer_box"]["displayed_link"] if "displayed_link" in results_dict["answer_box"] else "No source link found"}
+            """
+                )
+            )
+        # add organic results to search context
+        if "organic_results" in results_dict:
+            for result in results_dict["organic_results"]:
+                page_content = self._get_page_content(result["link"])
+                search_context.append(
+                    dedent(
+                        f"""
+                Title: {result["title"]}
+                Link: {result["link"]}
+                Snippet: {result["snippet"]}
+                Content: {page_content}
+                """
+                    )
+                )
+        return check_context_limit("\n".join(search_context))
+
+
+# SERP Bing Search Tool
+class SerpBingSearchTool(SerpSearchTool):
+    name: str = "Bing Tool"
+    description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query with Bing."
+    args_schema: Type[BaseModel] = SerpSearchToolSchema
+    cookies: Optional[dict] = None
+    headers: Optional[dict] = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+        "Accept": "text/html",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com/",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Accept-Encoding": "gzip, deflate, br",
+    }
+
+    def _run(self, **kwargs: Any) -> Any:
+        if os.getenv("SERPAPI_API_KEY") is None:
+            raise ValueError("SERPAPI_API_KEY is not set in environment variables")
+        search_context = []
+        search_query = kwargs.get("search_query")
+        search = GoogleSearch(
+            {
+                "engine": "bing",
+                "q": search_query,
+                "cc": "US",
                 "api_key": os.getenv("SERPAPI_API_KEY"),
             }
         )
@@ -217,8 +272,8 @@ class ScrapePageCacheTool(BaseTool):
 
 
 class SerpSearchCacheTool(SerpSearchTool):
-    name: str = "Search Engine Results Page (SERP) Tool"
-    description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query."
+    name: str = "Google Tool"
+    description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query using Google."
     args_schema: Type[BaseModel] = SerpSearchToolSchema
     cookies: Optional[dict] = None
     headers: Optional[dict] = {
@@ -235,9 +290,7 @@ class SerpSearchCacheTool(SerpSearchTool):
         super().__init__(**kwargs)
         if search_query is not None:
             self.args_schema = FixedSerpSearchToolSchema
-            self.description = (
-                "A tool that can be used to scrape search engine results page (SERP)."
-            )
+            self.description = "A tool that can be used to scrape search engine results page (SERP) using Google."
             self._generate_description()
         self._cache = Redis.from_url(os.getenv("REDIS_TOOL_CACHE_URL"))
 
@@ -250,6 +303,43 @@ class SerpSearchCacheTool(SerpSearchTool):
             cookies=self.cookies,
             timeout=30,
         )
+        return check_context_limit(content)
+
+
+# Serp Bing Search Cache Tool
+class SerpBingSearchCacheTool(SerpBingSearchTool):
+    name: str = "Bing Tool"
+    description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query with Bing."
+    args_schema: Type[BaseModel] = SerpSearchToolSchema
+    cookies: Optional[dict] = None
+    headers: Optional[dict] = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+        "Accept": "text/html",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com/",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Accept-Encoding": "gzip, deflate, br",
+    }
+
+    def __init__(self, search_query: Optional[str] = None, **kwargs):
+        super().__init__(**kwargs)
+        if search_query is not None:
+            self.args_schema = FixedSerpSearchToolSchema
+            self.description = "A tool that can be used to scrape search engine results page (SERP) with Bing."
+            self._generate_description()
+        self._cache = Redis.from_url(os.getenv("REDIS_TOOL_CACHE_URL"))
+
+    def _get_page_content(self, url: str) -> str:
+        response = send_request_with_cache(
+            url=url,
+            method="GET",
+            cache=self._cache,
+            headers=self.headers,
+            cookies=self.cookies,
+            timeout=30,
+        )
+        content = clean_html(response)
         return check_context_limit(content)
 
 
@@ -310,8 +400,8 @@ class ScrapePageOxyLabsTool(BaseTool):
 
 
 class SerpSearchOxyLabsTool(SerpSearchTool):
-    name: str = "Search Engine Results Page (SERP) Tool"
-    description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query."
+    name: str = "Google Tool"
+    description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query using Google."
     args_schema: Type[BaseModel] = SerpSearchToolSchema
     cookies: Optional[dict] = None
     headers: Optional[dict] = {
@@ -328,9 +418,45 @@ class SerpSearchOxyLabsTool(SerpSearchTool):
         super().__init__(**kwargs)
         if search_query is not None:
             self.args_schema = FixedSerpSearchToolSchema
-            self.description = (
-                "A tool that can be used to scrape search engine results page (SERP)."
-            )
+            self.description = "A tool that can be used to scrape search engine results page (SERP) using Google."
+            self._generate_description()
+
+    def _get_page_content(self, url: str) -> str:
+        # try to request with oxylabs proxy first and if it fails, send normal request
+        response = send_request_proxy(
+            url=url,
+            method="GET",
+            oxylabs_username=os.getenv("OXYLABS_USERNAME"),
+            oxylabs_password=os.getenv("OXYLABS_PASSWORD"),
+            headers=self.headers,
+            cookies=self.cookies,
+            timeout=30,
+        )
+        content = clean_html(response)
+        return check_context_limit(content)
+
+
+# Serp Bing Search OxyLabs Tool
+class SerpBingSearchOxyLabsTool(SerpBingSearchTool):
+    name: str = "Bing Tool"
+    description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query with Bing."
+    args_schema: Type[BaseModel] = SerpSearchToolSchema
+    cookies: Optional[dict] = None
+    headers: Optional[dict] = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+        "Accept": "text/html",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com/",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Accept-Encoding": "gzip, deflate, br",
+    }
+
+    def __init__(self, search_query: Optional[str] = None, **kwargs):
+        super().__init__(**kwargs)
+        if search_query is not None:
+            self.args_schema = FixedSerpSearchToolSchema
+            self.description = "A tool that can be used to scrape search engine results page (SERP) with Bing."
             self._generate_description()
 
     def _get_page_content(self, url: str) -> str:
@@ -350,8 +476,8 @@ class SerpSearchOxyLabsTool(SerpSearchTool):
 
 # Cached & OxyLabs version of the tools
 class SerpSearchOxylabsCacheTool(SerpSearchTool):
-    name: str = "Search Engine Results Page (SERP) Tool"
-    description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query."
+    name: str = "Google Tool"
+    description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query using Google."
     args_schema: Type[BaseModel] = SerpSearchToolSchema
     cookies: Optional[dict] = None
     headers: Optional[dict] = {
@@ -419,4 +545,40 @@ class ScrapePageOxylabsCacheTool(BaseTool):
             cookies=self.cookies,
             timeout=30,
         )
+        return check_context_limit(content)
+
+
+# Cache & Oxylabs Serp Bing tool
+class SerpBingSearchOxylabsCacheTool(SerpSearchTool):
+    name: str = "Bing Tool"
+    description: str = "A tool that can be used to scrape search engine results page (SERP) using a search query with Bing."
+    args_schema: Type[BaseModel] = SerpSearchToolSchema
+    cookies: Optional[dict] = None
+    headers: Optional[dict] = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+        "Accept": "text/html",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com/",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Accept-Encoding": "gzip, deflate, br",
+    }
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._cache = Redis.from_url(os.getenv("REDIS_TOOL_CACHE_URL"))
+
+    def _get_page_content(self, url: str) -> str:
+        # check cache for url
+        response = send_request_proxy_with_cache(
+            url=url,
+            method="GET",
+            oxylabs_username=os.getenv("OXYLABS_USERNAME"),
+            oxylabs_password=os.getenv("OXYLABS_PASSWORD"),
+            cache=self._cache,
+            headers=self.headers,
+            cookies=self.cookies,
+            timeout=30,
+        )
+        content = clean_html(response)
         return check_context_limit(content)

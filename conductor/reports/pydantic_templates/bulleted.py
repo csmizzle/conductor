@@ -68,11 +68,23 @@ class BulletedReportTemplate(ReportTemplatePromptGenerator):
             ],
         ),
         SectionTemplate(
-            title="Competitors",
+            title="Competition",
             paragraphs=[
                 ParagraphTemplate(
-                    title="Competitor",
-                    content_template="All identified strengths, weaknesses, opportunities, and threats, for competitors in bullet points",
+                    title="Competitors",
+                    content_template="All identified competitors strengths, weaknesses, opportunities in bullet points",
+                ),
+                ParagraphTemplate(
+                    title="Risk Analysis",
+                    content_template="Risk analysis in bullet points",
+                ),
+                ParagraphTemplate(
+                    title="Competitive Advantage",
+                    content_template="All identified competitive advantages in long form narrative",
+                ),
+                ParagraphTemplate(
+                    title="Competitive Disadvantage",
+                    content_template="All identified competitive disadvantages in long form narrative",
                 ),
             ],
         ),
@@ -167,7 +179,11 @@ class KeyQuestionsBulletedReportTemplate(ReportTemplatePromptGenerator):
                 paragraphs=[
                     ParagraphTemplate(
                         title="Competitors",
-                        content_template="All identified competitors in long form narrative",
+                        content_template="All identified competitors strengths, weaknesses, opportunities and threats in bullet points",
+                    ),
+                    ParagraphTemplate(
+                        title="Risk Analysis",
+                        content_template="Risk analysis in bullet points",
                     ),
                     ParagraphTemplate(
                         title="Competitive Advantage",

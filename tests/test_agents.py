@@ -5,13 +5,17 @@ from conductor.crews.marketing.crew import UrlMarketingCrew
 from conductor.crews.marketing import run_marketing_crew
 from conductor.crews.marketing.agents import MarketingAgents
 from conductor.crews.marketing.tools import (
-    SerpSearchOxylabsCacheTool,
-    ScrapePageOxylabsCacheTool,
-    SerpSearchOxyLabsTool,
-    ScrapePageOxyLabsTool,
+    SerpSearchTool,
+    SerpBingSearchTool,
     SerpSearchCacheTool,
     ScrapePageCacheTool,
-    SerpSearchTool,
+    SerpBingSearchCacheTool,
+    SerpSearchOxyLabsTool,
+    ScrapePageOxyLabsTool,
+    SerpBingSearchOxyLabsTool,
+    SerpSearchOxylabsCacheTool,
+    ScrapePageOxylabsCacheTool,
+    SerpBingSearchOxylabsCacheTool,
 )
 from crewai_tools import ScrapeWebsiteTool
 from conductor.crews.models import CrewRun, TaskRun
@@ -139,24 +143,28 @@ def test_set_scraping_tools() -> None:
     """
     # both proxy and cache
     tools = MarketingAgents.set_scraping_tools(cache=True, proxy=True)
-    assert len(tools) == 2
+    assert len(tools) == 3
     assert isinstance(tools[0], SerpSearchOxylabsCacheTool)
     assert isinstance(tools[1], ScrapePageOxylabsCacheTool)
+    assert isinstance(tools[2], SerpBingSearchOxylabsCacheTool)
     # proxy only
     tools = MarketingAgents.set_scraping_tools(cache=False, proxy=True)
-    assert len(tools) == 2
+    assert len(tools) == 3
     assert isinstance(tools[0], SerpSearchOxyLabsTool)
     assert isinstance(tools[1], ScrapePageOxyLabsTool)
+    assert isinstance(tools[2], SerpBingSearchOxyLabsTool)
     # cache only
     tools = MarketingAgents.set_scraping_tools(cache=True, proxy=False)
-    assert len(tools) == 2
+    assert len(tools) == 3
     assert isinstance(tools[0], SerpSearchCacheTool)
     assert isinstance(tools[1], ScrapePageCacheTool)
+    assert isinstance(tools[2], SerpBingSearchCacheTool)
     # no proxy or cache
     tools = MarketingAgents.set_scraping_tools(cache=False, proxy=False)
-    assert len(tools) == 2
+    assert len(tools) == 3
     assert isinstance(tools[0], SerpSearchTool)
     assert isinstance(tools[1], ScrapeWebsiteTool)
+    assert isinstance(tools[2], SerpBingSearchTool)
 
 
 def test_run_marketing_crew_with_proxy_and_cache() -> None:

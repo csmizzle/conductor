@@ -72,7 +72,11 @@ class NarrativeReportTemplate(ReportTemplatePromptGenerator):
             paragraphs=[
                 ParagraphTemplate(
                     title="Competitors",
-                    content_template="All identified competitors in long form narrative",
+                    content_template="All identified competitors strengths, weaknesses, opportunities and threats in long form narrative",
+                ),
+                ParagraphTemplate(
+                    title="Risk Analysis",
+                    content_template="Risk analysis in long form narrative",
                 ),
                 ParagraphTemplate(
                     title="Competitive Advantage",
@@ -175,7 +179,11 @@ class KeyQuestionsNarrativeReportTemplate(ReportTemplatePromptGenerator):
                 paragraphs=[
                     ParagraphTemplate(
                         title="Competitors",
-                        content_template="All identified competitors in long form narrative",
+                        content_template="All identified competitors strengths, weaknesses, opportunities and threats in long form narrative",
+                    ),
+                    ParagraphTemplate(
+                        title="Risk Analysis",
+                        content_template="Risk analysis in long form narrative",
                     ),
                     ParagraphTemplate(
                         title="Competitive Advantage",

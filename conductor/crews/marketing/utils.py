@@ -144,7 +144,7 @@ def clean_html(response: Response) -> str:
     text = " ".join([i for i in text.split(" ") if i.strip() != ""])
     # remove all the special characters using regex
     text = re.sub(r"[^a-zA-Z0-9\s]", "", text)
-    return text
+    return f"Link: {response.url} \n Content: {text}"
 
 
 def send_request_proxy_with_cache(

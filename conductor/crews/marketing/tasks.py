@@ -18,6 +18,7 @@ class MarketingTasks:
                 f"""
             Determine what company a URL belongs to.
             Use the URL to find the company and then provide detailed information about the company.
+            Be exhaustive and look across all possible search engines.
             URL to find the company: {company_url}
             """
             ),
@@ -31,6 +32,7 @@ class MarketingTasks:
                 """
             Find additional links that can be used to research the company.
             Ask questions that will lead to more information about the company, industry, and competitors.
+            Be exhaustive and look across all possible search engines.
             These links should be passed to the company research agent for further investigation.
             """
             ),
@@ -53,6 +55,7 @@ class MarketingTasks:
             Find estimates if exact numbers are not available.
             Use the URL: {company_url} to find the company.
             Ensure that all identified information is accurate and up-to-date by double-checking before completing.
+            Be exhaustive and look across all possible search engines.
             """
             ),
             agent=agent,
@@ -70,6 +73,7 @@ class MarketingTasks:
             To find the answers, use creative but detailed research techniques using the provided tools.
             The answers should be detailed and provide a comprehensive overview of the company.
             All answers should be 100 percent accurate and up-to-date. If you can't find the information, state that.
+            Be exhaustive and look across all possible search engines.
             Key questions:
             {" ".join(key_questions)}
             """
@@ -86,6 +90,7 @@ class MarketingTasks:
             Break down the company's strengths, weaknesses, opportunities, and threats.
             Each section should be detailed and provide a comprehensive analysis.
             The analysis should always be broken into four main sections.
+            Be exhaustive and look across all possible search engines.
             """
             ),
             agent=agent,
@@ -99,6 +104,8 @@ class MarketingTasks:
                 """
             Find the top competitors for the company in the provided context.
             Provide a brief overview of each competitor, including their strengths and weaknesses.
+            Be exhaustive and look across all possible search engines.
+            Include a risk score of high medium or low for each competitor with a short analysis.
             """
             ),
             agent=agent,
