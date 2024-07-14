@@ -46,7 +46,7 @@ class MarketingTasks:
             description=dedent(
                 f"""
             Find key personnel, company history, any pricing information available, and key products and services.
-            Look for the key personnel on the linkedin or company website. Do not make mistakes here. If you can't find the information, state that.
+            Look for the key personnel on the linkedin or company website. Do not make mistakes here. If you can't find the information, state that. Never make up fake information.
             Find any relevant contact information with key personnel.
             Find the most recent events of the company as well.
             Determine which market the company operates in and what their TAM/SAM/SOM is.
