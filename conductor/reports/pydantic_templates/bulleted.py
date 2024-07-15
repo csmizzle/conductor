@@ -76,7 +76,7 @@ class BulletedReportTemplate(ReportTemplatePromptGenerator):
                 ),
                 ParagraphTemplate(
                     title="Risk Analysis",
-                    content_template="Risk analysis in bullet points",
+                    content_template="Risk analysis for each competitor in bullet points. Each competitor should be given a high, medium, or low risk rating with an analysis.",
                 ),
             ],
         ),
@@ -175,7 +175,7 @@ class KeyQuestionsBulletedReportTemplate(ReportTemplatePromptGenerator):
                     ),
                     ParagraphTemplate(
                         title="Risk Analysis",
-                        content_template="Risk analysis in bullet points",
+                        content_template="Risk analysis for each competitor in bullet points. Each competitor should be given a high, medium, or low risk rating with an analysis.",
                     ),
                 ],
             ),

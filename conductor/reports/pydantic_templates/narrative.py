@@ -76,7 +76,7 @@ class NarrativeReportTemplate(ReportTemplatePromptGenerator):
                 ),
                 ParagraphTemplate(
                     title="Risk Analysis",
-                    content_template="Risk analysis in long form narrative",
+                    content_template="Risk analysis for each competitor in long form narrative. Each competitor should be given a high, medium, or low risk rating with an analysis.",
                 ),
             ],
         ),
@@ -175,7 +175,7 @@ class KeyQuestionsNarrativeReportTemplate(ReportTemplatePromptGenerator):
                     ),
                     ParagraphTemplate(
                         title="Risk Analysis",
-                        content_template="Risk analysis in long form narrative",
+                        content_template="Risk analysis for each competitor in long form narrative. Each competitor should be given a high, medium, or low risk rating with an analysis.",
                     ),
                 ],
             ),
