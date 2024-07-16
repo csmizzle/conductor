@@ -15,13 +15,15 @@ class RedisCrewCacheHandler(CacheHandler):
                 raise ValueError("Redis URL is required, set REDIS_CREW_CACHE_URL.")
         else:
             self.url = url
-        self._cache = Redis.from_url(url)
+        self._cache: Redis = Redis.from_url(url)
 
     def add(self, tool: str, input: str, output: str) -> None:
         """
         Add a cache entry.
         """
-        self._cache.set(f"{tool}-{input}", output)
+        self._cache.set(
+            f"{tool}-{input}", output, ex=60 * 5
+        )  # set expiration for 5 minutes
 
     def read(self, tool: str, input: str) -> str:
         """

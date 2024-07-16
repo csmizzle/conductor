@@ -36,6 +36,20 @@ def test_url_marketing_crew():
         assert isinstance(task, TaskRun)
 
 
+def test_url_known_gibberish_marketing_crew():
+    """
+    Test the UrlMarketingCrew class.
+    """
+    url = "https://flashpoint.io/"
+    crew = UrlMarketingCrew(url=url, report_style=ReportStyle.BULLETED)
+    result = crew.run()
+    assert isinstance(result, CrewRun)
+    assert result.result is not None
+    assert isinstance(result.result, str)
+    for task in result.tasks:
+        assert isinstance(task, TaskRun)
+
+
 def test_url_bulleted_with_key_questions_marketing_crew():
     """
     Test the UrlMarketingCrew class.
