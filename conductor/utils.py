@@ -10,7 +10,7 @@ def gibberish_detector(text: str):
     classifier = pipeline(
         "text-classification",
         model=selected_model,
-        device=os.getenv("GPU_DEVICE", 0),
+        device=os.getenv("GPU_DEVICE", None),
     )
     # chunk the text into multiple 512 token chunks
     chunks = []
