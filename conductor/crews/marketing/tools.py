@@ -1,4 +1,5 @@
 from crewai_tools.tools.base_tool import BaseTool
+from crewai_tools.tools import ScrapeWebsiteTool
 from serpapi import GoogleSearch
 from pydantic.v1 import BaseModel, Field
 from typing import Optional, Any, Type
@@ -8,7 +9,7 @@ from conductor.crews.functions import generate_apollo_person_domain_search_conte
 from conductor.crews.marketing.utils import (
     send_request_proxy,
     send_request_proxy_with_cache,
-    clean_html,
+    clean_and_remove_gibberish,
     send_request_with_cache,
 )
 from redis import Redis
@@ -69,6 +70,60 @@ class ApolloPersonDomainSearchToolSchema(FixedApolloPersonDomainSearchToolSchema
     )
 
 
+class FilteredScrapeWebsiteToolSchema(ScrapeWebsiteTool):
+    name: str = "Read website content"
+    description: str = "A tool that can be used to read a website content."
+    args_schema: Type[BaseModel] = ScrapeWebsiteToolSchema
+    website_url: Optional[str] = None
+    cookies: Optional[dict] = None
+    headers: Optional[dict] = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com/",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Accept-Encoding": "gzip, deflate, br",
+    }
+
+    def __init__(
+        self,
+        website_url: Optional[str] = None,
+        cookies: Optional[dict] = None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        if website_url is not None:
+            self.website_url = website_url
+            self.description = (
+                f"A tool that can be used to read {website_url}'s content."
+            )
+            self.args_schema = FixedScrapeWebsiteToolSchema
+            self._generate_description()
+            if cookies is not None:
+                self.cookies = {cookies["name"]: os.getenv(cookies["value"])}
+
+    def _run(
+        self,
+        **kwargs: Any,
+    ) -> Any:
+        website_url = kwargs.get("website_url", self.website_url)
+        response = requests.request(
+            url=website_url,
+            method="GET",
+            headers=self.headers,
+            cookies=self.cookies if self.cookies else {},
+            timeout=5,
+        )
+        if response.ok:
+            return clean_and_remove_gibberish(
+                response=response,
+                threshold=os.getenv("GIBBERISH_THRESHOLD", 0.9),
+            )
+        else:
+            return f"Error: Unable to fetch page content for {website_url}."
+
+
 # Tools
 class SerpSearchTool(BaseTool):
     name: str = "Google Tool"
@@ -101,7 +156,10 @@ class SerpSearchTool(BaseTool):
             timeout=5,
         )
         if response.ok:
-            return clean_html(response)
+            return clean_and_remove_gibberish(
+                response=response,
+                threshold=os.getenv("GIBBERISH_THRESHOLD", 0.9),
+            )
         else:
             return f"Error: Unable to fetch page content for {url}."
 
@@ -339,7 +397,10 @@ class SerpBingSearchCacheTool(SerpBingSearchTool):
             cookies=self.cookies,
             timeout=30,
         )
-        content = clean_html(response)
+        content = clean_and_remove_gibberish(
+            response=response,
+            threshold=os.getenv("GIBBERISH_THRESHOLD", 0.9),
+        )
         return check_context_limit(content)
 
 
@@ -386,7 +447,7 @@ class ScrapePageOxyLabsTool(BaseTool):
         **kwargs: Any,
     ) -> Any:
         # try to request with oxylabs proxy first and if it fails, send normal request
-        content = send_request_proxy(
+        response = send_request_proxy(
             url=kwargs.get("website_url", self.website_url),
             method="GET",
             oxylabs_username=os.getenv("OXYLABS_USERNAME"),
@@ -395,7 +456,10 @@ class ScrapePageOxyLabsTool(BaseTool):
             cookies=self.cookies if self.cookies else {},
             timeout=30,
         )
-        content = clean_html(content)
+        content = clean_and_remove_gibberish(
+            response=response,
+            threshold=os.getenv("GIBBERISH_THRESHOLD", 0.9),
+        )
         return check_context_limit(content)
 
 
@@ -432,7 +496,10 @@ class SerpSearchOxyLabsTool(SerpSearchTool):
             cookies=self.cookies,
             timeout=30,
         )
-        content = clean_html(response)
+        content = clean_and_remove_gibberish(
+            response=response,
+            threshold=os.getenv("GIBBERISH_THRESHOLD", 0.9),
+        )
         return check_context_limit(content)
 
 
@@ -470,7 +537,10 @@ class SerpBingSearchOxyLabsTool(SerpBingSearchTool):
             cookies=self.cookies,
             timeout=30,
         )
-        content = clean_html(response)
+        content = clean_and_remove_gibberish(
+            response=response,
+            threshold=os.getenv("GIBBERISH_THRESHOLD", 0.9),
+        )
         return check_context_limit(content)
 
 
@@ -580,5 +650,8 @@ class SerpBingSearchOxylabsCacheTool(SerpSearchTool):
             cookies=self.cookies,
             timeout=30,
         )
-        content = clean_html(response)
+        content = clean_and_remove_gibberish(
+            response=response,
+            threshold=os.getenv("GIBBERISH_THRESHOLD", 0.9),
+        )
         return check_context_limit(content)

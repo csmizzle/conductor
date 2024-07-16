@@ -4,8 +4,8 @@ Marketing agents
 from crewai import Agent
 from crewai_tools.tools.base_tool import BaseTool
 from pydantic import InstanceOf
-from crewai_tools import ScrapeWebsiteTool
 from conductor.crews.marketing.tools import (
+    FilteredScrapeWebsiteToolSchema,
     SerpSearchTool,
     SerpBingSearchTool,
     SerpSearchCacheTool,
@@ -49,7 +49,11 @@ class MarketingAgents:
                 SerpBingSearchCacheTool(),
             ]
         else:
-            return [SerpSearchTool(), ScrapeWebsiteTool(), SerpBingSearchTool()]
+            return [
+                SerpSearchTool(),
+                FilteredScrapeWebsiteToolSchema(),
+                SerpBingSearchTool(),
+            ]
 
     def url_research_agent(
         self, llm=None, cache=None, proxy=None, cache_handler=None

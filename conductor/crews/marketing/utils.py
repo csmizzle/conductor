@@ -9,7 +9,7 @@ import requests
 from requests.models import Response
 from redis import Redis
 from bs4 import BeautifulSoup
-import re
+from conductor.utils import is_gibberish
 
 
 def write_report_prompt(
@@ -143,8 +143,27 @@ def clean_html(response: Response) -> str:
     text = "\n".join([i for i in text.split("\n") if i.strip() != ""])
     text = " ".join([i for i in text.split(" ") if i.strip() != ""])
     # remove all the special characters using regex
-    text = re.sub(r"[^a-zA-Z0-9\s]", "", text)
+    # text = re.sub(r"[^a-zA-Z0-9\s]", "", text)
     return f"Link: {response.url} \n Content: {text}"
+
+
+def clean_and_remove_gibberish(response: Response, threshold: float = 0.9) -> str:
+    """Clean and detect gibberish before using downstream
+
+    Args:
+        response (Response): HTML Response
+        threshold (float): Threshold for gibberish detection
+
+    Returns:
+        str: Error determination
+    """
+    # clean text
+    cleaned_text = clean_html(response)
+    # check if gibberish
+    if is_gibberish(text=cleaned_text, gibberish_threshold=threshold):
+        return f"Error from {response.url}: Text is gibberish, ignore and do not include in answer."
+    else:
+        return cleaned_text
 
 
 def send_request_proxy_with_cache(
