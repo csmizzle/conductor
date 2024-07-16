@@ -65,8 +65,8 @@ def send_request_with_cache(
             method=method, url=url, headers=headers, cookies=cookies, timeout=timeout
         )
         if response.ok:
-            clean_content = clean_html(response)
-            cache.set(url, clean_content)
+            clean_content = clean_and_remove_gibberish(response)
+            cache.set(url, clean_content, ex=60 * 5)
             return clean_content
         else:
             return f"Error: Unable to fetch page content for {url}."
@@ -192,7 +192,7 @@ def send_request_proxy_with_cache(
             **kwargs,
         )
         if isinstance(content, Response) and content.ok:
-            clean_content = clean_html(content)
+            clean_content = clean_and_remove_gibberish(content)
             cache.set(url, clean_content)
             return clean_content
         else:
