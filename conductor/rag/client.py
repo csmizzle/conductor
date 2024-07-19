@@ -1,0 +1,82 @@
+"""
+Ingestion logic for RAG data
+- Ingest website data
+- Clean data
+- Vectorize data
+- Store data
+"""
+from elasticsearch import Elasticsearch
+from langchain_core.embeddings import Embeddings
+from langchain_elasticsearch import ElasticsearchStore
+from langchain_core.documents import Document
+from conductor.rag.models import WebPage
+
+
+class ElasticsearchRetrieverClient:
+    """
+    Ingest documents into Elasticsearch
+    """
+
+    def __init__(
+        self,
+        elasticsearch: Elasticsearch,
+        embeddings: Embeddings,
+        index_name: str,
+    ) -> None:
+        self.elasticsearch = elasticsearch
+        self.embeddings = embeddings
+        self.store = ElasticsearchStore(
+            index_name=index_name, es_connection=elasticsearch, embedding=embeddings
+        )
+        self.index_name = index_name
+
+    def create_webpage_document(self, webpage: WebPage) -> Document:
+        """
+        Ingest webpage document into Elasticsearch
+        """
+        return Document(
+            page_content=webpage.content,
+            metadata={
+                "url": webpage.url,
+                "title": webpage.title,
+                "created_at": webpage.created_at,
+            },
+        )
+
+    def create_webpage_documents(self, webpages: list[WebPage]) -> list[Document]:
+        """
+        Ingest multiple webpage documents into Elasticsearch
+        """
+        return [self.create_webpage_document(webpage) for webpage in webpages]
+
+    def create_insert_webpage_document(self, webpage: WebPage) -> None:
+        """
+        Insert webpage document into Elasticsearch
+        """
+        document = self.create_webpage_document(webpage)
+        return self.store.add_documents(documents=[document])
+
+    def create_insert_webpage_documents(self, webpages: list[WebPage]) -> None:
+        """
+        Insert multiple webpage documents into Elasticsearch
+        """
+        documents = self.create_webpage_documents(webpages)
+        return self.store.add_documents(documents=documents)
+
+    def delete_document(self, document_id: str) -> None:
+        """
+        Delete document from Elasticsearch
+        """
+        return self.store.delete(ids=[document_id])
+
+    def delete_documents(self, document_ids: list[str]) -> None:
+        """
+        Delete multiple documents from Elasticsearch
+        """
+        return self.store.delete(ids=document_ids)
+
+    def similarity_search(self, query: str) -> list[Document]:
+        """
+        Search Elasticsearch for similar documents
+        """
+        return self.store.similarity_search(query=query)
