@@ -9,7 +9,6 @@ import requests
 from requests.models import Response
 from redis import Redis
 from bs4 import BeautifulSoup
-from conductor.utils import is_gibberish
 
 
 def write_report_prompt(
@@ -65,7 +64,7 @@ def send_request_with_cache(
             method=method, url=url, headers=headers, cookies=cookies, timeout=timeout
         )
         if response.ok:
-            clean_content = clean_and_remove_gibberish(response)
+            clean_content = clean_html(response)
             cache.set(url, clean_content, ex=60 * 5)
             return clean_content
         else:
@@ -147,25 +146,6 @@ def clean_html(response: Response) -> str:
     return f"Link: {response.url} \n Content: {text}"
 
 
-def clean_and_remove_gibberish(response: Response, threshold: float = 0.9) -> str:
-    """Clean and detect gibberish before using downstream
-
-    Args:
-        response (Response): HTML Response
-        threshold (float): Threshold for gibberish detection
-
-    Returns:
-        str: Error determination
-    """
-    # clean text
-    cleaned_text = clean_html(response)
-    # check if gibberish
-    if is_gibberish(text=cleaned_text, gibberish_threshold=threshold):
-        return f"Error from {response.url}: Text is gibberish, ignore and do not include in answer."
-    else:
-        return cleaned_text
-
-
 def send_request_proxy_with_cache(
     url: str,
     method: str,
@@ -192,7 +172,7 @@ def send_request_proxy_with_cache(
             **kwargs,
         )
         if isinstance(content, Response) and content.ok:
-            clean_content = clean_and_remove_gibberish(content)
+            clean_content = clean_html(content)
             cache.set(url, clean_content)
             return clean_content
         else:

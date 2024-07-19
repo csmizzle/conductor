@@ -9,7 +9,7 @@ from conductor.crews.functions import generate_apollo_person_domain_search_conte
 from conductor.crews.marketing.utils import (
     send_request_proxy,
     send_request_proxy_with_cache,
-    clean_and_remove_gibberish,
+    clean_html,
     send_request_with_cache,
 )
 from redis import Redis
@@ -116,10 +116,7 @@ class FilteredScrapeWebsiteToolSchema(ScrapeWebsiteTool):
             timeout=5,
         )
         if response.ok:
-            return clean_and_remove_gibberish(
-                response=response,
-                threshold=os.getenv("GIBBERISH_THRESHOLD", 0.9),
-            )
+            return clean_html(response=response)
         else:
             return f"Error: Unable to fetch page content for {website_url}."
 
@@ -156,10 +153,7 @@ class SerpSearchTool(BaseTool):
             timeout=5,
         )
         if response.ok:
-            return clean_and_remove_gibberish(
-                response=response,
-                threshold=os.getenv("GIBBERISH_THRESHOLD", 0.9),
-            )
+            return clean_html(response=response)
         else:
             return f"Error: Unable to fetch page content for {url}."
 
@@ -397,10 +391,7 @@ class SerpBingSearchCacheTool(SerpBingSearchTool):
             cookies=self.cookies,
             timeout=30,
         )
-        content = clean_and_remove_gibberish(
-            response=response,
-            threshold=os.getenv("GIBBERISH_THRESHOLD", 0.9),
-        )
+        content = clean_html(response=response)
         return check_context_limit(content)
 
 
@@ -456,10 +447,7 @@ class ScrapePageOxyLabsTool(BaseTool):
             cookies=self.cookies if self.cookies else {},
             timeout=30,
         )
-        content = clean_and_remove_gibberish(
-            response=response,
-            threshold=os.getenv("GIBBERISH_THRESHOLD", 0.9),
-        )
+        content = clean_html(response=response)
         return check_context_limit(content)
 
 
@@ -496,10 +484,7 @@ class SerpSearchOxyLabsTool(SerpSearchTool):
             cookies=self.cookies,
             timeout=30,
         )
-        content = clean_and_remove_gibberish(
-            response=response,
-            threshold=os.getenv("GIBBERISH_THRESHOLD", 0.9),
-        )
+        content = clean_html(response=response)
         return check_context_limit(content)
 
 
@@ -537,10 +522,7 @@ class SerpBingSearchOxyLabsTool(SerpBingSearchTool):
             cookies=self.cookies,
             timeout=30,
         )
-        content = clean_and_remove_gibberish(
-            response=response,
-            threshold=os.getenv("GIBBERISH_THRESHOLD", 0.9),
-        )
+        content = clean_html(response=response)
         return check_context_limit(content)
 
 
@@ -650,8 +632,5 @@ class SerpBingSearchOxylabsCacheTool(SerpSearchTool):
             cookies=self.cookies,
             timeout=30,
         )
-        content = clean_and_remove_gibberish(
-            response=response,
-            threshold=os.getenv("GIBBERISH_THRESHOLD", 0.9),
-        )
+        content = clean_html(response=response)
         return check_context_limit(content)
