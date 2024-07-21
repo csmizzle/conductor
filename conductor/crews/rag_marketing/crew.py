@@ -44,7 +44,13 @@ class RagUrlMarketingCrew:
             index_name=self.index_name,
             llm=claude_sonnet,
         )
+        # get company structure, personnel, swot, competitors agents
         company_structure_research_agent = agents.company_structure_research_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
+        personnel_research_agent = agents.personnel_research_agent(
             elasticsearch=self.elasticsearch,
             index_name=self.index_name,
             llm=claude_sonnet,
@@ -54,10 +60,17 @@ class RagUrlMarketingCrew:
             index_name=self.index_name,
             llm=claude_sonnet,
         )
+        competitors_research_agent = agents.competitor_research_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
         team.append(data_collection_agent)
         team.append(swot_research_agent)
         team.append(vector_search_agent)
         team.append(company_structure_research_agent)
+        team.append(personnel_research_agent)
+        team.append(competitors_research_agent)
         # create all tasks and add them to the team
         team_tasks = []
         url_collection_task = tasks.url_collection_task(
@@ -75,11 +88,41 @@ class RagUrlMarketingCrew:
             agent=company_structure_research_agent,
             context=[company_determination_search_task],
         )
+        # get the personnel information
+        personnel_research_task = tasks.personnel_research_task(
+            agent=personnel_research_agent,
+            context=[company_determination_search_task],
+        )
+        # get the competitors information
+        competitors_research_task = tasks.competitor_research_task(
+            agent=competitors_research_agent,
+            context=[
+                company_determination_search_task,
+                personnel_research_task,
+                company_structure_research_task,
+            ],
+        )
         # get the company structure results
         company_structure_research_results = tasks.vector_multi_search_task(
             agent=vector_search_agent,
             search_query="What is the structure of this company? Include things like beneficial owners, subsidiaries, and parent companies.",
             context=[company_determination_search_task],
+        )
+        # get the personnel results
+        personnel_research_results = tasks.vector_multi_search_task(
+            agent=vector_search_agent,
+            search_query="Who are the executives of this company?",
+            context=[company_determination_search_task],
+        )
+        # get the competitors results
+        competitors_research_results = tasks.vector_multi_search_task(
+            agent=vector_search_agent,
+            search_query="Who are the competitors of this company?",
+            context=[
+                company_determination_search_task,
+                personnel_research_results,
+                company_structure_research_results,
+            ],
         )
         # get the company swot information
         swot_research_task = tasks.swot_research_task(
@@ -87,6 +130,8 @@ class RagUrlMarketingCrew:
             context=[
                 company_determination_search_task,
                 company_structure_research_task,
+                personnel_research_results,
+                competitors_research_results,
             ],
         )
         # get the swot results from vector search
@@ -103,6 +148,10 @@ class RagUrlMarketingCrew:
         team_tasks.append(company_determination_search_task)
         team_tasks.append(company_structure_research_task)
         team_tasks.append(company_structure_research_results)
+        team_tasks.append(personnel_research_task)
+        team_tasks.append(personnel_research_results)
+        team_tasks.append(competitors_research_task)
+        team_tasks.append(competitors_research_results)
         team_tasks.append(swot_research_task)
         team_tasks.append(swot_research_results)
         return team, team_tasks

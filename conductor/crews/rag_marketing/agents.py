@@ -53,6 +53,41 @@ class MarketingRagAgents:
             ],
             verbose=True,
             allow_delegation=False,
+            llm=llm,
+        )
+
+    def personnel_research_agent(
+        self, elasticsearch: Elasticsearch, index_name: str, llm=None
+    ) -> Agent:
+        return Agent(
+            role="Personnel Research Agent",
+            goal="Find the personnel of a company using search engine search techniques.",
+            backstory="An expert in analyzing company data to create a list of personnel using all available context and tools. Find executives, board members, and other personnel.",
+            tools=[
+                SerpSearchEngineIngestTool(
+                    elasticsearch=elasticsearch, index_name=index_name
+                )
+            ],
+            verbose=True,
+            allow_delegation=False,
+            llm=llm,
+        )
+
+    def competitor_research_agent(
+        self, elasticsearch: Elasticsearch, index_name: str, llm=None
+    ) -> Agent:
+        return Agent(
+            role="Competitor Research Agent",
+            goal="Find information about a company's competitors.",
+            backstory="An expert in analyzing company data to create a list of competitors using all available context and tools. Uses the estimated size, industry, and location to find the most relevant competitors.",
+            tools=[
+                SerpSearchEngineIngestTool(
+                    elasticsearch=elasticsearch, index_name=index_name
+                )
+            ],
+            verbose=True,
+            allow_delegation=False,
+            llm=llm,
         )
 
     def swot_research_agent(

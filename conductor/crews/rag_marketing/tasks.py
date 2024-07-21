@@ -54,7 +54,38 @@ class RagMarketingTasks:
             description=dedent(
                 """
             Find the company structure of a company using search engine search techniques.
-            Check places like OpenGov and similar websites to find the company structure of a company.
+            Use 5 different search queries to find the most relevant information.
+            Use the provided context to determine the best approach to find the information.
+            The output should be a simple confirmation that the data has been collected and ingested into the vector database or already exists.
+            """
+            ),
+            agent=agent,
+            expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
+            context=context,
+        )
+
+    def personnel_research_task(self, agent: Agent, context: list[Task] = None) -> Task:
+        return Task(
+            description=dedent(
+                """
+            Find the personnel of a company using search engine search techniques.
+            Use 5 different search queries to find the most relevant information.
+            Use the provided context to determine the best approach to find the information.
+            The output should be a simple confirmation that the data has been collected and ingested into the vector database or already exists.
+            """
+            ),
+            agent=agent,
+            expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
+            context=context,
+        )
+
+    def competitor_research_task(
+        self, agent: Agent, context: list[Task] = None
+    ) -> Task:
+        return Task(
+            description=dedent(
+                """
+            Find information about a company's competitors using search engine search techniques.
             Use 5 different search queries to find the most relevant information.
             Use the provided context to determine the best approach to find the information.
             The output should be a simple confirmation that the data has been collected and ingested into the vector database or already exists.
