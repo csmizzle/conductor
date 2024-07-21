@@ -38,8 +38,8 @@ class ElasticsearchRetrieverClient:
             page_content=webpage.content,
             metadata={
                 "url": webpage.url,
-                "title": webpage.title,
                 "created_at": webpage.created_at,
+                "raw": webpage.raw,
             },
         )
 
@@ -49,7 +49,7 @@ class ElasticsearchRetrieverClient:
         """
         return [self.create_webpage_document(webpage) for webpage in webpages]
 
-    def create_insert_webpage_document(self, webpage: WebPage) -> None:
+    def create_insert_webpage_document(self, webpage: WebPage) -> list[str]:
         """
         Insert webpage document into Elasticsearch
         """
