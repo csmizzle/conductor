@@ -26,12 +26,27 @@ class FixedVectorSearchToolSchema(BaseModel):
     pass
 
 
+class FixedVectorMetaSearchToolSchema(BaseModel):
+    """Input for SerpSearchTool."""
+
+    pass
+
+
 class VectorSearchToolSchema(FixedVectorSearchToolSchema):
     """Input for SerpSearchTool."""
 
     search_query: str = Field(
         ...,
         description="A question that will be used to search the vector database.",
+    )
+
+
+class VectorMetaSearchToolSchema(FixedVectorMetaSearchToolSchema):
+    """Input for SerpSearchTool."""
+
+    url: str = Field(
+        ...,
+        description="The URL of the company to find the website in vector database.",
     )
 
 
@@ -140,9 +155,52 @@ class VectorSearchTool(BaseTool):
     ) -> Any:
         search_query = kwargs.get("search_query", self.search_query)
         documents: List[Document] = self._vector_database.store.similarity_search(
-            query=search_query, k=1
+            query=search_query, k=5
         )
         return "\n".join([document.page_content for document in documents])
+
+
+class VectorSearchMetaTool(BaseTool):
+    """
+    Search a vector database for relevant information.
+    """
+
+    name: str = (
+        "Search the vector database for relevant information using metadata fields."
+    )
+    description: str = (
+        "A tool that can be used to search a vector database for relevant information."
+    )
+    args_schema: Type[BaseModel] = VectorMetaSearchToolSchema
+    url: Optional[str] = None
+
+    def __init__(
+        self,
+        elasticsearch: Elasticsearch,
+        index_name: str,
+        url: Optional[str] = None,
+        **kwargs,
+    ) -> None:
+        super().__init__(**kwargs)
+        self._vector_database = ElasticsearchRetrieverClient(
+            elasticsearch=elasticsearch,
+            embeddings=BedrockEmbeddings(),
+            index_name=index_name,
+        )
+        if url is not None:
+            self.url = url
+            self.description = f"A tool to find {url} in the vector database."
+            self.args_schema = VectorMetaSearchToolSchema
+            self._generate_description()
+
+    def _run(
+        self,
+        **kwargs: Any,
+    ) -> Any:
+        url = kwargs.get("url", self.url)
+        data = self._vector_database.find_webpage_by_url(url=url)
+        # return the text of the first document
+        return data["hits"]["hits"][0]["_source"]["text"]
 
 
 class SerpSearchEngineIngestTool(BaseTool):
@@ -189,11 +247,20 @@ class SerpSearchEngineIngestTool(BaseTool):
         except Exception:
             return f"Error ingesting {url}"
 
+    def _ingest_search_results(self, search_results: list[dict]) -> str:
+        all_results = []
+        for search_engine_result in search_results:
+            if "organic_results" in search_engine_result:
+                for result in search_engine_result["organic_results"]:
+                    ingested_document = self._ingest_page_content(result["link"])
+                    all_results.append(ingested_document)
+        return "\n".join(all_results)
+
     def _run(self, **kwargs: Any) -> Any:
         if os.getenv("SERPAPI_API_KEY") is None:
             raise ValueError("SERPAPI_API_KEY is not set in environment variables")
-        search_context = []
         search_query = kwargs.get("search_query")
+        # run google search
         search = GoogleSearch(
             {
                 "q": search_query,
@@ -202,10 +269,17 @@ class SerpSearchEngineIngestTool(BaseTool):
                 "api_key": os.getenv("SERPAPI_API_KEY"),
             }
         )
-        results_dict = search.get_dict()
-        # add organic results to search context
-        if "organic_results" in results_dict:
-            for result in results_dict["organic_results"]:
-                ingested_document = self._ingest_page_content(result["link"])
-                search_context.append(ingested_document)
-        return "\n".join(search_context)
+        google_results_dict = search.get_dict()
+        # run bing search
+        search = GoogleSearch(
+            {
+                "engine": "bing",
+                "q": search_query,
+                "cc": "US",
+                "api_key": os.getenv("SERPAPI_API_KEY"),
+            }
+        )
+        bing_results_dict = search.get_dict()
+        all_results = [google_results_dict, bing_results_dict]
+        # ingest search results
+        return self._ingest_search_results(all_results)

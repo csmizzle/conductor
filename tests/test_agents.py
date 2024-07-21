@@ -224,7 +224,7 @@ def test_rag_marketing_team(elasticsearch_test_agent_index) -> None:
         hosts=[os.getenv("ELASTICSEARCH_URL")],
     )
     crew = RagUrlMarketingCrew(
-        company_url="https://www.trssllc.com",
+        company_url="https://syrinxlabs.com/",
         # search_query="What are the key features of the company?",
         elasticsearch=elasticsearch,
         index_name=elasticsearch_test_agent_index,

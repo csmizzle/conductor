@@ -39,6 +39,16 @@ class RagUrlMarketingCrew:
             index_name=self.index_name,
             llm=claude_sonnet,
         )
+        vector_meta_search_agent = agents.vector_search_metadata_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
+        company_structure_research_agent = agents.company_structure_research_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
         swot_research_agent = agents.swot_research_agent(
             elasticsearch=self.elasticsearch,
             index_name=self.index_name,
@@ -47,6 +57,7 @@ class RagUrlMarketingCrew:
         team.append(data_collection_agent)
         team.append(swot_research_agent)
         team.append(vector_search_agent)
+        team.append(company_structure_research_agent)
         # create all tasks and add them to the team
         team_tasks = []
         url_collection_task = tasks.url_collection_task(
@@ -54,25 +65,44 @@ class RagUrlMarketingCrew:
             company_url=self.company_url,
         )
         # determine who the company is
-        vector_search_task = tasks.vector_search_task(
+        company_determination_search_task = tasks.vector_metadata_search_task(
+            agent=vector_meta_search_agent,
+            url=self.company_url,
+            query="What company does this URL belong to?",
+        )
+        # get the company structure
+        company_structure_research_task = tasks.company_structure_research_task(
+            agent=company_structure_research_agent,
+            context=[company_determination_search_task],
+        )
+        # get the company structure results
+        company_structure_research_results = tasks.vector_multi_search_task(
             agent=vector_search_agent,
-            search_query=f"Which company does this URL: {self.company_url} belong to?",
-            context=[url_collection_task],
+            search_query="What is the structure of this company? Include things like beneficial owners, subsidiaries, and parent companies.",
+            context=[company_determination_search_task],
         )
         # get the company swot information
         swot_research_task = tasks.swot_research_task(
             agent=swot_research_agent,
-            context=[vector_search_task],
+            context=[
+                company_determination_search_task,
+                company_structure_research_task,
+            ],
         )
         # get the swot results from vector search
         swot_research_results = tasks.vector_multi_search_task(
             agent=vector_search_agent,
             search_query="What is a good SWOT analysis for this company?",
-            context=[vector_search_task],
+            context=[
+                company_determination_search_task,
+                company_structure_research_results,
+            ],
         )
         # get the swot company information
         team_tasks.append(url_collection_task)
-        team_tasks.append(vector_search_task)
+        team_tasks.append(company_determination_search_task)
+        team_tasks.append(company_structure_research_task)
+        team_tasks.append(company_structure_research_results)
         team_tasks.append(swot_research_task)
         team_tasks.append(swot_research_results)
         return team, team_tasks

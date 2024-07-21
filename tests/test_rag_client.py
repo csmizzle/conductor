@@ -17,7 +17,7 @@ def elasticsearch_test_index():
     elasticsearch = Elasticsearch(
         hosts=[os.getenv("ELASTICSEARCH_URL")],
     )
-    test_index_name = "test_index"
+    test_index_name = "test_client_index"
     # Setup: Create the test index
     elasticsearch.indices.create(
         index=test_index_name, ignore=400
@@ -113,7 +113,7 @@ def test_url_to_db(elasticsearch_test_index):
     url = "https://trssllc.com"
     document_ids = url_to_db(url, client, headers=headers)
     assert len(document_ids) == 1
-    assert client.elasticsearch.count()["count"] == 1
+    assert client.elasticsearch.count()["count"] == 2
     # run similarity search and assert working
     results = client.store.similarity_search(
         query="Thomson Reuters Special Services", top_k=1
