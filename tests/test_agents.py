@@ -20,6 +20,41 @@ from conductor.crews.marketing.tools import (
 from crewai_tools import ScrapeWebsiteTool
 from conductor.crews.models import CrewRun, TaskRun
 from conductor.reports.models import ReportStyle
+from conductor.crews.rag_marketing.crew import RagUrlMarketingCrew
+from elasticsearch import Elasticsearch
+import os
+import pytest
+
+
+@pytest.fixture
+def elasticsearch_test_agent_index():
+    """Fixture to create and delete a test index in Elasticsearch."""
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    test_index_name = "test_agent_index"
+    # Setup: Create the test index
+    elasticsearch.indices.create(
+        index=test_index_name, ignore=400
+    )  # ignore 400 cause by index already exists
+
+    yield test_index_name  # This allows the test to use the test index
+
+    # Teardown: Delete the test index
+    elasticsearch.indices.delete(
+        index=test_index_name, ignore=[400, 404]
+    )  # ignore errors if index does not exist
+
+
+def validate_crew_run(crew_run: CrewRun) -> None:
+    """
+    Validate the crew run.
+    """
+    assert isinstance(crew_run, CrewRun)
+    assert crew_run.result is not None
+    assert isinstance(crew_run.result, str)
+    for task in crew_run.tasks:
+        assert isinstance(task, TaskRun)
 
 
 def test_url_marketing_crew():
@@ -29,11 +64,7 @@ def test_url_marketing_crew():
     url = "https://www.trssllc.com"
     crew = UrlMarketingCrew(url=url, report_style=ReportStyle.BULLETED)
     result = crew.run()
-    assert isinstance(result, CrewRun)
-    assert result.result is not None
-    assert isinstance(result.result, str)
-    for task in result.tasks:
-        assert isinstance(task, TaskRun)
+    validate_crew_run(result)
 
 
 def test_url_known_gibberish_marketing_crew():
@@ -45,11 +76,7 @@ def test_url_known_gibberish_marketing_crew():
         url=url, report_style=ReportStyle.BULLETED, cache=True, redis=True
     )
     result = crew.run()
-    assert isinstance(result, CrewRun)
-    assert result.result is not None
-    assert isinstance(result.result, str)
-    for task in result.tasks:
-        assert isinstance(task, TaskRun)
+    validate_crew_run(result)
 
 
 def test_url_bulleted_with_key_questions_marketing_crew():
@@ -67,11 +94,7 @@ def test_url_bulleted_with_key_questions_marketing_crew():
         key_questions=key_questions,
     )
     result = crew.run()
-    assert isinstance(result, CrewRun)
-    assert result.result is not None
-    assert isinstance(result.result, str)
-    for task in result.tasks:
-        assert isinstance(task, TaskRun)
+    validate_crew_run(result)
 
 
 def test_url_narrative_with_key_questions_marketing_crew():
@@ -89,11 +112,7 @@ def test_url_narrative_with_key_questions_marketing_crew():
         key_questions=key_questions,
     )
     result = crew.run()
-    assert isinstance(result, CrewRun)
-    assert result.result is not None
-    assert isinstance(result.result, str)
-    for task in result.tasks:
-        assert isinstance(task, TaskRun)
+    validate_crew_run(result)
 
 
 def test_url_marketing_crew_with_proxy():
@@ -107,11 +126,7 @@ def test_url_marketing_crew_with_proxy():
         proxy=True,
     )
     result = crew.run()
-    assert isinstance(result, CrewRun)
-    assert result.result is not None
-    assert isinstance(result.result, str)
-    for task in result.tasks:
-        assert isinstance(task, TaskRun)
+    validate_crew_run(result)
 
 
 def test_url_marketing_crew_with_redis_cache():
@@ -126,11 +141,7 @@ def test_url_marketing_crew_with_redis_cache():
         redis=True,
     )
     result = crew.run()
-    assert isinstance(result, CrewRun)
-    assert result.result is not None
-    assert isinstance(result.result, str)
-    for task in result.tasks:
-        assert isinstance(task, TaskRun)
+    validate_crew_run(result)
 
 
 def test_url_marketing_crew_with_redis_and_proxy():
@@ -146,11 +157,7 @@ def test_url_marketing_crew_with_redis_and_proxy():
         redis=True,
     )
     result = crew.run()
-    assert isinstance(result, CrewRun)
-    assert result.result is not None
-    assert isinstance(result.result, str)
-    for task in result.tasks:
-        assert isinstance(task, TaskRun)
+    validate_crew_run(result)
 
 
 def test_set_scraping_tools() -> None:
@@ -194,11 +201,7 @@ def test_run_marketing_crew_with_proxy_and_cache() -> None:
         cache=True,
         proxy=True,
     )
-    assert isinstance(result, CrewRun)
-    assert result.result is not None
-    assert isinstance(result.result, str)
-    for task in result.tasks:
-        assert isinstance(task, TaskRun)
+    validate_crew_run(result)
 
 
 def test_run_marketing_crew_with_key_questions_narrative() -> None:
@@ -213,8 +216,18 @@ def test_run_marketing_crew_with_key_questions_narrative() -> None:
         cache=True,
         proxy=True,
     )
-    assert isinstance(result, CrewRun)
-    assert result.result is not None
-    assert isinstance(result.result, str)
-    for task in result.tasks:
-        assert isinstance(task, TaskRun)
+    validate_crew_run(result)
+
+
+def test_rag_marketing_team(elasticsearch_test_agent_index) -> None:
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    crew = RagUrlMarketingCrew(
+        company_url="https://www.trssllc.com",
+        # search_query="What are the key features of the company?",
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_test_agent_index,
+    )
+    crew_run = crew.run()
+    validate_crew_run(crew_run)

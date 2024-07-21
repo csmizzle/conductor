@@ -80,3 +80,19 @@ class ElasticsearchRetrieverClient:
         Search Elasticsearch for similar documents
         """
         return self.store.similarity_search(query=query)
+
+    def find_webpage_by_url(self, url: str) -> Document:
+        """
+        Find webpage by URL
+        """
+        # elasticsearch query looking at metadata field url for exact match
+        return self.elasticsearch.search(
+            index=self.index_name,
+            body={
+                "query": {
+                    "match": {
+                        "metadata.url": url,
+                    }
+                }
+            },
+        )

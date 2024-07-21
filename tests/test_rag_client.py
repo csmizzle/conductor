@@ -120,3 +120,6 @@ def test_url_to_db(elasticsearch_test_index):
     )
     assert isinstance(results, list)
     assert len(results) == 1
+    # test if we can find the document using the find by metadata url function
+    document = client.find_webpage_by_url(url)
+    assert document["hits"]["total"]["value"] == 1
