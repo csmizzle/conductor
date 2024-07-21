@@ -38,10 +38,12 @@ def test_url_marketing_crew():
 
 def test_url_known_gibberish_marketing_crew():
     """
-    Test the UrlMarketingCrew class.
+    Test the UrlMarketingCrew class with a site that likely produces a lot of gibberish.
     """
     url = "https://flashpoint.io/"
-    crew = UrlMarketingCrew(url=url, report_style=ReportStyle.BULLETED)
+    crew = UrlMarketingCrew(
+        url=url, report_style=ReportStyle.BULLETED, cache=True, redis=True
+    )
     result = crew.run()
     assert isinstance(result, CrewRun)
     assert result.result is not None
