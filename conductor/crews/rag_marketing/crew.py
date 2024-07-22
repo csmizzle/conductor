@@ -44,7 +44,7 @@ class RagUrlMarketingCrew:
             index_name=self.index_name,
             llm=claude_sonnet,
         )
-        # get company structure, personnel, swot, competitors agents
+        # get company structure, personnel, swot, competitors, company history, pricing, recent events, products, services, market
         company_structure_research_agent = agents.company_structure_research_agent(
             elasticsearch=self.elasticsearch,
             index_name=self.index_name,
@@ -65,12 +65,43 @@ class RagUrlMarketingCrew:
             index_name=self.index_name,
             llm=claude_sonnet,
         )
+        company_history_research_agent = agents.company_history_research_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
+        pricing_research_agent = agents.pricing_research_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
+        recent_events_research_agent = agents.recent_events_research_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
+        products_services_research_agent = agents.product_and_services_research_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
+        market_research_agent = agents.market_research_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
+
         team.append(data_collection_agent)
         team.append(swot_research_agent)
         team.append(vector_search_agent)
         team.append(company_structure_research_agent)
         team.append(personnel_research_agent)
         team.append(competitors_research_agent)
+        team.append(company_history_research_agent)
+        team.append(pricing_research_agent)
+        team.append(recent_events_research_agent)
+        team.append(products_services_research_agent)
+        team.append(market_research_agent)
         # create all tasks and add them to the team
         team_tasks = []
         url_collection_task = tasks.url_collection_task(
@@ -102,6 +133,40 @@ class RagUrlMarketingCrew:
                 company_structure_research_task,
             ],
         )
+        # Research tasks
+        # get the company history information
+        company_history_research_task = tasks.company_history_research_task(
+            agent=company_history_research_agent,
+            context=[company_determination_search_task],
+        )
+        # get the pricing information
+        pricing_research_task = tasks.pricing_research_task(
+            agent=pricing_research_agent,
+            context=[company_determination_search_task],
+        )
+        # get the recent events information
+        recent_events_research_task = tasks.recent_events_research_task(
+            agent=recent_events_research_agent,
+            context=[company_determination_search_task],
+        )
+        # get the products and services information
+        products_services_research_task = tasks.products_and_services_research_task(
+            agent=products_services_research_agent,
+            context=[company_determination_search_task],
+        )
+        # market research information
+        market_research_task = tasks.market_analysis_research_task(
+            agent=market_research_agent,
+            context=[company_determination_search_task],
+        )
+        # get the company swot information
+        swot_research_task = tasks.swot_research_task(
+            agent=swot_research_agent,
+            context=[
+                company_determination_search_task,
+            ],
+        )
+        # Question tasks
         # get the company structure results
         company_structure_research_results = tasks.vector_multi_search_task(
             agent=vector_search_agent,
@@ -111,36 +176,101 @@ class RagUrlMarketingCrew:
         # get the personnel results
         personnel_research_results = tasks.vector_multi_search_task(
             agent=vector_search_agent,
-            search_query="Who are the executives of this company?",
-            context=[company_determination_search_task],
+            search_query="Who are the executives of this company? Collect any contact information available.",
+            context=[
+                company_determination_search_task,
+                company_structure_research_results,
+            ],
         )
         # get the competitors results
         competitors_research_results = tasks.vector_multi_search_task(
             agent=vector_search_agent,
-            search_query="Who are the competitors of this company?",
+            search_query="Who are the competitors of this company? Include a high, medium, or low risk analysis with a short analysis for each competitor.",
             context=[
                 company_determination_search_task,
                 personnel_research_results,
                 company_structure_research_results,
             ],
         )
-        # get the company swot information
-        swot_research_task = tasks.swot_research_task(
-            agent=swot_research_agent,
+        # get the company history results
+        company_history_research_results = tasks.vector_multi_search_task(
+            agent=vector_search_agent,
+            search_query="What is the history of this company? Include founding date, key events, and any notable acquisitions.",
             context=[
                 company_determination_search_task,
-                company_structure_research_task,
+                personnel_research_results,
+                company_structure_research_results,
+                competitors_research_results,
+            ],
+        )
+        # get the pricing results
+        pricing_research_results = tasks.vector_multi_search_task(
+            agent=vector_search_agent,
+            search_query="What is the pricing information for this company? Include any pricing models or pricing strategies.",
+            context=[
+                company_determination_search_task,
+                company_structure_research_results,
                 personnel_research_results,
                 competitors_research_results,
+                company_history_research_results,
+            ],
+        )
+        # get the recent events results
+        recent_events_research_results = tasks.vector_multi_search_task(
+            agent=vector_search_agent,
+            search_query="What are the most recent events for this company?",
+            context=[
+                company_determination_search_task,
+                company_structure_research_results,
+                personnel_research_results,
+                competitors_research_results,
+                company_history_research_results,
+                pricing_research_results,
+            ],
+        )
+        # get the products and services results
+        products_services_research_results = tasks.vector_multi_search_task(
+            agent=vector_search_agent,
+            search_query="What are the key products and services for this company?",
+            context=[
+                company_determination_search_task,
+                company_structure_research_results,
+                personnel_research_results,
+                competitors_research_results,
+                company_history_research_results,
+                pricing_research_results,
+                recent_events_research_results,
+            ],
+        )
+        # get the market results
+        market_research_results = tasks.vector_multi_search_task(
+            agent=vector_search_agent,
+            search_query="What market does this company operate in? What is their TAM/SAM/SOM?",
+            context=[
+                company_determination_search_task,
+                company_structure_research_results,
+                personnel_research_results,
+                competitors_research_results,
+                company_history_research_results,
+                pricing_research_results,
+                recent_events_research_results,
+                products_services_research_results,
             ],
         )
         # get the swot results from vector search
         swot_research_results = tasks.vector_multi_search_task(
             agent=vector_search_agent,
-            search_query="What is a good SWOT analysis for this company?",
+            search_query="What are strengths, weaknesses, opportunities, and threats for this company?",
             context=[
                 company_determination_search_task,
                 company_structure_research_results,
+                personnel_research_results,
+                competitors_research_results,
+                company_history_research_results,
+                pricing_research_results,
+                recent_events_research_results,
+                products_services_research_results,
+                market_research_results,
             ],
         )
         # get the swot company information
@@ -148,6 +278,16 @@ class RagUrlMarketingCrew:
         team_tasks.append(company_determination_search_task)
         team_tasks.append(company_structure_research_task)
         team_tasks.append(company_structure_research_results)
+        team_tasks.append(company_history_research_task)
+        team_tasks.append(company_history_research_results)
+        team_tasks.append(pricing_research_task)
+        team_tasks.append(pricing_research_results)
+        team_tasks.append(recent_events_research_task)
+        team_tasks.append(recent_events_research_results)
+        team_tasks.append(products_services_research_task)
+        team_tasks.append(products_services_research_results)
+        team_tasks.append(market_research_task)
+        team_tasks.append(market_research_results)
         team_tasks.append(personnel_research_task)
         team_tasks.append(personnel_research_results)
         team_tasks.append(competitors_research_task)

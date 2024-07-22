@@ -110,6 +110,91 @@ class MarketingRagAgents:
             llm=llm,
         )
 
+    def company_history_research_agent(
+        self, elasticsearch: Elasticsearch, index_name: str, llm=None
+    ) -> Agent:
+        return Agent(
+            role="Company History Research Agent",
+            goal="Find the history of a company using search engine search techniques.",
+            backstory="An expert in analyzing company data to create a company history using all available context and tools. Look at places like Wikipedia and similar websites to find the company history.",
+            tools=[
+                SerpSearchEngineIngestTool(
+                    elasticsearch=elasticsearch, index_name=index_name
+                )
+            ],
+            verbose=True,
+            allow_delegation=False,
+            llm=llm,
+        )
+
+    def pricing_research_agent(
+        self, elasticsearch: Elasticsearch, index_name: str, llm=None
+    ) -> Agent:
+        return Agent(
+            role="Pricing Research Agent",
+            goal="Find the pricing information of a company using search engine search techniques.",
+            backstory="An expert in analyzing company data to create a pricing information using all available context and tools. Look at places like the company website and similar websites to find the pricing information.",
+            tools=[
+                SerpSearchEngineIngestTool(
+                    elasticsearch=elasticsearch, index_name=index_name
+                )
+            ],
+            verbose=True,
+            allow_delegation=False,
+            llm=llm,
+        )
+
+    def recent_events_research_agent(
+        self, elasticsearch: Elasticsearch, index_name: str, llm=None
+    ) -> Agent:
+        return Agent(
+            role="Recent Events Research Agent",
+            goal="Find the recent events of a company using search engine search techniques.",
+            backstory="An expert in analyzing company data to create a recent events using all available context and tools.",
+            tools=[
+                SerpSearchEngineIngestTool(
+                    elasticsearch=elasticsearch, index_name=index_name
+                )
+            ],
+            verbose=True,
+            allow_delegation=False,
+            llm=llm,
+        )
+
+    def product_and_services_research_agent(
+        self, elasticsearch: Elasticsearch, index_name: str, llm=None
+    ) -> Agent:
+        return Agent(
+            role="Product and Services Research Agent",
+            goal="Find the products and services of a company using search engine search techniques.",
+            backstory="An expert in analyzing company data to create a list of products and services using all available context and tools.",
+            tools=[
+                SerpSearchEngineIngestTool(
+                    elasticsearch=elasticsearch, index_name=index_name
+                )
+            ],
+            verbose=True,
+            allow_delegation=False,
+            llm=llm,
+        )
+
+    def market_research_agent(
+        self, elasticsearch: Elasticsearch, index_name: str, llm=None
+    ) -> Agent:
+        return Agent(
+            role="Market Research Agent",
+            goal="Find the market the company operates in and what their TAM/SAM/SOM is. Always do your best to find the most accurate information and give quality analysis.",
+            backstory="An expert in analyzing company data to create a market research using all available context and tools.",
+            tools=[
+                SerpSearchEngineIngestTool(
+                    elasticsearch=elasticsearch, index_name=index_name
+                )
+            ],
+            verbose=True,
+            allow_delegation=False,
+            llm=llm,
+        )
+
     def vector_search_agent(
         self, elasticsearch: Elasticsearch, index_name: str, llm=None
     ) -> Agent:
@@ -147,4 +232,19 @@ class MarketingRagAgents:
             verbose=True,
             allow_delegation=False,
             llm=llm,
+        )
+
+    def writer_agent(
+        self, elasticsearch: Elasticsearch, index_name: str, llm=None
+    ) -> Agent:
+        return Agent(
+            role="Writer Agent",
+            goal="Write a report about a company using the provided context in a task.",
+            backstory="An expert in writing comprehensive reports about companies. Focuses on key points but also provides a detailed analysis. Also includes all sources used.",
+            tools=[
+                VectorSearchTool(elasticsearch=elasticsearch, index_name=index_name)
+            ],
+            verbose=True,
+            llm=llm,
+            allow_delegation=False,
         )

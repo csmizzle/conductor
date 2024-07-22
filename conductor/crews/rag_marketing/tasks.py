@@ -4,6 +4,8 @@ Second task is to search the vector database for relevant information.
 """
 from crewai import Task, Agent
 from textwrap import dedent
+from conductor.reports.models import ReportStyle
+from conductor.crews.marketing.utils import write_report_prompt
 
 
 class RagMarketingTasks:
@@ -125,4 +127,105 @@ class RagMarketingTasks:
             agent=agent,
             expected_output="A comprehensive answer to the search query.",
             context=context,
+        )
+
+    def company_history_research_task(
+        self, agent: Agent, context: list[Task] = None
+    ) -> Task:
+        return Task(
+            description=dedent(
+                """
+            Find the history of a company using search engine search techniques.
+            Use 5 different search queries to find the most relevant information.
+            Use the provided context to determine the best approach to find the information.
+            The output should be a simple confirmation that the data has been collected and ingested into the vector database or already exists.
+            """
+            ),
+            agent=agent,
+            expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
+            context=context,
+        )
+
+    def pricing_research_task(self, agent: Agent, context: list[Task] = None) -> Task:
+        return Task(
+            description=dedent(
+                """
+            Find pricing information of a company using search engine search techniques.
+            Use 5 different search queries to find the most relevant information.
+            Use the provided context to determine the best approach to find the information.
+            The output should be a simple confirmation that the data has been collected and ingested into the vector database or already exists.
+            """
+            ),
+            agent=agent,
+            expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
+            context=context,
+        )
+
+    def recent_events_research_task(
+        self, agent: Agent, context: list[Task] = None
+    ) -> Task:
+        return Task(
+            description=dedent(
+                """
+            Find the most recent events of a company using search engine search techniques.
+            Use 5 different search queries to find the most relevant information.
+            Use the provided context to determine the best approach to find the information.
+            The output should be a simple confirmation that the data has been collected and ingested into the vector database or already exists.
+            Include a sentiment analysis of the events surrounding the company.
+            """
+            ),
+            agent=agent,
+            expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
+            context=context,
+        )
+
+    def products_and_services_research_task(
+        self, agent: Agent, context: list[Task] = None
+    ) -> Task:
+        return Task(
+            description=dedent(
+                """
+            Find key products and services of a company using search engine search techniques.
+            Use 5 different search queries to find the most relevant information.
+            Use the provided context to determine the best approach to find the information.
+            The output should be a simple confirmation that the data has been collected and ingested into the vector database or already exists.
+            """
+            ),
+            agent=agent,
+            expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
+            context=context,
+        )
+
+    def market_analysis_research_task(
+        self, agent: Agent, context: list[Task] = None
+    ) -> Task:
+        return Task(
+            description=dedent(
+                """
+            Determine which market the company operates in and what their TAM/SAM/SOM is.
+            Find estimates if exact numbers are not available.
+            Use the provided context to determine the best approach to find the information.
+            The output should be a simple confirmation that the data has been collected and ingested into the vector database or already exists.
+            """
+            ),
+            agent=agent,
+            expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
+            context=context,
+        )
+
+    def company_report_task(
+        self,
+        agent: Agent,
+        context: list[Task],
+        report_style: ReportStyle,
+        key_questions: list[str] = None,
+    ) -> Task:
+        return Task(
+            description=write_report_prompt(
+                report_style=report_style,
+                key_questions=key_questions,
+            ),
+            agent=agent,
+            context=context,
+            expected_output="Comprehensive report on the company with the sections overview, swot analysis, and competitors.",
         )
