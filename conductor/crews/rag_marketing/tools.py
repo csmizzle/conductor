@@ -6,8 +6,7 @@ Add two different kinds of tools
 from crewai_tools.tools import ScrapeWebsiteTool
 from crewai_tools.tools.base_tool import BaseTool
 from pydantic.v1 import BaseModel, Field
-from typing import Optional, Any, Type, List
-from langchain_core.documents import Document
+from typing import Optional, Any, Type
 from conductor.crews.marketing.tools import (
     ScrapeWebsiteToolSchema,
     SerpSearchToolSchema,
@@ -16,6 +15,10 @@ from conductor.rag.ingest import url_to_db
 from conductor.rag.client import ElasticsearchRetrieverClient
 from elasticsearch import Elasticsearch
 from conductor.rag.embeddings import BedrockEmbeddings
+from conductor.rag.utils import (
+    get_page_content_with_source_url,
+    get_content_and_source_from_response,
+)
 from serpapi import GoogleSearch
 import os
 
@@ -61,7 +64,9 @@ def ingest(
     if existing_document["hits"]["total"]["value"] > 0:
         return "Document already exists in the vector database"
     else:
-        webpage = url_to_db(url=url, client=client, headers=headers, cookies=cookies)
+        webpage = url_to_db(
+            url=url, client=client, headers=headers, cookies=cookies, timeout=10
+        )
         return f"New documents added: {', '.join(webpage)}"
 
 
@@ -154,10 +159,12 @@ class VectorSearchTool(BaseTool):
         **kwargs: Any,
     ) -> Any:
         search_query = kwargs.get("search_query", self.search_query)
-        documents: List[Document] = self._vector_database.store.similarity_search(
+        documents = self._vector_database.store.similarity_search(
             query=search_query, k=5
         )
-        return "\n".join([document.page_content for document in documents])
+        return "\n".join(
+            [get_page_content_with_source_url(document) for document in documents]
+        )
 
 
 class VectorSearchMetaTool(BaseTool):
@@ -200,7 +207,7 @@ class VectorSearchMetaTool(BaseTool):
         url = kwargs.get("url", self.url)
         data = self._vector_database.find_webpage_by_url(url=url)
         # return the text of the first document
-        return data["hits"]["hits"][0]["_source"]["text"]
+        return get_content_and_source_from_response(data)
 
 
 class SerpSearchEngineIngestTool(BaseTool):

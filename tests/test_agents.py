@@ -21,29 +21,11 @@ from crewai_tools import ScrapeWebsiteTool
 from conductor.crews.models import CrewRun, TaskRun
 from conductor.reports.models import ReportStyle
 from conductor.crews.rag_marketing.crew import RagUrlMarketingCrew
+from conductor.crews.rag_marketing.chains import crew_run_to_report
+from conductor.reports.models import ReportV2
 from elasticsearch import Elasticsearch
 import os
-import pytest
-
-
-@pytest.fixture
-def elasticsearch_test_agent_index():
-    """Fixture to create and delete a test index in Elasticsearch."""
-    elasticsearch = Elasticsearch(
-        hosts=[os.getenv("ELASTICSEARCH_URL")],
-    )
-    test_index_name = "test_agent_index"
-    # Setup: Create the test index
-    elasticsearch.indices.create(
-        index=test_index_name, ignore=400
-    )  # ignore 400 cause by index already exists
-
-    yield test_index_name  # This allows the test to use the test index
-
-    # Teardown: Delete the test index
-    elasticsearch.indices.delete(
-        index=test_index_name, ignore=[400, 404]
-    )  # ignore errors if index does not exist
+import json
 
 
 def validate_crew_run(crew_run: CrewRun) -> None:
@@ -224,10 +206,32 @@ def test_rag_marketing_team(elasticsearch_test_agent_index) -> None:
         hosts=[os.getenv("ELASTICSEARCH_URL")],
     )
     crew = RagUrlMarketingCrew(
-        company_url="https://flashpoint.io",
+        company_url="https://trssllc.com",
         # search_query="What are the key features of the company?",
         elasticsearch=elasticsearch,
         index_name=elasticsearch_test_agent_index,
     )
     crew_run = crew.run()
     validate_crew_run(crew_run)
+
+
+def test_rag_marketing_team_with_output(elasticsearch_test_agent_index) -> None:
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    crew = RagUrlMarketingCrew(
+        company_url="https://trssllc.com",
+        # search_query="What are the key features of the company?",
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_test_agent_index,
+    )
+    crew_run = crew.run()
+    validate_crew_run(crew_run)
+    report = crew_run_to_report(
+        crew_run=crew_run,
+        title="TRSS Marketing Report",
+        description="Company report for TRSS",
+    )
+    assert isinstance(report, ReportV2)
+    with open("./test_report.json", "w") as f:
+        f.write(json.dumps(report.dict(), indent=4))

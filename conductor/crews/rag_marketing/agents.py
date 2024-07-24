@@ -44,8 +44,8 @@ class MarketingRagAgents:
     ) -> Agent:
         return Agent(
             role="Company Structure Research Agent",
-            goal="Find the company structure of a company using search engine search techniques.",
-            backstory="An expert in analyzing company data to create a company structure using all available context and tools. Look at places like OpenGov and similar websites to find the company structure of a company.",
+            goal="Collect the urls from the research and add the vectors to a vector database.",
+            backstory="An expert in researching company structure data using search engines, all available context, and tools.",
             tools=[
                 SerpSearchEngineIngestTool(
                     elasticsearch=elasticsearch, index_name=index_name
@@ -61,8 +61,8 @@ class MarketingRagAgents:
     ) -> Agent:
         return Agent(
             role="Personnel Research Agent",
-            goal="Find the personnel of a company using search engine search techniques.",
-            backstory="An expert in analyzing company data to create a list of personnel using all available context and tools. Find executives, board members, and other personnel.",
+            goal="Collect the urls from the research and add the vectors to a vector database.",
+            backstory="An expert in finding links that identify personnel using all available context and tools. Find executives, board members, and other personnel using great search engine queries.",
             tools=[
                 SerpSearchEngineIngestTool(
                     elasticsearch=elasticsearch, index_name=index_name
@@ -78,8 +78,8 @@ class MarketingRagAgents:
     ) -> Agent:
         return Agent(
             role="Competitor Research Agent",
-            goal="Find information about a company's competitors.",
-            backstory="An expert in analyzing company data to create a list of competitors using all available context and tools. Uses the estimated size, industry, and location to find the most relevant competitors.",
+            goal="Collect the urls from the research and add the vectors to a vector database.",
+            backstory="An expert in collecting data to create a list of competitors using all available context and tools. Uses the estimated size, industry, and location to find the most relevant competitors in search engines.",
             tools=[
                 SerpSearchEngineIngestTool(
                     elasticsearch=elasticsearch, index_name=index_name
@@ -98,8 +98,8 @@ class MarketingRagAgents:
         """
         return Agent(
             role="SWOT Research Agent",
-            goal="Extensively use search engine search techniques to find relevant information for a SWOT analysis for a company.",
-            backstory="An expert in analyzing company data to create SWOT analysis using all available context and tools.",
+            goal="Collect the urls from the research and add the vectors to a vector database.",
+            backstory="An expert in collecting company data to create SWOT analysis using all available context and tools. Uses the estimated size, industry, and location to find the most relevant SWOT analysis in search engines.",
             tools=[
                 SerpSearchEngineIngestTool(
                     elasticsearch=elasticsearch, index_name=index_name
@@ -115,8 +115,8 @@ class MarketingRagAgents:
     ) -> Agent:
         return Agent(
             role="Company History Research Agent",
-            goal="Find the history of a company using search engine search techniques.",
-            backstory="An expert in analyzing company data to create a company history using all available context and tools. Look at places like Wikipedia and similar websites to find the company history.",
+            goal="Collect the urls from the research and add the vectors to a vector database.",
+            backstory="An expert in collecting company data to create a company history using all available context and tools. Look at places like Wikipedia and similar websites to find the company history.",
             tools=[
                 SerpSearchEngineIngestTool(
                     elasticsearch=elasticsearch, index_name=index_name
@@ -132,8 +132,8 @@ class MarketingRagAgents:
     ) -> Agent:
         return Agent(
             role="Pricing Research Agent",
-            goal="Find the pricing information of a company using search engine search techniques.",
-            backstory="An expert in analyzing company data to create a pricing information using all available context and tools. Look at places like the company website and similar websites to find the pricing information.",
+            goal="Collect the urls from the research and add the vectors to a vector database.",
+            backstory="An expert in collecting company data to create a pricing information in a vector database  using all available context and tools. Look at places like the company website and similar websites to find the pricing information.",
             tools=[
                 SerpSearchEngineIngestTool(
                     elasticsearch=elasticsearch, index_name=index_name
@@ -149,8 +149,8 @@ class MarketingRagAgents:
     ) -> Agent:
         return Agent(
             role="Recent Events Research Agent",
-            goal="Find the recent events of a company using search engine search techniques.",
-            backstory="An expert in analyzing company data to create a recent events using all available context and tools.",
+            goal="Collect the urls from the research and add the vectors to a vector database.",
+            backstory="An expert in collecting company data to create data about recent events in a vector database using all available context and tools. Look at places like news websites and similar websites to find the recent events.",
             tools=[
                 SerpSearchEngineIngestTool(
                     elasticsearch=elasticsearch, index_name=index_name
@@ -166,8 +166,8 @@ class MarketingRagAgents:
     ) -> Agent:
         return Agent(
             role="Product and Services Research Agent",
-            goal="Find the products and services of a company using search engine search techniques.",
-            backstory="An expert in analyzing company data to create a list of products and services using all available context and tools.",
+            goal="Collect the urls from the research and add the vectors to a vector database.",
+            backstory="An expert in collecting company data to create a list of products and services in a vector database using all available context and tools. Look at places like the company website and similar websites to find the products and services.",
             tools=[
                 SerpSearchEngineIngestTool(
                     elasticsearch=elasticsearch, index_name=index_name
@@ -183,8 +183,8 @@ class MarketingRagAgents:
     ) -> Agent:
         return Agent(
             role="Market Research Agent",
-            goal="Find the market the company operates in and what their TAM/SAM/SOM is. Always do your best to find the most accurate information and give quality analysis.",
-            backstory="An expert in analyzing company data to create a market research using all available context and tools.",
+            goal="Collect the urls from the research and add the vectors to a vector database.",
+            backstory="An expert in collecting company data to create a market research using all available context and tools. Use industry reports and industry websites to sure up the market research.",
             tools=[
                 SerpSearchEngineIngestTool(
                     elasticsearch=elasticsearch, index_name=index_name
@@ -232,19 +232,4 @@ class MarketingRagAgents:
             verbose=True,
             allow_delegation=False,
             llm=llm,
-        )
-
-    def writer_agent(
-        self, elasticsearch: Elasticsearch, index_name: str, llm=None
-    ) -> Agent:
-        return Agent(
-            role="Writer Agent",
-            goal="Write a report about a company using the provided context in a task.",
-            backstory="An expert in writing comprehensive reports about companies. Focuses on key points but also provides a detailed analysis. Also includes all sources used.",
-            tools=[
-                VectorSearchTool(elasticsearch=elasticsearch, index_name=index_name)
-            ],
-            verbose=True,
-            llm=llm,
-            allow_delegation=False,
         )

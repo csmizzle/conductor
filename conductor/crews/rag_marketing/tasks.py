@@ -28,6 +28,7 @@ class RagMarketingTasks:
                 f"""
             Determine what company the URL belongs to by searching the vector database.
             URL to find the website: {url}.
+            Include all source links in the response.
             """
             ),
             agent=agent,
@@ -99,13 +100,21 @@ class RagMarketingTasks:
         )
 
     def vector_search_task(
-        self, agent: Agent, search_query: str, context: list[Task] = None
+        self,
+        agent: Agent,
+        search_query: str,
+        context: list[Task] = None,
+        instructions: str = None,
     ) -> Task:
         return Task(
             description=dedent(
                 f"""
-            Find relevant information from a vector database using queries.
+            Search the vector database for relevant information using the search query and context provided.
+            Always use the specific company name(s), markets, or a combination of them in your search, dont refer to it as "the company" or use general search queries unless it makes sense.
             Search query: {search_query}.
+            If there are additional instructions, follow them to find the most relevant information.
+            Instructions: {instructions if instructions else 'None'}.
+            Include all source links in the response.
             """
             ),
             agent=agent,
@@ -114,14 +123,22 @@ class RagMarketingTasks:
         )
 
     def vector_multi_search_task(
-        self, agent: Agent, search_query: str, context: list[Task]
+        self,
+        agent: Agent,
+        search_query: str,
+        context: list[Task],
+        instructions: str = None,
     ) -> Task:
         return Task(
             description=dedent(
                 f"""
             Search the vector database for relevant information using the search query and context provided.
+            Always use the specific company name(s), markets, or a combination of them in your search, dont refer to it as "the company" or use general search queries unless it makes sense.
             Search query: {search_query}.
             Look at the search query to generate 5 other queriers that will increase the chances of finding the most relevant information.
+            If there are additional instructions, follow them to find the most relevant information.
+            Instructions: {instructions if instructions else 'None'}.
+            Include all source links in the response.
             """
             ),
             agent=agent,
@@ -171,7 +188,6 @@ class RagMarketingTasks:
             Use 5 different search queries to find the most relevant information.
             Use the provided context to determine the best approach to find the information.
             The output should be a simple confirmation that the data has been collected and ingested into the vector database or already exists.
-            Include a sentiment analysis of the events surrounding the company.
             """
             ),
             agent=agent,

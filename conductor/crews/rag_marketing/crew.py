@@ -176,7 +176,8 @@ class RagUrlMarketingCrew:
         # get the personnel results
         personnel_research_results = tasks.vector_multi_search_task(
             agent=vector_search_agent,
-            search_query="Who are the executives of this company? Collect any contact information available.",
+            search_query="Who are the executives of this company?",
+            instructions="Collect any contact information available and include a short bio for each executive if available.",
             context=[
                 company_determination_search_task,
                 company_structure_research_results,
@@ -185,7 +186,8 @@ class RagUrlMarketingCrew:
         # get the competitors results
         competitors_research_results = tasks.vector_multi_search_task(
             agent=vector_search_agent,
-            search_query="Who are the competitors of this company? Include a high, medium, or low risk analysis with a short analysis for each competitor.",
+            search_query="Who are the competitors of this company",
+            instructions="Include a high, medium, or low risk analysis with a short analysis for each competitor.",
             context=[
                 company_determination_search_task,
                 personnel_research_results,
@@ -195,7 +197,8 @@ class RagUrlMarketingCrew:
         # get the company history results
         company_history_research_results = tasks.vector_multi_search_task(
             agent=vector_search_agent,
-            search_query="What is the history of this company? Include founding date, key events, and any notable acquisitions.",
+            search_query="What is the history of this company?",
+            instructions="Include founding date, key events, and any notable acquisitions.",
             context=[
                 company_determination_search_task,
                 personnel_research_results,
@@ -206,7 +209,8 @@ class RagUrlMarketingCrew:
         # get the pricing results
         pricing_research_results = tasks.vector_multi_search_task(
             agent=vector_search_agent,
-            search_query="What is the pricing information for this company? Include any pricing models or pricing strategies.",
+            search_query="What is the pricing information for this company?",
+            instructions=" Include any pricing models or pricing strategies.",
             context=[
                 company_determination_search_task,
                 company_structure_research_results,

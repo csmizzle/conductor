@@ -14,20 +14,28 @@ def ingest_webpage(url: str, **kwargs) -> WebPage:
     """
     # get a created at timestamp
     created_at = datetime.now()
-    # use requests
-    response = requests.get(url, **kwargs)
-    # process response
-    if not response.ok:
-        response.raise_for_status()
+    # handle pdfs by passing for now
+    if not url.endswith("pdf"):
+        # use requests
+        response = requests.get(url, **kwargs)
+        # process response
+        if not response.ok:
+            response.raise_for_status()
+        else:
+            # get text from response
+            response_text = response.text
+            # parse with BeautifulSoup
+            soup = BeautifulSoup(response_text, "html.parser")
+            # get text from soup
+            text = soup.get_text(strip=True)
+            # use the partition_text function
+            return WebPage(
+                url=url, created_at=created_at, content=text, raw=response_text
+            )
     else:
-        # get text from response
-        response_text = response.text
-        # parse with BeautifulSoup
-        soup = BeautifulSoup(response_text, "html.parser")
-        # get text from soup
-        text = soup.get_text(strip=True)
-        # use the partition_text function
-        return WebPage(url=url, created_at=created_at, content=text, raw=response_text)
+        return WebPage(
+            url=url, content="Unable to parse PDF", raw="", created_at=created_at
+        )
 
 
 def url_to_db(url: str, client: ElasticsearchRetrieverClient, **kwargs) -> list[str]:

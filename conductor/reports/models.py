@@ -70,6 +70,18 @@ class ReportStyle(Enum):
     NARRATIVE = "as long form narratives, avoiding bullet points and short sentences."
 
 
+class ReportTone(Enum):
+    """
+    Enum for report tone
+    """
+
+    PROFESSIONAL = "professional"
+    INFORMAL = "informal"
+    INFORMATIONAL = "informational"
+    ANALYTICAL = "analytical"
+    PERSUASIVE = "persuasive"
+
+
 class Paragraph(BaseModel):
     title: Optional[str] = Field(default="", description="Title of the paragraph")
     content: str = Field(description="Content of the paragraph")
@@ -80,10 +92,36 @@ class Section(BaseModel):
     paragraphs: List[Paragraph] = Field(description="List of paragraphs")
 
 
+class ParagraphV2(BaseModel):
+    title: Optional[str] = Field(
+        default="", description="Title of the paragraph if needed"
+    )
+    sentences: list[str] = Field(description="List of sentences in the paragraph")
+
+
+class SectionV2(BaseModel):
+    title: str = Field(description="Title of report section")
+    paragraphs: List[ParagraphV2] = Field(description="List of paragraphs")
+    sources: Optional[List[str]] = Field(description="List of sources for the section")
+    tone: Optional[ReportTone] = Field(description="Tone of the section")
+    style: Optional[ReportStyle] = Field(description="Style of the section")
+
+
 class ParsedReport(BaseModel):
     title: str = Field(description="Title of the report")
     description: str = Field(description="Description of the report")
     sections: List[Section] = Field(description="Sections in the report")
+
+
+class ParsedReportV2(BaseModel):
+    title: str = Field(description="Title of the report")
+    description: str = Field(description="Description of the report")
+    sections: List[SectionV2] = Field(description="Sections in the report")
+
+
+class ReportV2(BaseModel):
+    report: Optional[ParsedReportV2] = Field(description="Parsed report")
+    raw: list[str] = Field(description="Raw report sections")
 
 
 class Report(BaseModel):

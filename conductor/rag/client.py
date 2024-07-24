@@ -26,7 +26,9 @@ class ElasticsearchRetrieverClient:
         self.elasticsearch = elasticsearch
         self.embeddings = embeddings
         self.store = ElasticsearchStore(
-            index_name=index_name, es_connection=elasticsearch, embedding=embeddings
+            index_name=index_name,
+            es_connection=elasticsearch,
+            embedding=embeddings,
         )
         self.index_name = index_name
 
@@ -81,7 +83,7 @@ class ElasticsearchRetrieverClient:
         """
         return self.store.similarity_search(query=query)
 
-    def find_webpage_by_url(self, url: str) -> Document:
+    def find_webpage_by_url(self, url: str) -> dict:
         """
         Find webpage by URL
         """

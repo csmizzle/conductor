@@ -7,28 +7,8 @@ from conductor.rag.ingest import url_to_db
 from conductor.rag.embeddings import BedrockEmbeddings
 from conductor.rag.models import WebPage
 from datetime import datetime
+from elastic_transport import ObjectApiResponse
 import os
-import pytest
-
-
-@pytest.fixture
-def elasticsearch_test_index():
-    """Fixture to create and delete a test index in Elasticsearch."""
-    elasticsearch = Elasticsearch(
-        hosts=[os.getenv("ELASTICSEARCH_URL")],
-    )
-    test_index_name = "test_client_index"
-    # Setup: Create the test index
-    elasticsearch.indices.create(
-        index=test_index_name, ignore=400
-    )  # ignore 400 cause by index already exists
-
-    yield test_index_name  # This allows the test to use the test index
-
-    # Teardown: Delete the test index
-    elasticsearch.indices.delete(
-        index=test_index_name, ignore=[400, 404]
-    )  # ignore errors if index does not exist
 
 
 def test_elasticsearch_retriever_client_single_document(elasticsearch_test_index):
@@ -123,3 +103,27 @@ def test_url_to_db(elasticsearch_test_index):
     # test if we can find the document using the find by metadata url function
     document = client.find_webpage_by_url(url)
     assert document["hits"]["total"]["value"] == 1
+
+
+def test_get_document_by_url(elasticsearch_test_index) -> None:
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    client = ElasticsearchRetrieverClient(
+        elasticsearch=elasticsearch,
+        embeddings=BedrockEmbeddings(),
+        index_name=elasticsearch_test_index,
+    )
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+        "Accept": "text/html",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com/",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Accept-Encoding": "gzip, deflate, br",
+    }
+    url = "https://trssllc.com"
+    url_to_db(url, client, headers=headers)
+    result = client.find_webpage_by_url(url=url)
+    assert isinstance(result, ObjectApiResponse)
