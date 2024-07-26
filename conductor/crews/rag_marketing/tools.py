@@ -21,6 +21,7 @@ from conductor.rag.utils import (
 )
 from serpapi import GoogleSearch
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class FixedVectorSearchToolSchema(BaseModel):
@@ -68,6 +69,23 @@ def ingest(
             url=url, client=client, headers=headers, cookies=cookies, timeout=10
         )
         return f"New documents added: {', '.join(webpage)}"
+
+
+# parallelized ingest function
+def parallel_ingest(urls, client, headers=None, cookies=None):
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {
+            executor.submit(ingest, client, url, headers, cookies): url for url in urls
+        }
+        results = []
+        for future in as_completed(futures):
+            url = futures[future]
+            try:
+                result = future.result()
+                results.append(result)
+            except Exception:
+                results.append(f"Error processing: {url}")
+    return results
 
 
 class ScrapeWebsiteIngestTool(ScrapeWebsiteTool):
@@ -254,6 +272,15 @@ class SerpSearchEngineIngestTool(BaseTool):
         except Exception:
             return f"Error ingesting {url}"
 
+    def _parallel_ingest_page_content(self, search_results: list[dict]) -> list[str]:
+        urls = []
+        for search_engine_result in search_results:
+            if "organic_results" in search_engine_result:
+                for result in search_engine_result["organic_results"]:
+                    urls.append(result["link"])
+        results = parallel_ingest(urls, self._vector_database, headers=self.headers)
+        return "\n".join(results)
+
     def _ingest_search_results(self, search_results: list[dict]) -> str:
         all_results = []
         for search_engine_result in search_results:
@@ -289,4 +316,4 @@ class SerpSearchEngineIngestTool(BaseTool):
         bing_results_dict = search.get_dict()
         all_results = [google_results_dict, bing_results_dict]
         # ingest search results
-        return self._ingest_search_results(all_results)
+        return self._parallel_ingest_page_content(all_results)

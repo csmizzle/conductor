@@ -4,6 +4,7 @@ Base models for conductor
 from typing import Any
 from abc import ABC, abstractmethod
 import jmespath
+from crewai.task import Task
 
 
 class Context(ABC):
@@ -18,3 +19,7 @@ class Context(ABC):
     @abstractmethod
     def create_context(self, data: Any) -> list[str]:
         pass
+
+
+class NamedTask(Task):
+    name: str

@@ -6,11 +6,15 @@ from crewai import Task, Agent
 from textwrap import dedent
 from conductor.reports.models import ReportStyle
 from conductor.crews.marketing.utils import write_report_prompt
+from conductor.models import NamedTask
 
 
 class RagMarketingTasks:
-    def url_collection_task(self, agent: Agent, company_url: str) -> Task:
-        return Task(
+    def url_collection_task(
+        self, name: str, agent: Agent, company_url: str
+    ) -> NamedTask:
+        return NamedTask(
+            name=name,
             description=dedent(
                 f"""
             Collect data from a website and ingest it into a vector database.
@@ -22,8 +26,11 @@ class RagMarketingTasks:
             expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
         )
 
-    def vector_metadata_search_task(self, agent: Agent, url: str, query: str) -> Task:
-        return Task(
+    def vector_metadata_search_task(
+        self, name: str, agent: Agent, url: str
+    ) -> NamedTask:
+        return NamedTask(
+            name=name,
             description=dedent(
                 f"""
             Determine what company the URL belongs to by searching the vector database.
@@ -35,8 +42,11 @@ class RagMarketingTasks:
             expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
         )
 
-    def swot_research_task(self, agent: Agent, context: list[Task] = None) -> Task:
-        return Task(
+    def swot_research_task(
+        self, name: str, agent: Agent, context: list[Task] = None
+    ) -> NamedTask:
+        return NamedTask(
+            name=name,
             description=dedent(
                 """
             Extensively use search engine search techniques to find relevant information for a SWOT analysis for a company.
@@ -51,9 +61,10 @@ class RagMarketingTasks:
         )
 
     def company_structure_research_task(
-        self, agent: Agent, context: list[Task] = None
-    ) -> Task:
-        return Task(
+        self, name: str, agent: Agent, context: list[Task] = None
+    ) -> NamedTask:
+        return NamedTask(
+            name=name,
             description=dedent(
                 """
             Find the company structure of a company using search engine search techniques.
@@ -67,8 +78,11 @@ class RagMarketingTasks:
             context=context,
         )
 
-    def personnel_research_task(self, agent: Agent, context: list[Task] = None) -> Task:
-        return Task(
+    def personnel_research_task(
+        self, name: str, agent: Agent, context: list[Task] = None
+    ) -> NamedTask:
+        return NamedTask(
+            name=name,
             description=dedent(
                 """
             Find the personnel of a company using search engine search techniques.
@@ -83,9 +97,10 @@ class RagMarketingTasks:
         )
 
     def competitor_research_task(
-        self, agent: Agent, context: list[Task] = None
-    ) -> Task:
-        return Task(
+        self, name: str, agent: Agent, context: list[Task] = None
+    ) -> NamedTask:
+        return NamedTask(
+            name=name,
             description=dedent(
                 """
             Find information about a company's competitors using search engine search techniques.
@@ -101,12 +116,14 @@ class RagMarketingTasks:
 
     def vector_search_task(
         self,
+        name: str,
         agent: Agent,
         search_query: str,
         context: list[Task] = None,
         instructions: str = None,
-    ) -> Task:
-        return Task(
+    ) -> NamedTask:
+        return NamedTask(
+            name=name,
             description=dedent(
                 f"""
             Search the vector database for relevant information using the search query and context provided.
@@ -124,12 +141,14 @@ class RagMarketingTasks:
 
     def vector_multi_search_task(
         self,
+        name: str,
         agent: Agent,
         search_query: str,
         context: list[Task],
         instructions: str = None,
-    ) -> Task:
-        return Task(
+    ) -> NamedTask:
+        return NamedTask(
+            name=name,
             description=dedent(
                 f"""
             Search the vector database for relevant information using the search query and context provided.
@@ -147,9 +166,10 @@ class RagMarketingTasks:
         )
 
     def company_history_research_task(
-        self, agent: Agent, context: list[Task] = None
-    ) -> Task:
-        return Task(
+        self, name: str, agent: Agent, context: list[Task] = None
+    ) -> NamedTask:
+        return NamedTask(
+            name=name,
             description=dedent(
                 """
             Find the history of a company using search engine search techniques.
@@ -163,8 +183,11 @@ class RagMarketingTasks:
             context=context,
         )
 
-    def pricing_research_task(self, agent: Agent, context: list[Task] = None) -> Task:
-        return Task(
+    def pricing_research_task(
+        self, name: str, agent: Agent, context: list[Task] = None
+    ) -> NamedTask:
+        return NamedTask(
+            name=name,
             description=dedent(
                 """
             Find pricing information of a company using search engine search techniques.
@@ -179,9 +202,10 @@ class RagMarketingTasks:
         )
 
     def recent_events_research_task(
-        self, agent: Agent, context: list[Task] = None
-    ) -> Task:
-        return Task(
+        self, name: str, agent: Agent, context: list[Task] = None
+    ) -> NamedTask:
+        return NamedTask(
+            name=name,
             description=dedent(
                 """
             Find the most recent events of a company using search engine search techniques.
@@ -196,9 +220,10 @@ class RagMarketingTasks:
         )
 
     def products_and_services_research_task(
-        self, agent: Agent, context: list[Task] = None
-    ) -> Task:
-        return Task(
+        self, name: str, agent: Agent, context: list[Task] = None
+    ) -> NamedTask:
+        return NamedTask(
+            name=name,
             description=dedent(
                 """
             Find key products and services of a company using search engine search techniques.
@@ -213,9 +238,10 @@ class RagMarketingTasks:
         )
 
     def market_analysis_research_task(
-        self, agent: Agent, context: list[Task] = None
-    ) -> Task:
-        return Task(
+        self, name: str, agent: Agent, context: list[Task] = None
+    ) -> NamedTask:
+        return NamedTask(
+            name=name,
             description=dedent(
                 """
             Determine which market the company operates in and what their TAM/SAM/SOM is.
@@ -231,12 +257,14 @@ class RagMarketingTasks:
 
     def company_report_task(
         self,
+        name: str,
         agent: Agent,
         context: list[Task],
         report_style: ReportStyle,
         key_questions: list[str] = None,
-    ) -> Task:
-        return Task(
+    ) -> NamedTask:
+        return NamedTask(
+            name=name,
             description=write_report_prompt(
                 report_style=report_style,
                 key_questions=key_questions,

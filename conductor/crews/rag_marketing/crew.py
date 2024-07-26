@@ -105,27 +105,31 @@ class RagUrlMarketingCrew:
         # create all tasks and add them to the team
         team_tasks = []
         url_collection_task = tasks.url_collection_task(
+            name="URL Collection Research",
             agent=data_collection_agent,
             company_url=self.company_url,
         )
         # determine who the company is
         company_determination_search_task = tasks.vector_metadata_search_task(
+            name="Company Determination Research",
             agent=vector_meta_search_agent,
             url=self.company_url,
-            query="What company does this URL belong to?",
         )
         # get the company structure
         company_structure_research_task = tasks.company_structure_research_task(
+            name="Company Structure Research",
             agent=company_structure_research_agent,
             context=[company_determination_search_task],
         )
         # get the personnel information
         personnel_research_task = tasks.personnel_research_task(
+            name="Personnel Research",
             agent=personnel_research_agent,
             context=[company_determination_search_task],
         )
         # get the competitors information
         competitors_research_task = tasks.competitor_research_task(
+            name="Competitor Research",
             agent=competitors_research_agent,
             context=[
                 company_determination_search_task,
@@ -136,31 +140,37 @@ class RagUrlMarketingCrew:
         # Research tasks
         # get the company history information
         company_history_research_task = tasks.company_history_research_task(
+            name="Company History Research",
             agent=company_history_research_agent,
             context=[company_determination_search_task],
         )
         # get the pricing information
         pricing_research_task = tasks.pricing_research_task(
+            name="Pricing Research",
             agent=pricing_research_agent,
             context=[company_determination_search_task],
         )
         # get the recent events information
         recent_events_research_task = tasks.recent_events_research_task(
+            name="Recent Events Research",
             agent=recent_events_research_agent,
             context=[company_determination_search_task],
         )
         # get the products and services information
         products_services_research_task = tasks.products_and_services_research_task(
+            name="Products and Service Research",
             agent=products_services_research_agent,
             context=[company_determination_search_task],
         )
         # market research information
         market_research_task = tasks.market_analysis_research_task(
+            name="Market Research",
             agent=market_research_agent,
             context=[company_determination_search_task],
         )
         # get the company swot information
         swot_research_task = tasks.swot_research_task(
+            name="SWOT Research",
             agent=swot_research_agent,
             context=[
                 company_determination_search_task,
@@ -169,12 +179,14 @@ class RagUrlMarketingCrew:
         # Question tasks
         # get the company structure results
         company_structure_research_results = tasks.vector_multi_search_task(
+            name="Company Structure Search",
             agent=vector_search_agent,
             search_query="What is the structure of this company? Include things like beneficial owners, subsidiaries, and parent companies.",
             context=[company_determination_search_task],
         )
         # get the personnel results
         personnel_research_results = tasks.vector_multi_search_task(
+            name="Personnel Search",
             agent=vector_search_agent,
             search_query="Who are the executives of this company?",
             instructions="Collect any contact information available and include a short bio for each executive if available.",
@@ -185,6 +197,7 @@ class RagUrlMarketingCrew:
         )
         # get the competitors results
         competitors_research_results = tasks.vector_multi_search_task(
+            name="Competitors Search",
             agent=vector_search_agent,
             search_query="Who are the competitors of this company",
             instructions="Include a high, medium, or low risk analysis with a short analysis for each competitor.",
@@ -196,6 +209,7 @@ class RagUrlMarketingCrew:
         )
         # get the company history results
         company_history_research_results = tasks.vector_multi_search_task(
+            name="Company History Search",
             agent=vector_search_agent,
             search_query="What is the history of this company?",
             instructions="Include founding date, key events, and any notable acquisitions.",
@@ -208,6 +222,7 @@ class RagUrlMarketingCrew:
         )
         # get the pricing results
         pricing_research_results = tasks.vector_multi_search_task(
+            name="Pricing Search",
             agent=vector_search_agent,
             search_query="What is the pricing information for this company?",
             instructions=" Include any pricing models or pricing strategies.",
@@ -221,6 +236,7 @@ class RagUrlMarketingCrew:
         )
         # get the recent events results
         recent_events_research_results = tasks.vector_multi_search_task(
+            name="Recent Events Search",
             agent=vector_search_agent,
             search_query="What are the most recent events for this company?",
             context=[
@@ -234,6 +250,7 @@ class RagUrlMarketingCrew:
         )
         # get the products and services results
         products_services_research_results = tasks.vector_multi_search_task(
+            name="Products and Services Search",
             agent=vector_search_agent,
             search_query="What are the key products and services for this company?",
             context=[
@@ -248,6 +265,7 @@ class RagUrlMarketingCrew:
         )
         # get the market results
         market_research_results = tasks.vector_multi_search_task(
+            name="Market Search",
             agent=vector_search_agent,
             search_query="What market does this company operate in? What is their TAM/SAM/SOM?",
             context=[
@@ -263,6 +281,7 @@ class RagUrlMarketingCrew:
         )
         # get the swot results from vector search
         swot_research_results = tasks.vector_multi_search_task(
+            name="SWOT Search",
             agent=vector_search_agent,
             search_query="What are strengths, weaknesses, opportunities, and threats for this company?",
             context=[

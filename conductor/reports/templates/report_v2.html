@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>{{ report_title }}</title>
+    </head>
+    <body>
+        <h1>{{ report_title }}</h1>
+        <p>{{ report_description }}</p>
+        <ul>
+        {% for section in report_sections %}
+            <h2>{{ section.title }}</h2>
+            {% for paragraph in section.paragraphs %}
+                <h3>{{ paragraph.title }}</h3>
+                <p>{{ paragraph.sentences | join(" ") }}</p>
+            {% endfor %}
+        {% endfor %}
+            <h2>Sources<h2>
+            <ul>
+            {% for source in report_sources %}
+                <li>{{ source }}</li>
+            {% endfor %}
+            </ul>
+        </ul>
+    </body>
+    <style>
+        pre {
+            white-space: pre-wrap;
+        }
+        li {
+            font-weight: normal;
+        }
+    </style>
+</html>
