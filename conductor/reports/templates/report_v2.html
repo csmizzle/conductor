@@ -6,7 +6,6 @@
     <body>
         <h1>{{ report_title }}</h1>
         <p>{{ report_description }}</p>
-        <ul>
         {% for section in report_sections %}
             <h2>{{ section.title }}</h2>
             {% for paragraph in section.paragraphs %}
@@ -14,13 +13,10 @@
                 <p>{{ paragraph.sentences | join(" ") }}</p>
             {% endfor %}
         {% endfor %}
-            <h2>Sources<h2>
-            <ul>
-            {% for source in report_sources %}
-                <li>{{ source }}</li>
-            {% endfor %}
-            </ul>
-        </ul>
+        <h2>Sources</h2>
+        {% for source in report_sources %}
+            <li>{{ source }}</li>
+        {% endfor %}
     </body>
     <style>
         pre {

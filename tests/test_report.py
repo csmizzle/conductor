@@ -25,6 +25,7 @@ from conductor.reports.outputs import (
     report_to_html,
     report_v2_to_html,
     report_v2_to_pdf,
+    report_v2_to_docx,
 )
 from conductor.crews.rag_marketing.chains import crew_run_to_report
 from conductor.crews.models import CrewRun
@@ -153,3 +154,10 @@ def test_report_v2_to_html() -> None:
     html = report_v2_to_html(report=report_v2)
     assert isinstance(html, str)
     report_v2_to_pdf(report=report_v2, filename="tests/test_report_v2.pdf")
+
+
+def test_report_v2_to_docx() -> None:
+    report_v2 = ReportV2.parse_obj(REPORT_V2_JSON)
+    doc = report_v2_to_docx(report=report_v2)
+    assert isinstance(doc, DocumentObject)
+    doc.save("tests/test_report_v2.docx")

@@ -12,7 +12,10 @@ Include all the information in the included context.
 If valid URL sources are provided, include them at the end of the section. Else, leave the sources empty.
 Each paragraph should be a minimum of {min_sentences} sentences and maximum of {max_sentences}, be sure to use the maximum if needed.
 Be creative when beginning and ending paragraphs, avoid repetitive phrases such as "In conclusion" or "In summary".
-Title paragraphs if needed.
+Title sections if needed with simple, clear titles that will be part of a larger report.
+Section titles should 2-3 words and be clear and concise.
+
+Section Title Examples: Overview, Key Personnel, Financial Summary, Conclusion, Recommendations, etc.
 
 Title:
 <title>

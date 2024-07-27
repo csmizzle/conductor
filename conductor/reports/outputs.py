@@ -272,3 +272,26 @@ def report_to_docx(report: Report) -> Document:
                 document.add_heading(paragraph.title, level=3)
             document.add_paragraph(paragraph.content)
     return document
+
+
+def report_v2_to_docx(report: ReportV2) -> Document:
+    """
+    Convert a report to a DOCX
+    """
+    sources = set()
+    # create sources for the report
+    for section in report.report.sections:
+        sources.update(section.sources)
+    sorted_sources = sorted(sources)
+    document = Document()
+    document.add_heading(report.report.title, level=1)
+    for section in report.report.sections:
+        document.add_heading(section.title, level=2)
+        for paragraph in section.paragraphs:
+            if paragraph.title and paragraph.title != "":
+                document.add_heading(paragraph.title, level=3)
+            document.add_paragraph(" ".join(paragraph.sentences))
+    document.add_heading("Sources", level=2)
+    for source in sorted_sources:
+        document.add_paragraph(source, style="ListBullet")
+    return document
