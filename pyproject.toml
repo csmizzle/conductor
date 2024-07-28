@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "conductor"
-version = "0.2.2"
+version = "0.3.0"
 description = ""
 authors = ["csmizzle <chrissmith700@gmail.com>"]
 
@@ -32,6 +32,7 @@ langchain-elasticsearch = "^0.2.2"
 pre-commit = "^3.7.0"
 pyyaml = "^6.0.1"
 pytest = "^8.2.2"
+pytest-cov = "^5.0.0"
 
 [build-system]
 requires = ["poetry-core"]
