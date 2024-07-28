@@ -23,7 +23,6 @@ from conductor.reports.models import ReportStyle
 from conductor.crews.rag_marketing.crew import RagUrlMarketingCrew
 from elasticsearch import Elasticsearch
 import os
-import json
 
 
 def validate_crew_run(crew_run: CrewRun) -> None:
@@ -224,15 +223,18 @@ def test_rag_marketing_team_with_output(elasticsearch_test_agent_index) -> None:
     )
     crew_run = crew.run()
     validate_crew_run(crew_run)
-    with open("./test_crew_run.json", "w") as f:
-        json.dump(crew_run.dict(), f, indent=4)
-    # report = crew_run_to_report(
-    #     crew_run=crew_run,
-    #     title="TRSS Marketing Report",
-    #     description="Company report for TRSS",
-    #     style=ReportStyle.NARRATIVE,
-    #     tone=ReportTone.ANALYTICAL
-    # )
-    # assert isinstance(report, ReportV2)
-    # with open("./test_analytical_report.json", "w") as f:
-    #     json.dump(report.dict(), f, indent=4)
+
+
+def test_rag_marketing_team_with_redis_cache(elasticsearch_test_agent_index) -> None:
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    crew = RagUrlMarketingCrew(
+        company_url="https://trssllc.com",
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_test_agent_index,
+        cache=True,
+        redis=True,
+    )
+    crew_run = crew.run()
+    validate_crew_run(crew_run)

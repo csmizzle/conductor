@@ -3,6 +3,9 @@ from conductor.crews.rag_marketing.agents import MarketingRagAgents
 from conductor.crews.rag_marketing.tasks import RagMarketingTasks
 from conductor.crews.marketing.utils import task_to_task_run
 from conductor.crews.models import CrewRun
+from conductor.crews.cache import RedisCrewCacheHandler
+from conductor.crews.handlers import RedisCacheHandlerCrew
+from crewai.agents.cache.cache_handler import CacheHandler
 from conductor.llms import claude_sonnet
 from elasticsearch import Elasticsearch
 
@@ -18,11 +21,18 @@ class RagUrlMarketingCrew:
         # search_query: str,
         elasticsearch: Elasticsearch,
         index_name: str,
+        cache: bool = False,
+        redis: bool = False,
     ) -> None:
         self.company_url = company_url
         # self.search_query = search_query
         self.elasticsearch = elasticsearch
         self.index_name = index_name
+        self.cache = cache
+        if redis:
+            self.cache_handler = RedisCrewCacheHandler()
+        else:
+            self.cache_handler = CacheHandler()
 
     def build_team(self) -> tuple[list[Agent], list[Task]]:
         team = []
@@ -321,12 +331,20 @@ class RagUrlMarketingCrew:
 
     def run(self) -> CrewRun:
         team, team_tasks = self.build_team()
-        crew = Crew(
-            agents=team,
-            tasks=team_tasks,
-        )
+        if self.cache:
+            crew = RedisCacheHandlerCrew(
+                agents=team,
+                tasks=team_tasks,
+                cache=self.cache,
+                _cache_handler=self.cache_handler,
+            )
+        else:
+            crew = Crew(
+                agents=team,
+                tasks=team_tasks,
+            )
         result = crew.kickoff()
-        # create and return crew run
+        # create and return crew ru n
         crew_run = CrewRun(
             tasks=[task_to_task_run(task) for task in crew.tasks],
             result=result,
