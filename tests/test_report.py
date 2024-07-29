@@ -4,14 +4,33 @@ from tests.constants import (
     TEST_COMPLEX_NARRATIVE,
     TEST_KEY_QUESTIONS_BULLETED,
     TEST_KEY_QUESTIONS_NARRATIVE,
+    CREW_RUN,
+    REPORT_V2_JSON,
 )
 from conductor.reports.outputs import (
     string_to_report,
 )
-from conductor.reports.models import ParsedReport, Report, Section, Paragraph
-from conductor.reports.outputs import report_to_docx, report_to_html
+from conductor.reports.models import (
+    Report,
+    Paragraph,
+    Section,
+    ParsedReport,
+    ReportStyle,
+    ReportTone,
+    ReportPointOfView,
+    ReportV2,
+)
+from conductor.reports.outputs import (
+    report_to_docx,
+    report_to_html,
+    report_v2_to_html,
+    report_v2_to_docx,
+)
+from conductor.crews.rag_marketing.chains import crew_run_to_report
+from conductor.crews.models import CrewRun
 from langsmith import unit
 from docx.document import Document as DocumentObject
+import json
 
 
 def test_conductor_url_report_generator():
@@ -111,3 +130,33 @@ def test_key_questions_narrative_to_report() -> None:
         TEST_KEY_QUESTIONS_NARRATIVE,
     )
     assert isinstance(report, ParsedReport)
+
+
+def test_crew_run_to_report() -> None:
+    crew_run = CrewRun.parse_obj(CREW_RUN)
+    report = crew_run_to_report(
+        crew_run=crew_run,
+        title="TRSS Report",
+        description="Evrim Insights on TRSS",
+        section_titles_endswith_filter="Research",
+        tone=ReportTone.INFORMAL,
+        style=ReportStyle.NARRATIVE,
+        point_of_view=ReportPointOfView.THIRD_PERSON,
+    )
+    assert isinstance(report, ReportV2)
+    with open("tests/test_report.json", "w") as f:
+        json.dump(report.dict(), f, indent=4)
+
+
+def test_report_v2_to_html() -> None:
+    report_v2 = ReportV2.parse_obj(REPORT_V2_JSON)
+    html = report_v2_to_html(report=report_v2)
+    assert isinstance(html, str)
+    # report_v2_to_pdf(report=report_v2, filename="tests/test_report_v2.pdf")
+
+
+def test_report_v2_to_docx() -> None:
+    report_v2 = ReportV2.parse_obj(REPORT_V2_JSON)
+    doc = report_v2_to_docx(report=report_v2)
+    assert isinstance(doc, DocumentObject)
+    # doc.save("tests/test_report_v2.docx")

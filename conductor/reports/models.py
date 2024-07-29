@@ -68,6 +68,31 @@ class ReportStyle(Enum):
 
     BULLETED = "as bulleted lists, avoiding long paragraphs."
     NARRATIVE = "as long form narratives, avoiding bullet points and short sentences."
+    MIXED = (
+        "as a mixture of long form narratives and bulleted lists when it makes sense"
+    )
+
+
+class ReportTone(Enum):
+    """
+    Enum for report tone
+    """
+
+    PROFESSIONAL = "professional"
+    INFORMAL = "informal"
+    INFORMATIONAL = "informational"
+    ANALYTICAL = "analytical"
+    PERSUASIVE = "persuasive"
+    CRITICAL = "critical"
+
+
+class ReportPointOfView(Enum):
+    """
+    Enum for report point of view
+    """
+
+    FIRST_PERSON = "first person"
+    THIRD_PERSON = "third person"
 
 
 class Paragraph(BaseModel):
@@ -80,10 +105,44 @@ class Section(BaseModel):
     paragraphs: List[Paragraph] = Field(description="List of paragraphs")
 
 
+class ParagraphV2(BaseModel):
+    title: Optional[str] = Field(
+        default="", description="Title of the paragraph if needed"
+    )
+    sentences: list[str] = Field(
+        description="List of sentences in the paragraph. Each element in the list must contain only one sentence."
+    )
+
+
+class SectionV2(BaseModel):
+    title: str = Field(description="Title of report section")
+    paragraphs: List[ParagraphV2] = Field(description="List of paragraphs")
+    sources: Optional[List[str]] = Field(description="List of sources for the section")
+    tone: Optional[ReportTone] = Field(description="Tone of the section")
+    style: Optional[ReportStyle] = Field(description="Style of the section")
+    point_of_view: Optional[ReportPointOfView] = Field(
+        description="Point of view of the section"
+    )
+
+    class Config:
+        use_enum_values = True
+
+
 class ParsedReport(BaseModel):
     title: str = Field(description="Title of the report")
     description: str = Field(description="Description of the report")
     sections: List[Section] = Field(description="Sections in the report")
+
+
+class ParsedReportV2(BaseModel):
+    title: str = Field(description="Title of the report")
+    description: str = Field(description="Description of the report")
+    sections: List[SectionV2] = Field(description="Sections in the report")
+
+
+class ReportV2(BaseModel):
+    report: Optional[ParsedReportV2] = Field(description="Parsed report")
+    raw: list[str] = Field(description="Raw report sections")
 
 
 class Report(BaseModel):

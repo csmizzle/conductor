@@ -4,36 +4,14 @@ from conductor.crews.marketing.tasks import MarketingTasks
 from conductor.crews.models import CrewRun
 from conductor.crews.marketing.utils import task_to_task_run
 from conductor.crews.cache import RedisCrewCacheHandler
+from conductor.crews.handlers import RedisCacheHandlerCrew
 from conductor.llms import claude_sonnet
 from crewai import Crew, Agent, Task
-from crewai.telemetry import Telemetry
-from crewai.utilities import FileHandler, Logger, RPMController
 from crewai.agents.cache.cache_handler import CacheHandler
 import logging
-from pydantic import PrivateAttr, model_validator
 
 
 logger = logging.getLogger(__name__)
-
-
-class RedisCacheHandlerCrew(Crew):
-    _cache_handler: RedisCrewCacheHandler = PrivateAttr()
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    @model_validator(mode="after")
-    def set_private_attrs(self) -> "RedisCacheHandlerCrew":
-        """Set private attributes."""
-        self._cache_handler = RedisCrewCacheHandler()
-        self._logger = Logger(self.verbose)
-        if self.output_log_file:
-            self._file_handler = FileHandler(self.output_log_file)
-        self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
-        self._telemetry = Telemetry()
-        self._telemetry.set_tracer()
-        self._telemetry.crew_creation(self)
-        return self
 
 
 class UrlMarketingCrew:
