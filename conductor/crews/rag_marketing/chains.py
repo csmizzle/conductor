@@ -7,6 +7,7 @@ from conductor.crews.rag_marketing.prompts import report_section_prompt, section
 from conductor.crews.models import TaskRun, CrewRun
 from conductor.reports.models import SectionV2, ReportV2, ParsedReportV2
 from tqdm import tqdm
+from langsmith import traceable
 
 
 section_writer_chain = report_section_prompt | openai_gpt_4o | section_parser
@@ -48,6 +49,7 @@ def task_run_to_report_section(
     )
 
 
+@traceable
 def crew_run_to_report(
     crew_run: CrewRun,
     title: str,
