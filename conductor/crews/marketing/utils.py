@@ -4,7 +4,7 @@ from conductor.reports.prompts import create_report_prompt
 from conductor.reports.pydantic_templates import bulleted
 from conductor.reports.pydantic_templates import narrative
 from conductor.crews.models import TaskRun
-from crewai import Task
+from conductor.models import NamedTask
 import requests
 from requests.models import Response
 from redis import Redis
@@ -43,8 +43,9 @@ def write_report_prompt(
             )
 
 
-def task_to_task_run(task: Task) -> TaskRun:
+def task_to_task_run(task: NamedTask) -> TaskRun:
     return TaskRun(
+        name=task.name,
         agent_role=task.agent.role,
         description=task.description,
         result=task.output.raw_output,

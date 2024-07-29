@@ -4,7 +4,7 @@ Conductor Report Outputs
 """
 import pdfkit
 from langchain.prompts import PromptTemplate
-from conductor.reports.models import ParsedReport, Report
+from conductor.reports.models import ParsedReport, Report, ReportV2
 from conductor.llms import openai_gpt_4o
 from textwrap import dedent
 import tempfile
@@ -30,6 +30,31 @@ def report_to_html(report: Report) -> str:
         report_title=report.report.title,
         report_description=report.report.description,
         report_sections=[section.dict() for section in report.report.sections],
+    )
+    return html.unescape(output_from_parsed_template)
+
+
+def report_v2_to_html(report: ReportV2) -> str:
+    """
+    Convert a report to an HTML string
+    """
+    sources = set()
+    # create sources for the report
+    for section in report.report.sections:
+        sources.update(section.sources)
+    sorted_sources = sorted(sources)
+    # join together sentences
+    paragraphs = []
+    for section in report.report.sections:
+        for paragraph in section.paragraphs:
+            paragraphs.append(" ".join(paragraph.sentences))
+    env = Environment(loader=FileSystemLoader(os.path.join(BASEDIR, "templates")))
+    report_template = env.get_template("report_v2.html")
+    output_from_parsed_template = report_template.render(
+        report_title=report.report.title,
+        report_description=report.report.description,
+        report_sections=[section.dict() for section in report.report.sections],
+        report_sources=sorted_sources,
     )
     return html.unescape(output_from_parsed_template)
 
@@ -215,6 +240,15 @@ def report_to_pdf(report: Report, filename: str) -> bytes:
     return pdf
 
 
+def report_v2_to_pdf(report: ReportV2, filename: str) -> bytes:
+    """
+    Convert a report to a PDF
+    """
+    html = report_v2_to_html(report)
+    pdf = pdfkit.from_string(html, filename)
+    return pdf
+
+
 def report_to_pdf_binary(report: Report) -> bytes:
     """
     Convert a report to a PDF
@@ -237,4 +271,27 @@ def report_to_docx(report: Report) -> Document:
             if paragraph.title and paragraph.title != "":
                 document.add_heading(paragraph.title, level=3)
             document.add_paragraph(paragraph.content)
+    return document
+
+
+def report_v2_to_docx(report: ReportV2) -> Document:
+    """
+    Convert a report to a DOCX
+    """
+    sources = set()
+    # create sources for the report
+    for section in report.report.sections:
+        sources.update(section.sources)
+    sorted_sources = sorted(sources)
+    document = Document()
+    document.add_heading(report.report.title, level=1)
+    for section in report.report.sections:
+        document.add_heading(section.title, level=2)
+        for paragraph in section.paragraphs:
+            if paragraph.title and paragraph.title != "":
+                document.add_heading(paragraph.title, level=3)
+            document.add_paragraph(" ".join(paragraph.sentences))
+    document.add_heading("Sources", level=2)
+    for source in sorted_sources:
+        document.add_paragraph(source, style="ListBullet")
     return document
