@@ -222,7 +222,7 @@ class RagUrlMarketingCrew:
             name="Company History Search",
             agent=vector_search_agent,
             search_query="What is the history of this company?",
-            instructions="Include founding date, key events, and any notable acquisitions.",
+            instructions="Include founding date, key events, mergers and acquisitions, and any notable acquisitions.",
             context=[
                 company_determination_search_task,
                 personnel_research_results,
