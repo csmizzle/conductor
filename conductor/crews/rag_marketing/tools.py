@@ -46,11 +46,11 @@ class VectorSearchToolSchema(FixedVectorSearchToolSchema):
 
 
 class VectorMetaSearchToolSchema(FixedVectorMetaSearchToolSchema):
-    """Input for SerpSearchTool."""
+    """Input for search Elasticsearch by a single URL metadata field."""
 
     url: str = Field(
         ...,
-        description="The URL of the company to find the website in vector database.",
+        description="The URL of the company to find the website in vector database in the document metadata",
     )
 
 
@@ -187,14 +187,12 @@ class VectorSearchTool(BaseTool):
 
 class VectorSearchMetaTool(BaseTool):
     """
-    Search a vector database for relevant information.
+    Find a single document in a vector database by using a URL  to search the metadata field.
     """
 
-    name: str = (
-        "Search the vector database for relevant information using metadata fields."
-    )
+    name: str = "Find a single document in a vector database by using a URL to search the metadata field."
     description: str = (
-        "A tool that can be used to search a vector database for relevant information."
+        "A tool that can access the metadata field of a document in a vector database."
     )
     args_schema: Type[BaseModel] = VectorMetaSearchToolSchema
     url: Optional[str] = None
