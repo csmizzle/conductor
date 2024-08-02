@@ -73,6 +73,16 @@ class ReportStyle(Enum):
     )
 
 
+class ReportStyleV2(Enum):
+    """
+    Enum for report style
+    """
+
+    BULLETED = "BULLETED"
+    NARRATIVE = "NARRATIVE"
+    MIXED = "MIXED"
+
+
 class ReportTone(Enum):
     """
     Enum for report tone
@@ -119,7 +129,7 @@ class SectionV2(BaseModel):
     paragraphs: List[ParagraphV2] = Field(description="List of paragraphs")
     sources: Optional[List[str]] = Field(description="List of sources for the section")
     tone: Optional[ReportTone] = Field(description="Tone of the section")
-    style: Optional[ReportStyle] = Field(description="Style of the section")
+    style: Optional[ReportStyleV2] = Field(description="Style of the section")
     point_of_view: Optional[ReportPointOfView] = Field(
         description="Point of view of the section"
     )

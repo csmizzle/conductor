@@ -15,7 +15,7 @@ from conductor.reports.models import (
     Paragraph,
     Section,
     ParsedReport,
-    ReportStyle,
+    ReportStyleV2,
     ReportTone,
     ReportPointOfView,
     ReportV2,
@@ -30,7 +30,6 @@ from conductor.crews.rag_marketing.chains import crew_run_to_report
 from conductor.crews.models import CrewRun
 from langsmith import unit
 from docx.document import Document as DocumentObject
-import json
 
 
 def test_conductor_url_report_generator():
@@ -140,12 +139,10 @@ def test_crew_run_to_report() -> None:
         description="Evrim Insights on TRSS",
         section_titles_endswith_filter="Research",
         tone=ReportTone.INFORMAL,
-        style=ReportStyle.NARRATIVE,
+        style=ReportStyleV2.NARRATIVE,
         point_of_view=ReportPointOfView.THIRD_PERSON,
     )
     assert isinstance(report, ReportV2)
-    with open("tests/test_report.json", "w") as f:
-        json.dump(report.dict(), f, indent=4)
 
 
 def test_report_v2_to_html() -> None:

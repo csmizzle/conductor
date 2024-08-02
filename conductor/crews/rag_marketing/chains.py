@@ -2,7 +2,7 @@
 A small set of chains to augment the outputs of the Crew
 """
 from conductor.llms import openai_gpt_4o
-from conductor.reports.models import ReportStyle, ReportTone, ReportPointOfView
+from conductor.reports.models import ReportStyleV2, ReportTone, ReportPointOfView
 from conductor.crews.rag_marketing.prompts import report_section_prompt, section_parser
 from conductor.crews.models import TaskRun, CrewRun
 from conductor.reports.models import SectionV2, ReportV2, ParsedReportV2
@@ -15,7 +15,7 @@ section_writer_chain = report_section_prompt | openai_gpt_4o | section_parser
 
 def task_run_to_report_section(
     task_run: TaskRun,
-    style: ReportStyle,
+    style: ReportStyleV2,
     tone: ReportTone,
     point_of_view: ReportPointOfView,
     title: str = None,
@@ -36,10 +36,17 @@ def task_run_to_report_section(
     Returns:
         SectionV2: The converted Section Object.
     """
+    # create extended prompt for the report style based on reportstylev0
+    if style == ReportStyleV2.BULLETED:
+        style = "as bulleted lists, avoiding long paragraphs."
+    if style == ReportStyleV2.NARRATIVE:
+        style = "as long form narratives, avoiding bullet points and short sentences."
+    if style == ReportStyleV2.MIXED:
+        style = "as a mixture of long form narratives and bulleted lists when it makes sense."
     return section_writer_chain.invoke(
         dict(
             title=title if title else "",
-            style=style.value,
+            style=style,
             tone=tone.value,
             context=task_run.result,
             min_sentences=min_sentences,
@@ -54,7 +61,7 @@ def crew_run_to_report(
     crew_run: CrewRun,
     title: str,
     description: str,
-    style: ReportStyle,
+    style: ReportStyleV2,
     tone: ReportTone,
     point_of_view: ReportPointOfView,
     min_sentences: int = 3,
