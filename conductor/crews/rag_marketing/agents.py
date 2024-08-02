@@ -203,7 +203,7 @@ class MarketingRagAgents:
         """
         return Agent(
             role="Vector Search Agent",
-            goal="Find relevant information from a vector database using queries.",
+            goal="Best data from a vector database using high quality queries.",
             backstory="Expert at finding using vector search techniques. Create several queries to find the most relevant information.",
             tools=[
                 VectorSearchTool(elasticsearch=elasticsearch, index_name=index_name)

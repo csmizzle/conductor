@@ -78,12 +78,12 @@ class ReportTone(Enum):
     Enum for report tone
     """
 
-    PROFESSIONAL = "professional"
-    INFORMAL = "informal"
-    INFORMATIONAL = "informational"
-    ANALYTICAL = "analytical"
-    PERSUASIVE = "persuasive"
-    CRITICAL = "critical"
+    PROFESSIONAL = "PROFESSIONAL"
+    INFORMAL = "INFORMAL"
+    INFORMATIONAL = "INFORMATIONAL"
+    ANALYTICAL = "ANALYTICAL"
+    PERSUASIVE = "PERSUASIVE"
+    CRITICAL = "CRITICAL"
 
 
 class ReportPointOfView(Enum):
@@ -91,8 +91,8 @@ class ReportPointOfView(Enum):
     Enum for report point of view
     """
 
-    FIRST_PERSON = "first person"
-    THIRD_PERSON = "third person"
+    FIRST_PERSON = "FIRST_PERSON"
+    THIRD_PERSON = "THIRD_PERSON"
 
 
 class Paragraph(BaseModel):
