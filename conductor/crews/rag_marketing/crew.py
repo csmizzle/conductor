@@ -8,6 +8,7 @@ from conductor.crews.handlers import RedisCacheHandlerCrew
 from crewai.agents.cache.cache_handler import CacheHandler
 from conductor.llms import claude_sonnet
 from elasticsearch import Elasticsearch
+from typing import Callable
 
 
 class RagUrlMarketingCrew:
@@ -23,6 +24,7 @@ class RagUrlMarketingCrew:
         index_name: str,
         cache: bool = False,
         redis: bool = False,
+        task_callback: Callable = None,
     ) -> None:
         self.company_url = company_url
         # self.search_query = search_query
@@ -33,6 +35,7 @@ class RagUrlMarketingCrew:
             self.cache_handler = RedisCrewCacheHandler()
         else:
             self.cache_handler = CacheHandler()
+        self.task_callback = task_callback
 
     def build_team(self) -> tuple[list[Agent], list[Task]]:
         team = []
@@ -337,11 +340,13 @@ class RagUrlMarketingCrew:
                 tasks=team_tasks,
                 cache=self.cache,
                 _cache_handler=self.cache_handler,
+                task_callback=self.task_callback,
             )
         else:
             crew = Crew(
                 agents=team,
                 tasks=team_tasks,
+                task_callback=self.task_callback,
             )
         result = crew.kickoff()
         # create and return crew ru n

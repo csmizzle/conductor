@@ -2,6 +2,7 @@ from conductor.crews.rag_marketing.crew import RagUrlMarketingCrew
 from elasticsearch import Elasticsearch
 from conductor.crews.models import CrewRun
 from langsmith import traceable
+from typing import Callable
 
 
 @traceable
@@ -11,6 +12,7 @@ def run_rag_marketing_crew(
     index_name: str,
     cache: bool = False,
     redis: bool = False,
+    step_callback: Callable = None,
 ) -> CrewRun:
     """Start with a url and generate a marketing report
 
@@ -20,6 +22,7 @@ def run_rag_marketing_crew(
         index_name (str): Name of the Elasticsearch index
         cache (bool, optional): Cache the results. Defaults to False.
         redis (bool, optional): Use Redis for caching. Defaults to False.
+        step_callback ([Callable], optional): Step function callback. Defaults to None.
 
     Returns:
         CrewRun: Data about the crew run including the results.

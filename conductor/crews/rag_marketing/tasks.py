@@ -130,6 +130,7 @@ class RagMarketingTasks:
             Always use the specific company name(s), markets, or a combination of them in your search, dont refer to it as "the company" or use general search queries unless it makes sense.
             Search query: {search_query}.
             If there are additional instructions, follow them to find the most relevant information.
+            The search queries should be at least 15 words long, and should be different from each other.
             Instructions: {instructions if instructions else 'None'}.
             Include all source links in the response.
             """
@@ -155,6 +156,7 @@ class RagMarketingTasks:
             Always use the specific company name(s), markets, or a combination of them in your search, dont refer to it as "the company" or use general search queries unless it makes sense.
             Search query: {search_query}.
             Look at the search query to generate 5 other queriers that will increase the chances of finding the most relevant information.
+            The search queries should be at least 15 words long, and should be different from each other.
             If there are additional instructions, follow them to find the most relevant information.
             Instructions: {instructions if instructions else 'None'}.
             Include all source links in the response.

@@ -19,9 +19,11 @@ from conductor.crews.marketing.tools import (
 )
 from crewai_tools import ScrapeWebsiteTool
 from conductor.crews.models import CrewRun, TaskRun
+from conductor.crews.callbacks import send_task_output_to_thread
 from conductor.reports.models import ReportStyle
 from conductor.crews.rag_marketing.crew import RagUrlMarketingCrew
 from elasticsearch import Elasticsearch
+from functools import partial
 import os
 
 
@@ -235,6 +237,44 @@ def test_rag_marketing_team_with_redis_cache(elasticsearch_test_agent_index) -> 
         index_name=elasticsearch_test_agent_index,
         cache=True,
         redis=True,
+    )
+    crew_run = crew.run()
+    validate_crew_run(crew_run)
+
+
+def test_marketing_with_callback() -> None:
+    callback = partial(
+        send_task_output_to_thread,
+        os.getenv("DISCORD_BOT_TOKEN"),
+        os.getenv("DISCORD_WEBHOOK_URL"),
+        os.getenv("TEST_THREAD"),
+    )
+    crew = UrlMarketingCrew(
+        url="https://trssllc.com",
+        report_style=ReportStyle.BULLETED,
+        cache=True,
+        redis=True,
+        task_callback=callback,
+    )
+    crew_run = crew.run()
+    validate_crew_run(crew_run)
+
+
+def test_rag_marketing_with_task_callback(elasticsearch_test_agent_index) -> None:
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    callback = partial(
+        send_task_output_to_thread,
+        os.getenv("DISCORD_BOT_TOKEN"),
+        os.getenv("DISCORD_WEBHOOK_URL"),
+        os.getenv("TEST_THREAD"),
+    )
+    crew = RagUrlMarketingCrew(
+        company_url="https://trssllc.com",
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_test_agent_index,
+        task_callback=callback,
     )
     crew_run = crew.run()
     validate_crew_run(crew_run)
