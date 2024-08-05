@@ -2,8 +2,14 @@ from conductor.crews.rag_marketing.chains import (
     task_run_to_report_section,
     crew_run_to_report,
 )
-from conductor.crews.models import TaskRun, CrewRun
-from conductor.reports.models import ReportStyle, ReportTone, SectionV2, ReportV2
+from conductor.crews.models import CrewRun, TaskRun
+from conductor.reports.models import (
+    ReportStyleV2,
+    ReportTone,
+    ReportPointOfView,
+    SectionV2,
+    ReportV2,
+)
 
 
 example_data = """
@@ -60,36 +66,33 @@ However, these are very broad markets. TRSS likely occupies specialized niches w
 def test_task_run_to_report_section() -> None:
     # lengthy paragraph on background of microsoft for test
     test_task_run = TaskRun(
-        agent_role="Test Agent", description="Test Description", result=example_data
+        name="Test Task",
+        agent_role="Test Agent",
+        description="Test Description",
+        result=example_data,
+        section_name="TRSS Background",
     )
     section = task_run_to_report_section(
         task_run=test_task_run,
-        title="TRSS Background",
-        style=ReportStyle.NARRATIVE,
+        style=ReportStyleV2.NARRATIVE,
         tone=ReportTone.PROFESSIONAL,
-    )
-    assert isinstance(section, SectionV2)
-
-
-def test_task_run_to_report_section_no_title() -> None:
-    # lengthy paragraph on background of microsoft for test
-    test_task_run = TaskRun(
-        agent_role="Test Agent", description="Test Description", result=example_data
-    )
-    section = task_run_to_report_section(
-        task_run=test_task_run,
-        style=ReportStyle.NARRATIVE,
-        tone=ReportTone.PROFESSIONAL,
+        point_of_view=ReportPointOfView.FIRST_PERSON,
     )
     assert isinstance(section, SectionV2)
 
 
 def test_crew_run_to_report() -> None:
     test_task_run = TaskRun(
-        agent_role="Test Agent", description="Test Description", result=example_data
+        name="Test Task",
+        agent_role="Test Agent",
+        description="Test Description",
+        result=example_data,
     )
     test_task_run_2 = TaskRun(
-        agent_role="Test Agent", description="Test Description", result=example_data_2
+        name="Test Task 2",
+        agent_role="Test Agent",
+        description="Test Description",
+        result=example_data_2,
     )
     test_crew_run = CrewRun(
         tasks=[test_task_run, test_task_run_2], result="Test Result"
@@ -98,7 +101,8 @@ def test_crew_run_to_report() -> None:
         crew_run=test_crew_run,
         title="TRSS Report",
         description="Test Description",
-        style=ReportStyle.NARRATIVE,
+        style=ReportStyleV2.NARRATIVE,
         tone=ReportTone.PROFESSIONAL,
+        point_of_view=ReportPointOfView.FIRST_PERSON,
     )
     assert isinstance(report, ReportV2)

@@ -18,7 +18,6 @@ def task_run_to_report_section(
     style: ReportStyleV2,
     tone: ReportTone,
     point_of_view: ReportPointOfView,
-    title: str = None,
     min_sentences: int = 3,
     max_sentences: int = 5,
 ) -> SectionV2:
@@ -45,7 +44,7 @@ def task_run_to_report_section(
         style = "as a mixture of long form narratives and bulleted lists when it makes sense."
     return section_writer_chain.invoke(
         dict(
-            title=title if title else "",
+            title=task_run.section_name,
             style=style,
             tone=tone.value,
             context=task_run.result,

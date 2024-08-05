@@ -1,4 +1,5 @@
 from pydantic.v1 import BaseModel, Field
+from typing import Optional
 
 
 class TaskRun(BaseModel):
@@ -6,6 +7,9 @@ class TaskRun(BaseModel):
     agent_role: str = Field(description="The name of the agent that ran the task")
     description: str = Field(description="The description of the task that was run")
     result: str = Field(description="The result of the task run")
+    section_name: Optional[str] = Field(
+        description="The name of the section the task belongs to", default=None
+    )
 
 
 class CrewRun(BaseModel):

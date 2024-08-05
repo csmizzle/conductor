@@ -1,7 +1,7 @@
 """
 Base models for conductor
 """
-from typing import Any
+from typing import Any, Optional
 from abc import ABC, abstractmethod
 import jmespath
 from crewai.task import Task
@@ -23,3 +23,4 @@ class Context(ABC):
 
 class NamedTask(Task):
     name: str
+    section_name: Optional[str] = None

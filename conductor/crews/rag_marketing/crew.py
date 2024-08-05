@@ -150,7 +150,6 @@ class RagUrlMarketingCrew:
                 company_structure_research_task,
             ],
         )
-        # Research tasks
         # get the company history information
         company_history_research_task = tasks.company_history_research_task(
             name="Company History Research",
@@ -196,6 +195,18 @@ class RagUrlMarketingCrew:
             agent=vector_search_agent,
             search_query="What is the structure of this company? Include things like beneficial owners, subsidiaries, and parent companies.",
             context=[company_determination_search_task],
+            section_name="Company Structure",
+        )
+        # get the company history results
+        company_history_research_results = tasks.vector_multi_search_task(
+            name="Company History Search",
+            agent=vector_search_agent,
+            search_query="What is the history of this company?",
+            instructions="Include founding date, key events, mergers and acquisitions, and any notable acquisitions.",
+            context=[
+                company_determination_search_task,
+            ],
+            section_name="Company History",
         )
         # get the personnel results
         personnel_research_results = tasks.vector_multi_search_task(
@@ -206,7 +217,9 @@ class RagUrlMarketingCrew:
             context=[
                 company_determination_search_task,
                 company_structure_research_results,
+                company_history_research_results,
             ],
+            section_name="Personnel",
         )
         # get the competitors results
         competitors_research_results = tasks.vector_multi_search_task(
@@ -216,22 +229,11 @@ class RagUrlMarketingCrew:
             instructions="Include a high, medium, or low risk analysis with a short analysis for each competitor.",
             context=[
                 company_determination_search_task,
+                company_history_research_results,
                 personnel_research_results,
                 company_structure_research_results,
             ],
-        )
-        # get the company history results
-        company_history_research_results = tasks.vector_multi_search_task(
-            name="Company History Search",
-            agent=vector_search_agent,
-            search_query="What is the history of this company?",
-            instructions="Include founding date, key events, mergers and acquisitions, and any notable acquisitions.",
-            context=[
-                company_determination_search_task,
-                personnel_research_results,
-                company_structure_research_results,
-                competitors_research_results,
-            ],
+            section_name="Competitors",
         )
         # get the pricing results
         pricing_research_results = tasks.vector_multi_search_task(
@@ -246,6 +248,7 @@ class RagUrlMarketingCrew:
                 competitors_research_results,
                 company_history_research_results,
             ],
+            section_name="Pricing",
         )
         # get the recent events results
         recent_events_research_results = tasks.vector_multi_search_task(
@@ -260,6 +263,7 @@ class RagUrlMarketingCrew:
                 company_history_research_results,
                 pricing_research_results,
             ],
+            section_name="Recent Events",
         )
         # get the products and services results
         products_services_research_results = tasks.vector_multi_search_task(
@@ -275,6 +279,7 @@ class RagUrlMarketingCrew:
                 pricing_research_results,
                 recent_events_research_results,
             ],
+            section_name="Products and Services",
         )
         # get the market results
         market_research_results = tasks.vector_multi_search_task(
@@ -291,6 +296,7 @@ class RagUrlMarketingCrew:
                 recent_events_research_results,
                 products_services_research_results,
             ],
+            section_name="Market Analysis",
         )
         # get the swot results from vector search
         swot_research_results = tasks.vector_multi_search_task(
@@ -308,6 +314,7 @@ class RagUrlMarketingCrew:
                 products_services_research_results,
                 market_research_results,
             ],
+            section_name="SWOT Analysis",
         )
         # get the swot company information
         team_tasks.append(url_collection_task)

@@ -11,7 +11,7 @@ from conductor.models import NamedTask
 
 class RagMarketingTasks:
     def url_collection_task(
-        self, name: str, agent: Agent, company_url: str
+        self, name: str, agent: Agent, company_url: str, section_name: str = None
     ) -> NamedTask:
         return NamedTask(
             name=name,
@@ -24,10 +24,11 @@ class RagMarketingTasks:
             ),
             agent=agent,
             expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
+            section_name=section_name,
         )
 
     def vector_metadata_search_task(
-        self, name: str, agent: Agent, url: str
+        self, name: str, agent: Agent, url: str, section_name: str = None
     ) -> NamedTask:
         return NamedTask(
             name=name,
@@ -40,10 +41,15 @@ class RagMarketingTasks:
             ),
             agent=agent,
             expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
+            section_name=section_name,
         )
 
     def swot_research_task(
-        self, name: str, agent: Agent, context: list[Task] = None
+        self,
+        name: str,
+        agent: Agent,
+        context: list[Task] = None,
+        section_name: str = None,
     ) -> NamedTask:
         return NamedTask(
             name=name,
@@ -58,10 +64,15 @@ class RagMarketingTasks:
             agent=agent,
             expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
             context=context,
+            section_name=section_name,
         )
 
     def company_structure_research_task(
-        self, name: str, agent: Agent, context: list[Task] = None
+        self,
+        name: str,
+        agent: Agent,
+        context: list[Task] = None,
+        section_name: str = None,
     ) -> NamedTask:
         return NamedTask(
             name=name,
@@ -76,10 +87,15 @@ class RagMarketingTasks:
             agent=agent,
             expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
             context=context,
+            section_name=section_name,
         )
 
     def personnel_research_task(
-        self, name: str, agent: Agent, context: list[Task] = None
+        self,
+        name: str,
+        agent: Agent,
+        context: list[Task] = None,
+        section_name: str = None,
     ) -> NamedTask:
         return NamedTask(
             name=name,
@@ -94,10 +110,15 @@ class RagMarketingTasks:
             agent=agent,
             expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
             context=context,
+            section_name=section_name,
         )
 
     def competitor_research_task(
-        self, name: str, agent: Agent, context: list[Task] = None
+        self,
+        name: str,
+        agent: Agent,
+        context: list[Task] = None,
+        section_name: str = None,
     ) -> NamedTask:
         return NamedTask(
             name=name,
@@ -112,6 +133,7 @@ class RagMarketingTasks:
             agent=agent,
             expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
             context=context,
+            section_name=section_name,
         )
 
     def vector_search_task(
@@ -121,6 +143,7 @@ class RagMarketingTasks:
         search_query: str,
         context: list[Task] = None,
         instructions: str = None,
+        section_name: str = None,
     ) -> NamedTask:
         return NamedTask(
             name=name,
@@ -138,6 +161,7 @@ class RagMarketingTasks:
             agent=agent,
             expected_output="A comprehensive answer to the search query.",
             context=context,
+            section_name=section_name,
         )
 
     def vector_multi_search_task(
@@ -147,6 +171,7 @@ class RagMarketingTasks:
         search_query: str,
         context: list[Task],
         instructions: str = None,
+        section_name: str = None,
     ) -> NamedTask:
         return NamedTask(
             name=name,
@@ -165,10 +190,15 @@ class RagMarketingTasks:
             agent=agent,
             expected_output="A comprehensive answer to the search query.",
             context=context,
+            section_name=section_name,
         )
 
     def company_history_research_task(
-        self, name: str, agent: Agent, context: list[Task] = None
+        self,
+        name: str,
+        agent: Agent,
+        context: list[Task] = None,
+        section_name: str = None,
     ) -> NamedTask:
         return NamedTask(
             name=name,
@@ -183,10 +213,15 @@ class RagMarketingTasks:
             agent=agent,
             expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
             context=context,
+            section_name=section_name,
         )
 
     def pricing_research_task(
-        self, name: str, agent: Agent, context: list[Task] = None
+        self,
+        name: str,
+        agent: Agent,
+        context: list[Task] = None,
+        section_name: str = None,
     ) -> NamedTask:
         return NamedTask(
             name=name,
@@ -201,10 +236,15 @@ class RagMarketingTasks:
             agent=agent,
             expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
             context=context,
+            section_name=section_name,
         )
 
     def recent_events_research_task(
-        self, name: str, agent: Agent, context: list[Task] = None
+        self,
+        name: str,
+        agent: Agent,
+        context: list[Task] = None,
+        section_name: str = None,
     ) -> NamedTask:
         return NamedTask(
             name=name,
@@ -219,10 +259,15 @@ class RagMarketingTasks:
             agent=agent,
             expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
             context=context,
+            section_name=section_name,
         )
 
     def products_and_services_research_task(
-        self, name: str, agent: Agent, context: list[Task] = None
+        self,
+        name: str,
+        agent: Agent,
+        context: list[Task] = None,
+        section_name: str = None,
     ) -> NamedTask:
         return NamedTask(
             name=name,
@@ -240,7 +285,11 @@ class RagMarketingTasks:
         )
 
     def market_analysis_research_task(
-        self, name: str, agent: Agent, context: list[Task] = None
+        self,
+        name: str,
+        agent: Agent,
+        context: list[Task] = None,
+        section_name: str = None,
     ) -> NamedTask:
         return NamedTask(
             name=name,
@@ -255,6 +304,7 @@ class RagMarketingTasks:
             agent=agent,
             expected_output="Confirmation that the data has been collected and ingested into the vector database or already exists.",
             context=context,
+            section_name=section_name,
         )
 
     def company_report_task(
@@ -264,6 +314,7 @@ class RagMarketingTasks:
         context: list[Task],
         report_style: ReportStyle,
         key_questions: list[str] = None,
+        section_name: str = None,
     ) -> NamedTask:
         return NamedTask(
             name=name,
@@ -274,4 +325,5 @@ class RagMarketingTasks:
             agent=agent,
             context=context,
             expected_output="Comprehensive report on the company with the sections overview, swot analysis, and competitors.",
+            section_name=section_name,
         )

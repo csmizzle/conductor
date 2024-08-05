@@ -49,6 +49,7 @@ def task_to_task_run(task: NamedTask) -> TaskRun:
         agent_role=task.agent.role,
         description=task.description,
         result=task.output.raw_output,
+        section_name=task.section_name,
     )
 
 
