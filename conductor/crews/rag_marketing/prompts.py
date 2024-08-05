@@ -17,7 +17,6 @@ Be creative when beginning and ending paragraphs, avoid repetitive phrases such 
 Title:
 <title>
 {title}
-If no title is provided, generate a title based on the context.
 </title>
 
 Style:
