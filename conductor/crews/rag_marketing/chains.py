@@ -20,6 +20,7 @@ def task_run_to_report_section(
     point_of_view: ReportPointOfView,
     min_sentences: int = 3,
     max_sentences: int = 5,
+    previous_sections: list[str] = None,
 ) -> SectionV2:
     """
     Converts a TaskRun object into a ReportSection object.
@@ -51,6 +52,7 @@ def task_run_to_report_section(
             min_sentences=min_sentences,
             max_sentences=max_sentences,
             point_of_view=point_of_view.value,
+            previous_sections=previous_sections,
         )
     )
 
@@ -89,6 +91,7 @@ def crew_run_to_report(
     # set to star as default, hopefully this is a very rare occasion that a task name ends with *
     if not section_titles_endswith_filter:
         section_titles_endswith_filter = "*"
+    previous_sections = []
     raw_sections = []
     sections = []
     for task_run in tqdm(crew_run.tasks):
@@ -102,7 +105,16 @@ def crew_run_to_report(
                 min_sentences=min_sentences,
                 max_sentences=max_sentences,
                 point_of_view=point_of_view,
+                previous_sections="\n".join(previous_sections),
             )
+            # create previous section context
+            previous_section = ""
+            previous_section += section.title + "\n"
+            for paragraph in section.paragraphs:
+                previous_section += " ".join(paragraph.sentences) + "\n"
+            # append previous section to list
+            previous_sections.append(previous_section)
+            # collect new section and raw section
             sections.append(section)
             raw_sections.append(task_run.result)
         else:
