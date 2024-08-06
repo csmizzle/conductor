@@ -78,10 +78,7 @@ def send_webhook_to_thread_sync(
     Returns:
         None: This function does not return any value.
     """
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
+    loop = asyncio.get_event_loop()
     if loop.is_closed():
         loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
