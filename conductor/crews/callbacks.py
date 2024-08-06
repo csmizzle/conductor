@@ -81,7 +81,7 @@ def send_webhook_to_thread_sync(
     loop = asyncio.get_event_loop()
     if loop.is_closed():
         loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+        asyncio.set_event_loop(loop)
     sent_webhook = loop.run_until_complete(
         send_webhook_to_thread(
             token=token,
