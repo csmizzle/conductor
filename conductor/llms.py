@@ -21,3 +21,4 @@ claude_haiku = BedrockChat(
     model_kwargs={"max_tokens": 10000},
 )
 openai_gpt_4o = ChatOpenAI(temperature=0, max_tokens=4000, model="gpt-4o")
+gpt_4o_mini = ChatOpenAI(temperature=0, max_tokens=4000, model="gpt-4o-mini")
