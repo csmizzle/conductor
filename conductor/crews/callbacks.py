@@ -7,9 +7,10 @@ from discord import Webhook
 from discord.utils import MISSING
 from typing import Any
 from discord.file import File
-import asyncio
+from requests.models import Response
 import discord
 from crewai.task import TaskOutput
+from discord_webhook import DiscordWebhook
 
 intents = discord.Intents.default()
 intents.guilds = True  # Ensure GUILDS intent is enabled
@@ -43,16 +44,15 @@ async def send_webhook_to_thread(
     """
     await client.login(token=token)
     thread = await client.fetch_channel(thread_id)
-    session = ClientSession()
-    webhook = Webhook.from_url(url=webhook_url, session=session)
-    # omit file if not provided
-    await webhook.send(
-        thread=thread,
-        content=content,
-        username=username,
-        file=file if file else MISSING,
-    )
-    await session.close()
+    async with ClientSession() as session:
+        webhook = Webhook.from_url(url=webhook_url, session=session)
+        # omit file if not provided
+        await webhook.send(
+            thread=thread,
+            content=content,
+            username=username,
+            file=file if file else MISSING,
+        )
     return True
 
 
@@ -62,8 +62,9 @@ def send_webhook_to_thread_sync(
     thread_id: str,
     content: str,
     username: str,
-    file: File = None,
-) -> None:
+    file: str = None,
+    filename: str = None,
+) -> Response | DiscordWebhook:
     """
     Send task output to discord thread synchronously.
 
@@ -78,21 +79,39 @@ def send_webhook_to_thread_sync(
     Returns:
         None: This function does not return any value.
     """
-    loop = asyncio.get_event_loop()
-    if loop.is_closed():
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    sent_webhook = loop.run_until_complete(
-        send_webhook_to_thread(
-            token=token,
-            webhook_url=webhook_url,
-            thread_id=thread_id,
-            content=content,
-            username=username,
-            file=file,
-        )
-    )
-    return sent_webhook
+    # try:
+    #     loop = asyncio.get_event_loop()
+    # except RuntimeError:
+    #     loop = asyncio.new_event_loop()
+    #     asyncio.set_event_loop(loop)
+    # if loop.is_closed():
+    #     loop = asyncio.new_event_loop()
+    #     asyncio.set_event_loop(loop)
+    # sent_webhook = asyncio.run(
+    #     send_webhook_to_thread(
+    #         token=token,
+    #         webhook_url=webhook_url,
+    #         thread_id=thread_id,
+    #         content=content,
+    #         username=username,
+    #         file=file,
+    #     )
+    # )
+    if not file:
+        webhook = DiscordWebhook(
+            url=webhook_url, content=content, username=username, thread_id=thread_id
+        ).execute()
+    else:
+        with open(file, "rb") as file_:
+            webhook = DiscordWebhook(
+                url=webhook_url,
+                content=content,
+                username=username,
+                thread_id=thread_id,
+            )
+            webhook.add_file(file=file_, filename=filename)
+            webhook.execute()
+    return webhook
 
 
 def send_task_output_to_thread(

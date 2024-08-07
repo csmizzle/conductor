@@ -6,7 +6,7 @@ from conductor.crews.callbacks import (
     send_task_output_to_thread,
 )
 from crewai.tasks.task_output import TaskOutput
-from discord.file import File
+from discord_webhook import DiscordWebhook
 from functools import partial
 import os
 
@@ -81,10 +81,11 @@ def test_send_file_to_thread() -> None:
         token=DISCORD_BOT_TOKEN,
         thread_id=TEST_THREAD,
         content="Hello for the Test Suite! With a file this time!",
-        file=File(TEST_REPORT),
+        file=TEST_REPORT,
+        filename="test_report.pdf",
         username="Test Team",
     )
-    assert sent_message is True
+    assert isinstance(sent_message, DiscordWebhook)
 
 
 def test_send_no_file_to_thread() -> None:
@@ -92,11 +93,11 @@ def test_send_no_file_to_thread() -> None:
         webhook_url=DISCORD_WEBHOOK_URL,
         token=DISCORD_BOT_TOKEN,
         thread_id=TEST_THREAD,
-        content="Hello for the Test Suite! With a file this time!",
+        content="Hello for the Test Suite! Without a file this time!",
         file=None,
         username="Test Team",
     )
-    assert sent_message is True
+    assert sent_message.ok
 
 
 def test_partial_task_to_thread() -> None:
