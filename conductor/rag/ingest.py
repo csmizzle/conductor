@@ -1,11 +1,38 @@
 """
 Ingest of raw data into Pydantic model
 """
+import asyncio
 from conductor.rag.models import WebPage
 from bs4 import BeautifulSoup
 import requests
+from time import sleep
 from datetime import datetime
+from pyppeteer import launch
 from conductor.rag.client import ElasticsearchRetrieverClient
+
+
+def fetch_webpage_screenshot(url: str, screenshot_path: str, **kwargs) -> str:
+    """
+    Fetch the content of a webpage using pyppeteer synchronously.
+    """
+
+    async def get_content():
+        browser = await launch(headless=True)
+        page = await browser.newPage()
+        page.setUserAgent(
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.80 Safari/537.36"
+        )
+        await page.goto(url)
+        sleep(5)
+        content = await page.content()
+        # full_height = await page.evaluate('document.body.scrollHeight')
+        # # Set the viewport height to the full height of the page
+        await page.setViewport({"width": 1280})
+        await page.screenshot({"path": screenshot_path})
+        await browser.close()
+        return content
+
+    return asyncio.run(get_content())
 
 
 def ingest_webpage(url: str, **kwargs) -> WebPage:
