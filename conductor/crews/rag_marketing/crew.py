@@ -6,7 +6,7 @@ from conductor.crews.models import CrewRun
 from conductor.crews.cache import RedisCrewCacheHandler
 from conductor.crews.handlers import RedisCacheHandlerCrew
 from crewai.agents.cache.cache_handler import CacheHandler
-from conductor.llms import gpt_4o_mini, claude_sonnet
+from conductor.llms import openai_gpt_4o, claude_sonnet
 from elasticsearch import Elasticsearch
 from typing import Callable
 
@@ -45,7 +45,7 @@ class RagUrlMarketingCrew:
         data_collection_agent = agents.data_collection_agent(
             elasticsearch=self.elasticsearch,
             index_name=self.index_name,
-            llm=gpt_4o_mini,
+            llm=openai_gpt_4o,
         )
         vector_search_agent = agents.vector_search_agent(
             elasticsearch=self.elasticsearch,
@@ -61,47 +61,47 @@ class RagUrlMarketingCrew:
         company_structure_research_agent = agents.company_structure_research_agent(
             elasticsearch=self.elasticsearch,
             index_name=self.index_name,
-            llm=gpt_4o_mini,
+            llm=openai_gpt_4o,
         )
         personnel_research_agent = agents.personnel_research_agent(
             elasticsearch=self.elasticsearch,
             index_name=self.index_name,
-            llm=gpt_4o_mini,
+            llm=openai_gpt_4o,
         )
         swot_research_agent = agents.swot_research_agent(
             elasticsearch=self.elasticsearch,
             index_name=self.index_name,
-            llm=gpt_4o_mini,
+            llm=openai_gpt_4o,
         )
         competitors_research_agent = agents.competitor_research_agent(
             elasticsearch=self.elasticsearch,
             index_name=self.index_name,
-            llm=gpt_4o_mini,
+            llm=openai_gpt_4o,
         )
         company_history_research_agent = agents.company_history_research_agent(
             elasticsearch=self.elasticsearch,
             index_name=self.index_name,
-            llm=gpt_4o_mini,
+            llm=openai_gpt_4o,
         )
         pricing_research_agent = agents.pricing_research_agent(
             elasticsearch=self.elasticsearch,
             index_name=self.index_name,
-            llm=gpt_4o_mini,
+            llm=openai_gpt_4o,
         )
         recent_events_research_agent = agents.recent_events_research_agent(
             elasticsearch=self.elasticsearch,
             index_name=self.index_name,
-            llm=gpt_4o_mini,
+            llm=openai_gpt_4o,
         )
         products_services_research_agent = agents.product_and_services_research_agent(
             elasticsearch=self.elasticsearch,
             index_name=self.index_name,
-            llm=gpt_4o_mini,
+            llm=openai_gpt_4o,
         )
         market_research_agent = agents.market_research_agent(
             elasticsearch=self.elasticsearch,
             index_name=self.index_name,
-            llm=gpt_4o_mini,
+            llm=openai_gpt_4o,
         )
 
         team.append(data_collection_agent)
