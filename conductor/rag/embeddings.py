@@ -1,7 +1,7 @@
 """
 Setup Bedrock embeddings for RAG model.
 """
-from langchain_community.embeddings.bedrock import BedrockEmbeddings
+from langchain_aws import BedrockEmbeddings
 
 
 bedrock_embeddings = BedrockEmbeddings()
