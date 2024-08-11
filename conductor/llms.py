@@ -2,10 +2,17 @@
 Implementation of the LLM services
 """
 from langchain_openai.chat_models import ChatOpenAI
+from langchain_core.rate_limiters import InMemoryRateLimiter
 from langchain_aws import ChatBedrock
 from botocore.config import Config
 import boto3
 
+# configure rate_limiter for Bedrock Clade Sonnet
+rate_limiter = InMemoryRateLimiter(
+    requests_per_second=8,
+    check_every_n_seconds=0.1,
+    max_bucket_size=10,
+)
 
 bedrock_config = Config(
     retries={
@@ -18,6 +25,7 @@ claude_sonnet = ChatBedrock(
     client=bedrock_runtime,
     model_id="anthropic.claude-3-sonnet-20240229-v1:0",
     model_kwargs={"max_tokens": 5000},
+    rate_limiter=rate_limiter,
 )
 claude_haiku = ChatBedrock(
     client=bedrock_runtime,
