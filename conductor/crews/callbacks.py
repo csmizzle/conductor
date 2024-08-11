@@ -135,8 +135,8 @@ def send_task_output_to_thread(
     """
     # break the content into 2000 character chunks and send them
     sent_content_chunks = []
-    for i in range(0, len(task_output.raw_output), 2000):
-        content_chunk = task_output.raw_output[i : i + 2000]
+    for i in range(0, len(task_output.raw), 2000):
+        content_chunk = task_output.raw[i : i + 2000]
         sent_message = send_webhook_to_thread_sync(
             token=token,
             webhook_url=webhook_url,
