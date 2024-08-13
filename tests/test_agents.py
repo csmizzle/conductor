@@ -219,7 +219,7 @@ def test_rag_marketing_team_with_output(elasticsearch_test_agent_index) -> None:
         hosts=[os.getenv("ELASTICSEARCH_URL")],
     )
     crew = RagUrlMarketingCrew(
-        company_url="https://www.bardeen.ai/",
+        company_url="https://www.whistlelake.io/",
         elasticsearch=elasticsearch,
         index_name=elasticsearch_test_agent_index,
     )

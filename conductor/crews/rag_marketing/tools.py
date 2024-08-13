@@ -73,7 +73,7 @@ def ingest(
 
 # parallelized ingest function
 def parallel_ingest(urls, client, headers=None, cookies=None):
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=5) as executor:
         futures = {
             executor.submit(ingest, client, url, headers, cookies): url for url in urls
         }
