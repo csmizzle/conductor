@@ -10,6 +10,8 @@ from langchain_core.embeddings import Embeddings
 from langchain_elasticsearch import ElasticsearchStore
 from langchain_core.documents import Document
 from conductor.rag.models import WebPage
+from zenrows import ZenRowsClient
+import os
 
 
 class ElasticsearchRetrieverClient:
@@ -92,3 +94,9 @@ class ElasticsearchRetrieverClient:
             index=self.index_name,
             body={"query": {"term": {"metadata.url.keyword": {"value": url}}}},
         )
+
+
+# zen rows client
+zenrows_client = ZenRowsClient(
+    apikey=os.getenv("ZENROWS_API_KEY"), retries=5, concurrency=1
+)

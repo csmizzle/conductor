@@ -5,8 +5,7 @@ from conductor.rag.models import WebPage
 from bs4 import BeautifulSoup
 from datetime import datetime
 from conductor.rag.client import ElasticsearchRetrieverClient
-from zenrows import ZenRowsClient
-import os
+from conductor.rag.client import zenrows_client
 
 
 def ingest_webpage(url: str, limit: int = 50000, **kwargs) -> WebPage:
@@ -19,19 +18,11 @@ def ingest_webpage(url: str, limit: int = 50000, **kwargs) -> WebPage:
         # handle pdfs by passing for now
         if not url.endswith("pdf"):
             # use zenrows to get the text from the webpage
-            client = ZenRowsClient(
-                apikey=os.getenv("ZENROWS_API_KEY"), retries=5, concurrency=1
+            params = dict(
+                js_render="true",
+                premium_proxy="true",
             )
-            if "linkedin" in url:
-                params = dict(
-                    js_render="true",
-                    premium_proxy="true",
-                )
-            else:
-                params = dict(
-                    js_render="true",
-                )
-            response = client.get(
+            response = zenrows_client.get(
                 url,
                 params=params,
             )
