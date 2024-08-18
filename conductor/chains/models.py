@@ -84,3 +84,18 @@ class Timeline(BaseModel):
     """
 
     events: List[TimelineEvent] = Field(..., description="The events in the timeline")
+
+
+# Image processing
+class ImageDescription(BaseModel):
+    """
+    Image description model
+    """
+
+    description: str = Field(..., description="The description of the image")
+    metadata: Optional[str] = Field(
+        ..., description="The metadata provided with the image"
+    )
+    answer: str = Field(
+        ..., description="The answer combining the description and metadata"
+    )
