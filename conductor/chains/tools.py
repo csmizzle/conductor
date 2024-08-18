@@ -13,6 +13,7 @@ def image_search(query: str, api_key: str) -> dict:
     """
     search = GoogleSearch(
         {
+            "engine": "google_images",
             "q": query,
             "api_key": api_key,
         }
