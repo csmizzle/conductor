@@ -9,7 +9,7 @@ from elasticsearch import Elasticsearch
 from langchain_core.embeddings import Embeddings
 from langchain_elasticsearch import ElasticsearchStore
 from langchain_core.documents import Document
-from conductor.rag.models import WebPage
+from conductor.rag.models import WebPage, SourcedImageDescription
 from zenrows import ZenRowsClient
 import os
 
@@ -34,6 +34,18 @@ class ElasticsearchRetrieverClient:
         )
         self.index_name = index_name
 
+    def create_image_document(self, image: SourcedImageDescription) -> Document:
+        return Document(
+            page_content=image.image_description.answer,
+            metadata={
+                "url": image.source,
+                "created_at": image.created_at,
+                "path": image.path,
+                "image_metadata": image.image_description.metadata,
+                "description": image.image_description.description,
+            },
+        )
+
     def create_webpage_document(self, webpage: WebPage) -> Document:
         """
         Ingest webpage document into Elasticsearch
@@ -47,12 +59,6 @@ class ElasticsearchRetrieverClient:
             },
         )
 
-    def create_webpage_documents(self, webpages: list[WebPage]) -> list[Document]:
-        """
-        Ingest multiple webpage documents into Elasticsearch
-        """
-        return [self.create_webpage_document(webpage) for webpage in webpages]
-
     def create_insert_webpage_document(self, webpage: WebPage) -> list[str]:
         """
         Insert webpage document into Elasticsearch
@@ -64,7 +70,23 @@ class ElasticsearchRetrieverClient:
         """
         Insert multiple webpage documents into Elasticsearch
         """
-        documents = self.create_webpage_documents(webpages)
+        documents = [self.create_webpage_document(webpage) for webpage in webpages]
+        return self.store.add_documents(documents=documents)
+
+    def create_insert_image_document(self, image: SourcedImageDescription) -> list[str]:
+        """
+        Insert image document into Elasticsearch
+        """
+        document = self.create_image_document(image)
+        return self.store.add_documents(documents=[document])
+
+    def create_insert_image_documents(
+        self, images: list[SourcedImageDescription]
+    ) -> None:
+        """
+        Insert multiple image documents into Elasticsearch
+        """
+        documents = [self.create_image_document(image) for image in images]
         return self.store.add_documents(documents=documents)
 
     def delete_document(self, document_id: str) -> None:
@@ -85,9 +107,9 @@ class ElasticsearchRetrieverClient:
         """
         return self.store.similarity_search(query=query)
 
-    def find_webpage_by_url(self, url: str) -> dict:
+    def find_document_by_url(self, url: str) -> dict:
         """
-        Find webpage by URL
+        Find document by URL
         """
         # elasticsearch query looking at metadata field url for exact match
         return self.elasticsearch.search(

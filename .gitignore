@@ -11,3 +11,4 @@ tests/cassettes
 *.pdf
 logs
 tests/*.txt
+/images

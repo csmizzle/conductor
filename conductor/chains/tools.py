@@ -68,8 +68,12 @@ class ImageProcessor:
     def from_url(
         cls, image_url: str, model: BaseChatModel, metadata: str = None
     ) -> "ImageProcessor":
-        image_content = zenrows_client.get(image_url).content
-        return cls(image_content=image_content, model=model, metadata=metadata)
+        response = zenrows_client.get(image_url)
+        if not response.ok:
+            response.raise_for_status()
+        else:
+            image_content = response.content
+            return cls(image_content=image_content, model=model, metadata=metadata)
 
     def describe(self) -> ImageDescription:
         """Describe images from base64 encoded image.
@@ -112,3 +116,13 @@ class ImageProcessor:
         )
         response = self.model.invoke([message])
         return self.parser.parse(text=response.content)
+
+    def save_image(self, save_path: str) -> bool:
+        """Save image to disk.
+
+        Args:
+            save_path (str): path to save image
+        """
+        with open(save_path, "wb") as f:
+            f.write(self.image_content)
+            return True

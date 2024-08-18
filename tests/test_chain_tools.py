@@ -3,6 +3,8 @@ from conductor.chains.models import ImageDescription
 from conductor.llms import claude_sonnet, openai_gpt_4o
 from tests.constants import BASEDIR
 import os
+import pytest
+from requests.exceptions import HTTPError
 
 
 def test_image_search() -> None:
@@ -42,3 +44,24 @@ def test_describe_person_image_from_url() -> None:
     )
     response = processor.describe()
     assert isinstance(response, ImageDescription)
+
+
+def test_http_error() -> None:
+    with pytest.raises(HTTPError):
+        image_url = "sdfjaskldfh kalsjhflkasjfdh"
+        ImageProcessor.from_url(
+            image_url=image_url,
+            model=claude_sonnet,
+            metadata="Minimal Logo Design Inspiration: Palantir | DesignRush",
+        )
+
+
+def test_save_image_from_url() -> None:
+    image_url = "https://assets.weforum.org/sf_account/image/-T6sEZZYrPjKBFqgJR9nhnbLpKoafHG__y0ZlbMJaU8.jpg"
+    processor = ImageProcessor.from_url(
+        image_url=image_url,
+        model=openai_gpt_4o,
+        metadata="alex karp palantir founder us | Alex Karp | World Economic Forum",
+    )
+    saved_image = processor.save_image("./test_image.jpg")
+    assert saved_image

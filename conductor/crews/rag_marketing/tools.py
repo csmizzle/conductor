@@ -61,7 +61,7 @@ def ingest(
     cookies: dict = None,
 ):
     print(f"Ingesting data for {url} ...")
-    existing_document = client.find_webpage_by_url(url=url)
+    existing_document = client.find_document_by_url(url=url)
     if existing_document["hits"]["total"]["value"] > 0:
         return "Document already exists in the vector database"
     else:
@@ -221,7 +221,7 @@ class VectorSearchMetaTool(BaseTool):
         **kwargs: Any,
     ) -> Any:
         url = kwargs.get("url", self.url)
-        data = self._vector_database.find_webpage_by_url(url=url)
+        data = self._vector_database.find_document_by_url(url=url)
         # return the text of the first document
         return get_content_and_source_from_response(data)
 

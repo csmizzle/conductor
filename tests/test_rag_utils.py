@@ -49,6 +49,6 @@ def test_get_content_and_source_from_response(elasticsearch_test_index) -> None:
     }
     url = "https://trssllc.com"
     url_to_db(url, client, headers=headers)
-    result = client.find_webpage_by_url(url=url)
+    result = client.find_document_by_url(url=url)
     data_with_source = get_content_and_source_from_response(result)
     assert isinstance(data_with_source, str)
