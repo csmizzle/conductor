@@ -10,7 +10,7 @@ from conductor.chains.models import ImageDescription
 image_description_parser = PydanticOutputParser(pydantic_object=ImageDescription)
 
 
-def image_search(self, query: str, api_key: str) -> dict:
+def image_search(query: str, api_key: str) -> dict:
     """Search for images using SerpApi.
 
     Args:

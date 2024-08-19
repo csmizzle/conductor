@@ -63,3 +63,7 @@ REPORT_JSON = json.load(open(os.path.join(BASEDIR, "data", "json_report.json")))
 REPORT_V2_JSON = json.load(open(os.path.join(BASEDIR, "data", "test_report_v2.json")))
 ### CREW RUN
 CREW_RUN = json.load(open(os.path.join(BASEDIR, "data", "test_crew_run.json")))
+### Graph
+GRAPH_JSON = json.load(
+    open(os.path.join(BASEDIR, "data", "test_extract_graph_from_report.json"))
+)

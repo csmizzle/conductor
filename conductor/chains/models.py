@@ -31,6 +31,9 @@ class Entity(BaseModel):
     type: EntityType = Field(..., description="The type of the entity")
     reason: str = Field(..., description="The reason for the entity label")
 
+    class Config:
+        use_enum_values = True
+
 
 class Relationship(BaseModel):
     """
@@ -44,6 +47,9 @@ class Relationship(BaseModel):
         ...,
         description="The reasoning for the relationship between the source and target entities",
     )
+
+    class Config:
+        use_enum_values = True
 
 
 class Graph(BaseModel):
