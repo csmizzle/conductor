@@ -1,6 +1,11 @@
 from conductor.crews.rag_marketing.chains import (
     task_run_to_report_section,
     crew_run_to_report,
+    extract_graph_from_report,
+    extract_timeline_from_report,
+    Graph,
+    Timeline,
+    ReportV2,
 )
 from conductor.crews.models import CrewRun, TaskRun
 from conductor.reports.models import (
@@ -8,8 +13,8 @@ from conductor.reports.models import (
     ReportTone,
     ReportPointOfView,
     SectionV2,
-    ReportV2,
 )
+from tests.constants import REPORT_V2_JSON
 
 
 example_data = """
@@ -106,3 +111,19 @@ def test_crew_run_to_report() -> None:
         point_of_view=ReportPointOfView.FIRST_PERSON,
     )
     assert isinstance(report, ReportV2)
+
+
+def test_extract_graph_from_report() -> None:
+    report = ReportV2.parse_obj(REPORT_V2_JSON)
+    graph = extract_graph_from_report(
+        report, sections_filter=["Company Structure", "Personnel"]
+    )
+    assert isinstance(graph, Graph)
+
+
+def test_extract_timeline_from_report() -> None:
+    report = ReportV2.parse_obj(REPORT_V2_JSON)
+    timeline = extract_timeline_from_report(
+        report, sections_filter=["Company History", "Recent Events"]
+    )
+    assert isinstance(timeline, Timeline)

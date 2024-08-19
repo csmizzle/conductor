@@ -13,7 +13,8 @@ Your goal is to extract entities and relationships from a given text and create 
 First, evaluate the entity types and relationship types you can extract.
 Second, evaluate the provided text and extract entities.
 Third, evaluate the provided text and extract relationships between the entities you extracted.
-For each entity, provide a reason for why you think the entity is of that type.
+Fourth, deduplicate the entities and relationships you extracted.
+For each entity, provide a reason for why you think the entity is of that type and provide the other names provided if there was any deduplication.
 For each relationship, provide a reason for why you think the relationship exists.
 Finally, return the extracted entities and relationships in the provided JSON format.
 

@@ -6,6 +6,7 @@ from conductor.reports.models import ReportStyleV2, ReportTone, ReportPointOfVie
 from conductor.crews.rag_marketing.prompts import report_section_prompt, section_parser
 from conductor.crews.models import TaskRun, CrewRun
 from conductor.reports.models import SectionV2, ReportV2, ParsedReportV2
+from conductor.chains import run_set_graph_chain, run_timeline_chain, Graph, Timeline
 from tqdm import tqdm
 from langsmith import traceable
 
@@ -123,3 +124,121 @@ def crew_run_to_report(
         title=title, description=description, sections=sections
     )
     return ReportV2(report=parsed_report, raw=raw_sections)
+
+
+# graph extraction
+def extract_graph_from_task(
+    task: TaskRun,
+) -> Graph:
+    """
+    Extracts a graph from a given task.
+
+    Args:
+        task (TaskRun): The task to extract the graph from.
+
+    Returns:
+        Graph: The extracted graph.
+    """
+    return run_set_graph_chain(task.result)
+
+
+def extract_graph_from_crew_run(
+    crew_run: CrewRun,
+    sections_filter: list[str] = None,
+) -> Graph:
+    """
+    Extracts a graph from a given crew run.
+
+    Args:
+        crew_run (CrewRun): The crew run to extract the graph from.
+        sections_filter (list[str]): The sections to extract the graph from. If None, all sections are extracted.
+    Returns:
+        Graph: The extracted graph.
+    """
+    text = ""
+    for task in crew_run.tasks:
+        if sections_filter:
+            if task.name in sections_filter:
+                text += task.result + "\n"
+    return run_set_graph_chain(text=text)
+
+
+def extract_graph_from_report(
+    report: ReportV2,
+    sections_filter: list[str] = None,
+) -> Graph:
+    """
+    Extracts a graph from a given report.
+
+    Args:
+        report (ReportV2): The report to extract the graph from.
+        sections_filter (list[str]): The sections to extract the graph from. If None, all sections are extracted.
+    Returns:
+        Graph: The extracted graph.
+    """
+    text = ""
+    for section in report.report.sections:
+        if sections_filter:
+            if section.title in sections_filter:
+                for paragraph in section.paragraphs:
+                    text += " ".join(paragraph.sentences) + "\n"
+    return run_set_graph_chain(text=text)
+
+
+# timeline extraction
+def extract_timeline_from_task(
+    task: TaskRun,
+) -> Timeline:
+    """
+    Extracts a timeline from a given task.
+
+    Args:
+        task (TaskRun): The task to extract the timeline from.
+
+    Returns:
+        Timeline: The extracted timeline.
+    """
+    return run_timeline_chain(task.result)
+
+
+def extract_timeline_from_crew_run(
+    crew_run: CrewRun,
+    sections_filter: list[str] = None,
+) -> Timeline:
+    """
+    Extracts a timeline from a given crew run.
+
+    Args:
+        crew_run (CrewRun): The crew run to extract the timeline from.
+        sections_filter (list[str]): The sections to extract the timeline from. If None, all sections are extracted.
+    Returns:
+        Timeline: The extracted timeline.
+    """
+    text = ""
+    for task in crew_run.tasks:
+        if sections_filter:
+            if task.name in sections_filter:
+                text += task.result + "\n"
+    return run_timeline_chain(text=text)
+
+
+def extract_timeline_from_report(
+    report: ReportV2,
+    sections_filter: list[str] = None,
+) -> Timeline:
+    """
+    Extracts a timeline from a given report.
+
+    Args:
+        report (ReportV2): The report to extract the timeline from.
+        sections_filter (list[str]): The sections to extract the timeline from. If None, all sections are extracted.
+    Returns:
+        Timeline: The extracted timeline.
+    """
+    text = ""
+    for section in report.report.sections:
+        if sections_filter:
+            if section.title in sections_filter:
+                for paragraph in section.paragraphs:
+                    text += " ".join(paragraph.sentences) + "\n"
+    return run_timeline_chain(text=text)
