@@ -97,6 +97,4 @@ class ElasticsearchRetrieverClient:
 
 
 # zen rows client
-zenrows_client = ZenRowsClient(
-    apikey=os.getenv("ZENROWS_API_KEY"), concurrency=1, timeout=10
-)
+zenrows_client = ZenRowsClient(apikey=os.getenv("ZENROWS_API_KEY"), concurrency=1)

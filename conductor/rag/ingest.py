@@ -24,10 +24,7 @@ def ingest_webpage(url: str, limit: int = 50000, **kwargs) -> WebPage:
                 js_render="true",
                 premium_proxy="true",
             )
-            zen_response = zenrows_client.get(
-                url,
-                params=params,
-            )
+            zen_response = zenrows_client.get(url, params=params, timeout=10)
             # process response and try with requests if not successful
             if not zen_response.ok:
                 print(f"Zenrows Error: {zen_response.status_code}")
