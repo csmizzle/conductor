@@ -6,12 +6,14 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from conductor.rag.client import ElasticsearchRetrieverClient
 from conductor.rag.client import zenrows_client
+import requests
 
 
 def ingest_webpage(url: str, limit: int = 50000, **kwargs) -> WebPage:
     """
     Ingest webpage from URL
     """
+    response = None
     try:
         # get a created at timestamp
         created_at = datetime.now()
@@ -22,16 +24,26 @@ def ingest_webpage(url: str, limit: int = 50000, **kwargs) -> WebPage:
                 js_render="true",
                 premium_proxy="true",
             )
-            response = zenrows_client.get(
+            zen_response = zenrows_client.get(
                 url,
                 params=params,
             )
-            # process response
-            if not response.ok:
-                print(f"Error: {response.status_code}")
-                print(f"Error: {response.text}")
-                response.raise_for_status()
+            # process response and try with requests if not successful
+            if not zen_response.ok:
+                print(f"Zenrows Error: {zen_response.status_code}")
+                print(f"Zenrows Error: {zen_response.text}")
+                print("Sending request with requests instead ...")
+                normal_response = requests.get(url, timeout=10, **kwargs)
+                if not normal_response.ok:
+                    print(f"Requests Error: {zen_response.status_code}")
+                    print(f"Requests Error: {zen_response.text}")
+                    normal_response.raise_for_status()
+                else:
+                    response = normal_response
             else:
+                response = zen_response
+            # process response if successful
+            if response:
                 # get text from response
                 response_text = response.text
                 # parse with BeautifulSoup
