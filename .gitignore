@@ -12,3 +12,5 @@ tests/cassettes
 logs
 tests/*.txt
 /images
+/*.html
+lib

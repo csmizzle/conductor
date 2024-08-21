@@ -106,6 +106,12 @@ class ImageDescription(BaseModel):
         ..., description="The answer combining the description and metadata"
     )
 
+    def combine_description_metadata(self):
+        """
+        Combine the description and metadata
+        """
+        return f"{self.description} {self.metadata}"
+
 
 # Image processing pipeline
 class ImageResult(BaseModel):

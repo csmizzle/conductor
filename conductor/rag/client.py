@@ -34,7 +34,7 @@ class ElasticsearchRetrieverClient:
 
     def create_image_document(self, image: SourcedImageDescription) -> Document:
         return Document(
-            page_content=image.image_description.answer,
+            page_content=image.image_description.combine_description_metadata(),
             metadata={
                 "url": image.source,
                 "created_at": image.created_at,
