@@ -16,9 +16,9 @@ from conductor.reports.models import (
     ReportPointOfView,
     SectionV2,
 )
-from tests.constants import REPORT_V2_JSON, GRAPH_JSON
+from tests.constants import REPORT_V2_JSON, GRAPH_JSON, BASEDIR
 import os
-
+import vcr
 
 example_data = """
 Thomson Reuters Special Services (TRSS) operates in multiple markets and industries, primarily serving government agencies, law enforcement, defense/intelligence communities, and commercial businesses.
@@ -132,6 +132,10 @@ def test_extract_timeline_from_report() -> None:
     assert isinstance(timeline, Timeline)
 
 
+# adding vcr to save credits
+@vcr.use_cassette(
+    os.path.join(BASEDIR, "cassettes", "test_relationship_to_image_search.yaml")
+)
 def test_relationship_to_image_search() -> None:
     graph = Graph.model_validate(GRAPH_JSON)
     images = relationships_to_image_search(

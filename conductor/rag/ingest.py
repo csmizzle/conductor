@@ -2,13 +2,26 @@
 Ingest of raw data into Pydantic model
 """
 from conductor.rag.models import WebPage, SourcedImageDescription
+from conductor.chains.models import (
+    Graph,
+    RelationshipType,
+    ImageSearchResult,
+    ImageResult,
+)
 from conductor.chains.tools import ImageProcessor
+from conductor.chains import relationships_to_image_query
 from bs4 import BeautifulSoup
 from datetime import datetime
 from conductor.rag.client import ElasticsearchRetrieverClient
-from conductor.rag.client import zenrows_client
+from conductor.zen import zenrows_client
+from conductor.llms import openai_gpt_4o
 from langchain_core.language_models.chat_models import BaseChatModel
 import requests
+import logging
+from tqdm import tqdm
+
+
+logger = logging.getLogger(__name__)
 
 
 # text data from websites
@@ -130,3 +143,63 @@ def image_from_url_to_db(
     )
     # insert document
     return client.create_insert_image_document(image)
+
+
+def ingest_images_from_graph(
+    graph: Graph,
+    api_key: str,
+    relationship_types: list[RelationshipType],
+    client: ElasticsearchRetrieverClient,
+    n_images: int = 1,
+    save_path: str = None,
+) -> list[str]:
+    """Ingest images from a Graph
+
+    Args:
+        graph (Graph): Extracted graph
+        api_key (str): SerpAPI credentials
+        relationship_types (list[RelationshipType]): Relationship types to extract
+        client (ElasticsearchRetrieverClient): Elasticsearch client
+        n_images (int, optional): Number of images to pull from SerpAPI. Defaults to 1.
+        save_path (str, optional): Path to save images to. Defaults to None.
+
+    Returns:
+        list[str]: Confirmation of images being added
+    """
+    added_documents = []
+    search_queries = relationships_to_image_query(
+        graph=graph,
+        api_key=api_key,
+        relationship_types=relationship_types,
+    )
+    # collect searches from SerpAPI
+    image_results = []
+    for query in search_queries:
+        image_result = ImageSearchResult(
+            query=query["search_parameters"]["q"]
+        )  # map raw query to image result
+        # collect n results from results
+        for idx in range(n_images):
+            image_result.results.append(
+                ImageResult(
+                    original_url=query["images_results"][idx]["original"],
+                    title=query["images_results"][idx]["title"],
+                )
+            )
+        image_results.append(image_result)
+    # describe images
+    for result in tqdm(image_results):
+        logger.info("Parsing image entry ...")
+        for entry in result.results:
+            # process image
+            document = image_from_url_to_db(
+                image_url=entry.original_url,
+                model=openai_gpt_4o,
+                client=client,
+                metadata=result.query
+                + "; "
+                + entry.title,  # append the query and title for metadata
+                save_path=save_path,
+            )
+            added_documents.extend(document)
+    return added_documents

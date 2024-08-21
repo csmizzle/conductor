@@ -1,6 +1,8 @@
 from conductor.chains import prompts
+from conductor.chains.tools import image_search
 from conductor.llms import openai_gpt_4o
 from conductor.chains.models import Graph, EntityType, RelationshipType, Timeline
+from tqdm import tqdm
 
 graph_chain = prompts.graph_extraction_prompt | openai_gpt_4o | prompts.graph_parser
 timeline_chain = (
@@ -60,3 +62,43 @@ def run_timeline_chain(text: str) -> Timeline:
             text=text,
         )
     )
+
+
+# relationship to image search
+def relationships_to_image_query(
+    graph: Graph,
+    api_key: str,
+    relationship_types: list[RelationshipType] = None,
+) -> list[dict]:
+    """
+    Converts a relationship to an image search.
+
+    Args:
+        graph (Graph): The graph to convert to an image search.
+        api_key (str): The API key for the image search.
+        relationship_types (list[RelationshipType]): The relationship types to convert to an image search. If None, all relationships are converted.
+
+    Returns:
+        str: The image search.
+    """
+    # iterate through graph and collect relations
+    searches = set()
+    for relationship in graph.relationships:
+        # filter relationships based on relationship types
+        if relationship_types:
+            if relationship.type in relationship_types:
+                # concat source and target and add to searches
+                searches.add(relationship.source.name + " " + relationship.target.name)
+        # add all relationships
+        else:
+            searches.add(relationship.source.name + " " + relationship.target.name)
+    # iterate through searches and create image search
+    results = []
+    for search in tqdm(searches):
+        results.append(
+            image_search(
+                query=search,
+                api_key=api_key,
+            )
+        )
+    return results

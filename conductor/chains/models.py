@@ -105,3 +105,24 @@ class ImageDescription(BaseModel):
     answer: str = Field(
         ..., description="The answer combining the description and metadata"
     )
+
+
+# Image processing pipeline
+class ImageResult(BaseModel):
+    """
+    Image search result model
+    """
+
+    original_url: str = Field(..., description="The original URL of the image")
+    title: str = Field(..., description="The title of the image in the search results")
+
+
+class ImageSearchResult(BaseModel):
+    """
+    Image search results model
+    """
+
+    query: str = Field(..., description="The search query")
+    results: List[ImageResult] = Field(
+        default=[], description="The image search results"
+    )

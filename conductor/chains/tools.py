@@ -3,7 +3,7 @@ from langchain_core.messages import HumanMessage
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.output_parsers import PydanticOutputParser
 import base64
-from conductor.rag.client import zenrows_client
+from conductor.zen import zenrows_client
 from conductor.chains.models import ImageDescription
 
 

@@ -67,3 +67,5 @@ CREW_RUN = json.load(open(os.path.join(BASEDIR, "data", "test_crew_run.json")))
 GRAPH_JSON = json.load(
     open(os.path.join(BASEDIR, "data", "test_extract_graph_from_report.json"))
 )
+### Serp Images
+SERP_IMAGES = json.load(open(os.path.join(BASEDIR, "data", "test_serpapi_images.json")))

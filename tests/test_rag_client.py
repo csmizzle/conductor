@@ -2,11 +2,16 @@
 Test the RAG client
 """
 from elasticsearch import Elasticsearch
-from tests.constants import BASEDIR
+from tests.constants import BASEDIR, SERP_IMAGES, GRAPH_JSON
 from conductor.rag.client import ElasticsearchRetrieverClient
-from conductor.rag.ingest import url_to_db, image_from_url_to_db
+from conductor.rag.ingest import (
+    url_to_db,
+    image_from_url_to_db,
+    ingest_images_from_graph,
+)
 from conductor.rag.embeddings import BedrockEmbeddings
 from conductor.rag.models import WebPage
+from conductor.chains.models import Graph, RelationshipType
 from conductor.llms import openai_gpt_4o
 from datetime import datetime
 from elastic_transport import ObjectApiResponse
@@ -149,3 +154,42 @@ def test_ingest_from_url_to_db(elasticsearch_test_index) -> None:
         save_path=os.path.join(BASEDIR, "data", "test_image.jpg"),
     )
     assert len(document_ids) == 1
+
+
+def test_ingest_images_from_serp_url_to_db(elasticsearch_test_index) -> None:
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    client = ElasticsearchRetrieverClient(
+        elasticsearch=elasticsearch,
+        embeddings=BedrockEmbeddings(),
+        index_name=elasticsearch_test_index,
+    )
+    serp_data_link = SERP_IMAGES[0]["images_results"][0]["original"]
+    document_ids = image_from_url_to_db(
+        image_url=serp_data_link,
+        model=openai_gpt_4o,
+        client=client,
+        metadata="test serp image",
+        save_path=os.path.join(BASEDIR, "data", "test_fallone_image.jpg"),
+    )
+    assert len(document_ids) == 1
+
+
+def test_ingest_images_from_graph(elasticsearch_test_image_index) -> None:
+    graph = Graph.model_validate(GRAPH_JSON)
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    client = ElasticsearchRetrieverClient(
+        elasticsearch=elasticsearch,
+        embeddings=BedrockEmbeddings(),
+        index_name=elasticsearch_test_image_index,
+    )
+    documents = ingest_images_from_graph(
+        graph=graph,
+        api_key=os.getenv("SERPAPI_API_KEY"),
+        relationship_types=[RelationshipType.EMPLOYEE.value],
+        client=client,
+    )
+    assert len(documents) == 5
