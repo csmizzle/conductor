@@ -32,6 +32,8 @@ langchain-core = "^0.2.29"
 zenrows = "^1.3.2"
 pyvis = "^0.3.2"
 matplotlib = "^3.9.2"
+reportlab = "^4.2.2"
+imgkit = "^1.2.3"
 
 
 [tool.poetry.group.dev.dependencies]

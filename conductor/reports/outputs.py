@@ -13,6 +13,17 @@ from langchain.chains.llm import LLMChain
 from langsmith import traceable
 from docx import Document
 from jinja2 import Environment, FileSystemLoader
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet, ListStyle
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    ListItem,
+    ListFlowable,
+    Image,
+    PageBreak,
+)
 import html
 import os
 
@@ -251,20 +262,99 @@ def report_to_pdf(report: Report, filename: str) -> bytes:
     return pdf
 
 
-def report_v2_to_pdf(report: ReportV2, filename: str, graph_file: str = None) -> bytes:
+def add_watermark(canvas, doc):
+    # Define the watermark image file path
+
+    # Define the position (x, y) where the watermark will be placed
+    x = 25
+    y = 750
+
+    # Draw the watermark image on the page
+    canvas.drawImage(
+        os.getenv("WATERMARK_IMAGE"), x, y, width=75, height=25, mask="auto"
+    )
+
+    # add page number
+    page_number_text = f"{doc.page}"
+
+    # Define the position (x, y) where the page number will be placed
+    x = letter[0] - 100  # Right side
+    y = 20  # Bottom side
+
+    # Set the font and size
+    canvas.setFont("Helvetica", 10)
+
+    # Draw the page number on the bottom-right of the page
+    canvas.drawString(x, y, page_number_text)
+
+
+def report_v2_to_pdf(
+    report: ReportV2, filename: str, graph_file: str = None, watermark: bool = None
+) -> SimpleDocTemplate:
     """Generate a PDF report with a graph embedded in the HTML
 
     Args:
         report (ReportV2): Report object
         filename (str): file to save
         graph_file (str, optional): graph file to include. Defaults to None.
+        watermark_file (str, optional): watermark file to include. Defaults to None.
 
     Returns:
         bytes: _description_
     """
-    html = report_v2_to_html(report=report, graph_file=graph_file)
-    pdf = pdfkit.from_string(html, filename)
-    return pdf
+    sources = set()
+    document_elements = []
+    doc = SimpleDocTemplate(filename, pagesize=letter)
+    styles = getSampleStyleSheet()
+    title = Paragraph(report.report.title, styles["Title"])
+    # append title to document elements
+    document_elements.append(title)
+    for section in report.report.sections:
+        section_title = Paragraph(section.title, styles["Heading2"])
+        document_elements.append(section_title)
+        for paragraph in section.paragraphs:
+            if paragraph.title:
+                paragraph_title = Paragraph(paragraph.title, styles["Heading3"])
+                document_elements.append(paragraph_title)
+            raw_paragraph_content = " ".join(paragraph.sentences)
+            # add sources to the document
+            if section.sources and len(section.sources) > 0:
+                for source in section.sources:
+                    sources.add(source)
+            paragraph_content = Paragraph(raw_paragraph_content, styles["Normal"])
+            document_elements.append(paragraph_content)
+            # add space between paragraphs
+            document_elements.append(Spacer(1, 12))
+    # add graph to the document
+    if graph_file:
+        # add graph title
+        document_elements.append(PageBreak())
+        graph_title = Paragraph("Entity Graph", styles["Heading2"])
+        document_elements.append(graph_title)
+        document_elements.append(Image(graph_file, width=450, height=400))
+        # add space between graph and sources
+        document_elements.append(Spacer(1, 12))
+    # append sources to the document
+    document_elements.append(PageBreak())
+    bullet_style = ListStyle(name="BulletStyle", bulletType="bullet")
+    sources_header = Paragraph("Sources", styles["Heading2"])
+    document_elements.append(sources_header)
+    # add sources to the document
+    # convert sources to a list
+    list_flowable = []
+    for source in sources:
+        list_flowable.append(
+            ListItem(Paragraph(source, styles["BodyText"]), bulletText="•")
+        )
+    sources_list = ListFlowable(list_flowable, style=bullet_style, bulletType="bullet")
+    document_elements.append(sources_list)
+    if watermark:
+        doc.build(
+            document_elements, onFirstPage=add_watermark, onLaterPages=add_watermark
+        )
+    else:
+        doc.build(document_elements)
+    return doc
 
 
 def report_to_pdf_binary(report: Report) -> bytes:

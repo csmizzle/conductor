@@ -71,3 +71,5 @@ GRAPH_JSON = json.load(
 SERP_IMAGES = json.load(open(os.path.join(BASEDIR, "data", "test_serpapi_images.json")))
 ### Graph html file
 GRAPH_PNG = os.path.join(BASEDIR, "data", "testgraph.png")
+### Timeline png file
+TIMELINE_JSON = json.load(open(os.path.join(BASEDIR, "data", "test_timeline.json")))
