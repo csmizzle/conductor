@@ -2,11 +2,10 @@
 Graph utilities
 """
 from conductor.chains.models import Graph
-from pyvis.network import Network
 import networkx as nx
 
 
-def graph_to_pyvis(graph: Graph) -> Network:
+def graph_to_networkx(graph: Graph) -> nx.DiGraph:
     """
     Convert graph to pyvis network
     """
@@ -21,18 +20,16 @@ def graph_to_pyvis(graph: Graph) -> Network:
         if graph.entities[idx].name not in label_map:
             label_map[graph.entities[idx].name] = idx
             network_x_object.add_node(
-                idx,
+                graph.entities[idx].name,
                 label=graph.entities[idx].name,
                 title=graph.entities[idx].name,
                 color=color_map[graph.entities[idx].type],
             )
     for relationship in graph.relationships:
         network_x_object.add_edge(
-            label_map[relationship.source.name],
-            label_map[relationship.target.name],
+            relationship.source.name,
+            relationship.target.name,
             title=relationship.type,
             label=relationship.type,
         )
-    net = Network(directed=True)
-    net.from_nx(network_x_object)
-    return net
+    return network_x_object

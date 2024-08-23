@@ -6,6 +6,7 @@ from tests.constants import (
     TEST_KEY_QUESTIONS_NARRATIVE,
     CREW_RUN,
     REPORT_V2_JSON,
+    GRAPH_PNG,
 )
 from conductor.reports.outputs import (
     string_to_report,
@@ -25,6 +26,7 @@ from conductor.reports.outputs import (
     report_to_html,
     report_v2_to_html,
     report_v2_to_docx,
+    report_v2_to_pdf,
 )
 from conductor.crews.rag_marketing.chains import crew_run_to_report
 from conductor.crews.models import CrewRun
@@ -157,3 +159,20 @@ def test_report_v2_to_docx() -> None:
     doc = report_v2_to_docx(report=report_v2)
     assert isinstance(doc, DocumentObject)
     # doc.save("tests/test_report_v2.docx")
+
+
+def test_report_v2_to_html_with_graph() -> None:
+    html = report_v2_to_html(
+        report=ReportV2.parse_obj(REPORT_V2_JSON),
+        graph_file=GRAPH_PNG,
+    )
+    assert isinstance(html, str)
+
+
+def test_report_v2_to_pdf_with_graph() -> None:
+    html = report_v2_to_pdf(
+        report=ReportV2.parse_obj(REPORT_V2_JSON),
+        graph_file=GRAPH_PNG,
+        filename="./graph_report.pdf",
+    )
+    assert isinstance(html, str)

@@ -3,11 +3,11 @@ from conductor.crews.rag_marketing.chains import (
     crew_run_to_report,
     extract_graph_from_report,
     extract_timeline_from_report,
-    relationships_to_image_search,
     Graph,
     Timeline,
     ReportV2,
 )
+from conductor.chains import relationships_to_image_query
 from conductor.chains.models import RelationshipType
 from conductor.crews.models import CrewRun, TaskRun
 from conductor.reports.models import (
@@ -138,7 +138,7 @@ def test_extract_timeline_from_report() -> None:
 )
 def test_relationship_to_image_search() -> None:
     graph = Graph.model_validate(GRAPH_JSON)
-    images = relationships_to_image_search(
+    images = relationships_to_image_query(
         graph=graph,
         api_key=os.getenv("SERPAPI_API_KEY"),
         relationship_types=[

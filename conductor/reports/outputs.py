@@ -34,9 +34,15 @@ def report_to_html(report: Report) -> str:
     return html.unescape(output_from_parsed_template)
 
 
-def report_v2_to_html(report: ReportV2) -> str:
-    """
-    Convert a report to an HTML string
+def report_v2_to_html(report: ReportV2, graph_file: str = None) -> str:
+    """Generate a report with a graph embedded in the HTML
+
+    Args:
+        report (ReportV2): Report object
+        graph_file (str): graph html object
+
+    Returns:
+        str: _description_
     """
     sources = set()
     # create sources for the report
@@ -48,13 +54,18 @@ def report_v2_to_html(report: ReportV2) -> str:
     for section in report.report.sections:
         for paragraph in section.paragraphs:
             paragraphs.append(" ".join(paragraph.sentences))
-    env = Environment(loader=FileSystemLoader(os.path.join(BASEDIR, "templates")))
+    # templates
+    template_paths = [os.path.join(BASEDIR, "templates")]
+    if graph_file:
+        template_paths.append(os.path.dirname(graph_file))
+    env = Environment(loader=FileSystemLoader(template_paths))
     report_template = env.get_template("report_v2.html")
     output_from_parsed_template = report_template.render(
         report_title=report.report.title,
         report_description=report.report.description,
         report_sections=[section.dict() for section in report.report.sections],
         report_sources=sorted_sources,
+        graph_file=os.path.basename(graph_file),
     )
     return html.unescape(output_from_parsed_template)
 
@@ -240,11 +251,18 @@ def report_to_pdf(report: Report, filename: str) -> bytes:
     return pdf
 
 
-def report_v2_to_pdf(report: ReportV2, filename: str) -> bytes:
+def report_v2_to_pdf(report: ReportV2, filename: str, graph_file: str = None) -> bytes:
+    """Generate a PDF report with a graph embedded in the HTML
+
+    Args:
+        report (ReportV2): Report object
+        filename (str): file to save
+        graph_file (str, optional): graph file to include. Defaults to None.
+
+    Returns:
+        bytes: _description_
     """
-    Convert a report to a PDF
-    """
-    html = report_v2_to_html(report)
+    html = report_v2_to_html(report=report, graph_file=graph_file)
     pdf = pdfkit.from_string(html, filename)
     return pdf
 
