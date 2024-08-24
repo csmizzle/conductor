@@ -1,7 +1,7 @@
 """
 Graph utilities
 """
-from conductor.chains.models import Graph
+from conductor.reports.models import Graph
 import networkx as nx
 import matplotlib.pyplot as plt
 

@@ -11,7 +11,7 @@ from conductor.rag.ingest import (
 from conductor.rag.models import WebPage, SourcedImageDescription
 from conductor.llms import openai_gpt_4o
 from tests.constants import GRAPH_JSON
-from conductor.chains.models import Graph, RelationshipType
+from conductor.reports.models import Graph, RelationshipType
 import pytest
 import os
 

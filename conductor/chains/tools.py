@@ -4,7 +4,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.output_parsers import PydanticOutputParser
 import base64
 from conductor.zen import zenrows_client
-from conductor.chains.models import ImageDescription
+from conductor.reports.models import ImageDescription
 
 
 image_description_parser = PydanticOutputParser(pydantic_object=ImageDescription)

@@ -2,7 +2,7 @@
 Ingest of raw data into Pydantic model
 """
 from conductor.rag.models import WebPage, SourcedImageDescription
-from conductor.chains.models import (
+from conductor.reports.models import (
     Graph,
     RelationshipType,
     ImageSearchResult,

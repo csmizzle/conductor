@@ -3,7 +3,7 @@ Prompts for entity extraction
 """
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
-from conductor.chains.models import Graph, Timeline, QueryMatch
+from conductor.reports.models import Graph, Timeline, QueryMatch
 
 
 # Entity extraction

@@ -1,15 +1,15 @@
 from conductor.chains import prompts
 from conductor.chains.tools import image_search
 from conductor.llms import openai_gpt_4o
-from conductor.chains.models import (
+from conductor.reports.models import (
     Graph,
     EntityType,
     RelationshipType,
     Timeline,
     ImageSearchResult,
     QueryMatch,
+    ReportV2,
 )
-from conductor.reports.models import ReportV2
 
 from tqdm import tqdm
 
@@ -137,33 +137,58 @@ def relationships_to_image_query(
 
 
 def match_queries_to_paragraphs(
-    image_search_results: list[ImageSearchResult], sections: list[str], report: ReportV2
-) -> list[list[int, int, int]]:
+    image_search_results: list[ImageSearchResult],
+    sections_filter: list[str],
+    report: ReportV2,
+) -> ReportV2:
+    """
+    Assign photos to paragraphs based on image search results.
+    There should not be:
+    - Duplicate photos in the report
+    - Multiple photos in a paragraph
+
+    Args:
+        image_search_results (list[ImageSearchResult]): _description_
+        sections_filter (list[str]): _description_
+        report (ReportV2): _description_
+
+    Returns:
+        ReportV2: _description_
+    """
     section_paragraph_image_matches = []
     matched_queries = []
     # iterate through paragraphs and match image search results
     for idx0 in range(len(report.report.sections)):
-        if report.report.sections[idx0].title in sections:
+        if report.report.sections[idx0].title in sections_filter:
             for idx1 in range(len(report.report.sections[idx0].paragraphs)):
                 paragraph_text = " ".join(
                     report.report.sections[idx0].paragraphs[idx1].sentences
                 )
                 # run match chain on paragraph text with image search results query
                 for idx2 in range(len(image_search_results)):
-                    if idx2 in matched_queries:
+                    if idx2 not in matched_queries:
                         search_query = image_search_results[idx2].query
                         image_match = run_query_match_chain(
                             search_query=search_query, text=paragraph_text
                         )
-                        if image_match.matched_text == "RELEVANT":
+                        if image_match.determination == "RELEVANT":
+                            print(
+                                f"Matched '{search_query}' to paragraph text, assigning image..."
+                            )
                             matched_queries.append(idx2)
                             section_paragraph_image_matches.append([idx0, idx1, idx2])
+                            report.report.sections[idx0].paragraphs[
+                                idx1
+                            ].images = image_search_results[idx2]
                         else:
                             print(
-                                "Search query did not match paragraph text, skipping..."
+                                f"Search query '{search_query}' did not match paragraph text, skipping..."
                             )
                             continue
                     else:
-                        print("Image search result already matched, skipping...")
+                        print(
+                            f"Image search result {image_search_results[idx2].query} already matched, skipping..."
+                        )
                         continue
-    return section_paragraph_image_matches
+    # return report with image search results
+    return report

@@ -1,7 +1,7 @@
 from conductor.utils.graph import graph_to_networkx, draw_networkx
 from conductor.utils.timeline import draw_timeline
 from tests.constants import GRAPH_JSON, BASEDIR, TIMELINE_JSON
-from conductor.chains.models import Graph, Timeline
+from conductor.reports.models import Graph, Timeline
 from networkx import DiGraph
 import os
 

@@ -8,7 +8,7 @@ from conductor.crews.rag_marketing.chains import (
     ReportV2,
 )
 from conductor.chains import relationships_to_image_query
-from conductor.chains.models import RelationshipType
+from conductor.reports.models import RelationshipType
 from conductor.crews.models import CrewRun, TaskRun
 from conductor.reports.models import (
     ReportStyleV2,

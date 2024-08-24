@@ -1,5 +1,5 @@
 from conductor.chains.tools import image_search, ImageProcessor
-from conductor.chains.models import ImageDescription
+from conductor.reports.models import ImageDescription
 from conductor.llms import claude_sonnet, openai_gpt_4o
 from tests.constants import BASEDIR
 import os

@@ -11,7 +11,7 @@ from conductor.rag.ingest import (
 )
 from conductor.rag.embeddings import BedrockEmbeddings
 from conductor.rag.models import WebPage
-from conductor.chains.models import Graph, RelationshipType
+from conductor.reports.models import Graph, RelationshipType
 from conductor.llms import openai_gpt_4o
 from datetime import datetime
 from elastic_transport import ObjectApiResponse

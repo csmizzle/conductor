@@ -1,4 +1,4 @@
-from conductor.chains.models import Timeline
+from conductor.reports.models import Timeline
 from datetime import datetime
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
