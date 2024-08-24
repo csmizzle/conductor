@@ -84,7 +84,7 @@ def url_to_db(url: str, client: ElasticsearchRetrieverClient, **kwargs) -> list[
 
 
 # image data from urls
-def ingest_image_from_url(
+def describe_image_from_url(
     image_url: str, model: BaseChatModel, metadata: str = None, save_path: str = None
 ) -> SourcedImageDescription:
     """
@@ -115,6 +115,98 @@ def ingest_image_from_url(
         raise e
 
 
+def describe_from_image_search_result(
+    query: str,
+    image_result: ImageSearchResult,
+    model: BaseChatModel,
+    save_path: str = None,
+) -> SourcedImageDescription:
+    """Describe an image from an image search result
+
+    Args:
+        query (str): Search query
+        image_result (ImageSearchResult): image results
+        model (BaseChatModel): Langchain model
+        save_path (str, optional): path to save the files. Defaults to None.
+
+    Raises:
+        e: _description_
+
+    Returns:
+        SourcedImageDescription: Sourced image description
+    """
+    results = []
+    try:
+        # get a created at timestamp
+        created_at = datetime.now()
+        # get image content from url
+        for image in image_result.results:
+            processor = ImageProcessor.from_url(
+                image_url=image.original_url,
+                model=model,
+                metadata=query + ";" + image.title,
+            )
+            # describe image
+            image_description = processor.describe()
+            # save image to path if provided
+            if save_path:
+                processor.save_image(save_path)
+            # return sourced image description
+            sourced_description = SourcedImageDescription(
+                created_at=created_at,
+                image_description=image_description,
+                source=image_result.original_url,
+                path=save_path,
+            )
+            results.append(sourced_description)
+    except Exception as e:
+        raise e
+    return results
+
+
+# now parse a list of queries to a list of image search results
+def describe_from_image_search_results(
+    image_results: list[ImageSearchResult],
+    model: BaseChatModel,
+    save_path: str = None,
+) -> list[SourcedImageDescription]:
+    """
+    Describe images from image search results
+    """
+    results = {}
+    for idx, _ in tqdm(enumerate(image_results), total=len(image_results)):
+        try:
+            # get a created at timestamp
+            created_at = datetime.now()
+            # get image content from url
+            for image in image_results[idx].results:
+                if image.original_url not in results:
+                    results[image.original_url] = None
+                else:
+                    continue
+                processor = ImageProcessor.from_url(
+                    image_url=image.original_url,
+                    model=model,
+                    metadata=image_results[idx].query + ";" + image.title,
+                )
+                # describe image
+                image_description = processor.describe()
+                # save image to path if provided
+                if save_path:
+                    processor.save_image(save_path)
+                # return sourced image description
+                sourced_description = SourcedImageDescription(
+                    created_at=created_at,
+                    image_description=image_description,
+                    source=image.original_url,
+                    path=save_path,
+                )
+                results[image.original_url] = sourced_description
+        except Exception as e:
+            raise e
+    return [results[key] for key in results]
+
+
 def image_from_url_to_db(
     image_url: str,
     model: BaseChatModel,
@@ -135,7 +227,7 @@ def image_from_url_to_db(
         list[str]: _description_
     """
     # ingest image
-    image = ingest_image_from_url(
+    image = describe_image_from_url(
         image_url=image_url,
         model=model,
         metadata=metadata,
@@ -143,6 +235,53 @@ def image_from_url_to_db(
     )
     # insert document
     return client.create_insert_image_document(image)
+
+
+def queries_to_image_results(
+    search_queries: list[str], n_images: int = 1
+) -> list[ImageSearchResult]:
+    """
+    Convert queries to image search results
+    """
+    # collect searches from SerpAPI
+    image_results = []
+    for query in search_queries:
+        image_result = ImageSearchResult(
+            query=query["search_parameters"]["q"]
+        )  # map raw query to image result
+        # collect n results from results
+        for idx in range(n_images):
+            image_result.results.append(
+                ImageResult(
+                    original_url=query["images_results"][idx]["original"],
+                    title=query["images_results"][idx]["title"],
+                )
+            )
+        image_results.append(image_result)
+    return image_results
+
+
+def insert_image_urls_to_db(
+    image_results: list[ImageSearchResult],
+    client: ElasticsearchRetrieverClient,
+    save_path: str = None,
+) -> list[str]:
+    added_documents = []
+    for result in tqdm(image_results):
+        logger.info("Parsing image entry ...")
+        for entry in result.results:
+            # process image
+            document = image_from_url_to_db(
+                image_url=entry.original_url,
+                model=openai_gpt_4o,
+                client=client,
+                metadata=result.query
+                + "; "
+                + entry.title,  # append the query and title for metadata
+                save_path=save_path if save_path else None,
+            )
+            added_documents.extend(document)
+    return added_documents
 
 
 def ingest_images_from_graph(
@@ -166,40 +305,17 @@ def ingest_images_from_graph(
     Returns:
         list[str]: Confirmation of images being added
     """
-    added_documents = []
     search_queries = relationships_to_image_query(
         graph=graph,
         api_key=api_key,
         relationship_types=relationship_types,
     )
     # collect searches from SerpAPI
-    image_results = []
-    for query in search_queries:
-        image_result = ImageSearchResult(
-            query=query["search_parameters"]["q"]
-        )  # map raw query to image result
-        # collect n results from results
-        for idx in range(n_images):
-            image_result.results.append(
-                ImageResult(
-                    original_url=query["images_results"][idx]["original"],
-                    title=query["images_results"][idx]["title"],
-                )
-            )
-        image_results.append(image_result)
+    image_results = queries_to_image_results(search_queries, n_images)
     # describe images
-    for result in tqdm(image_results):
-        logger.info("Parsing image entry ...")
-        for entry in result.results:
-            # process image
-            document = image_from_url_to_db(
-                image_url=entry.original_url,
-                model=openai_gpt_4o,
-                client=client,
-                metadata=result.query
-                + "; "
-                + entry.title,  # append the query and title for metadata
-                save_path=save_path,
-            )
-            added_documents.extend(document)
+    added_documents = insert_image_urls_to_db(
+        image_results=image_results,
+        client=client,
+        save_path=save_path,
+    )
     return added_documents

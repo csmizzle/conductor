@@ -132,3 +132,15 @@ class ImageSearchResult(BaseModel):
     results: List[ImageResult] = Field(
         default=[], description="The image search results"
     )
+
+
+# Query to paragraph matching
+class QueryMatch(BaseModel):
+    """
+    Query match model
+    """
+
+    determination: str = Field(
+        ...,
+        description="The determination of if the search query to the paragraph text",
+    )

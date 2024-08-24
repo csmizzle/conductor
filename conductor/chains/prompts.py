@@ -3,7 +3,7 @@ Prompts for entity extraction
 """
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
-from conductor.chains.models import Graph, Timeline
+from conductor.chains.models import Graph, Timeline, QueryMatch
 
 
 # Entity extraction
@@ -76,5 +76,42 @@ timeline_extraction_prompt = PromptTemplate(
     ],
     partial_variables={
         "format_instructions": timeline_parser.get_format_instructions()
+    },
+)
+
+
+# query to paragraph matching
+QUERY_TO_PARAGRAPH_MATCHING_PROMPT = """
+You are a world-class model for matching search queries to paragraph text, making sure that the query text is relevant to the paragraph text.
+Your goal is to evaluate the provided search query and paragraph text and determine if the search query is relevant to the paragraph text.
+You have three options:
+- RELEVANT: The search query is relevant to the paragraph text.
+- NOT_RELEVANT: The search query is not relevant to the paragraph text.
+- UNSURE: You are unsure if the search query is relevant to the paragraph text.
+Finally, return the evaluations in the provided JSON format.
+
+<search_query>
+{search_query}
+</search_query>
+
+<paragraph_text>
+{paragraph_text}
+</paragraph_text>
+
+<format_instructions>
+{format_instructions}
+</format_instructions>
+"""
+
+query_matcher_parser = PydanticOutputParser(pydantic_object=QueryMatch)
+
+query_to_paragraph_matching_prompt = PromptTemplate(
+    template=QUERY_TO_PARAGRAPH_MATCHING_PROMPT,
+    input_variables=[
+        "search_query",
+        "paragraph_text",
+    ],
+    partial_variables={
+        "format_instructions": query_matcher_parser.get_format_instructions()
     },
 )

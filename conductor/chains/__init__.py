@@ -1,12 +1,26 @@
 from conductor.chains import prompts
 from conductor.chains.tools import image_search
 from conductor.llms import openai_gpt_4o
-from conductor.chains.models import Graph, EntityType, RelationshipType, Timeline
+from conductor.chains.models import (
+    Graph,
+    EntityType,
+    RelationshipType,
+    Timeline,
+    ImageSearchResult,
+    QueryMatch,
+)
+from conductor.reports.models import ReportV2
+
 from tqdm import tqdm
 
 graph_chain = prompts.graph_extraction_prompt | openai_gpt_4o | prompts.graph_parser
 timeline_chain = (
     prompts.timeline_extraction_prompt | openai_gpt_4o | prompts.timeline_parser
+)
+query_match_chain = (
+    prompts.query_to_paragraph_matching_prompt
+    | openai_gpt_4o
+    | prompts.query_matcher_parser
 )
 
 
@@ -64,6 +78,24 @@ def run_timeline_chain(text: str) -> Timeline:
     )
 
 
+def run_query_match_chain(search_query: str, text: str) -> QueryMatch:
+    """Match a search query to a given text.
+
+    Args:
+        search_query (str): search query to match
+        text (str): text to match the search query to
+
+    Returns:
+        QueryMatch: query match object containing the search query and the matched text
+    """
+    return query_match_chain.invoke(
+        dict(
+            search_query=search_query,
+            paragraph_text=text,
+        )
+    )
+
+
 # relationship to image search
 def relationships_to_image_query(
     graph: Graph,
@@ -102,3 +134,36 @@ def relationships_to_image_query(
             )
         )
     return results
+
+
+def match_queries_to_paragraphs(
+    image_search_results: list[ImageSearchResult], sections: list[str], report: ReportV2
+) -> list[list[int, int, int]]:
+    section_paragraph_image_matches = []
+    matched_queries = []
+    # iterate through paragraphs and match image search results
+    for idx0 in range(len(report.report.sections)):
+        if report.report.sections[idx0].title in sections:
+            for idx1 in range(len(report.report.sections[idx0].paragraphs)):
+                paragraph_text = " ".join(
+                    report.report.sections[idx0].paragraphs[idx1].sentences
+                )
+                # run match chain on paragraph text with image search results query
+                for idx2 in range(len(image_search_results)):
+                    if idx2 in matched_queries:
+                        search_query = image_search_results[idx2].query
+                        image_match = run_query_match_chain(
+                            search_query=search_query, text=paragraph_text
+                        )
+                        if image_match.matched_text == "RELEVANT":
+                            matched_queries.append(idx2)
+                            section_paragraph_image_matches.append([idx0, idx1, idx2])
+                        else:
+                            print(
+                                "Search query did not match paragraph text, skipping..."
+                            )
+                            continue
+                    else:
+                        print("Image search result already matched, skipping...")
+                        continue
+    return section_paragraph_image_matches
