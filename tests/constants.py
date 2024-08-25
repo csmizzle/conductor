@@ -61,6 +61,9 @@ TEST_KEY_QUESTIONS_NARRATIVE = open(
 ### REPORT JSON
 REPORT_JSON = json.load(open(os.path.join(BASEDIR, "data", "json_report.json")))
 REPORT_V2_JSON = json.load(open(os.path.join(BASEDIR, "data", "test_report_v2.json")))
+ENRICHED_REPORT_V2_JSON = json.load(
+    open(os.path.join(BASEDIR, "data", "test_enriched_report.json"))
+)
 ### CREW RUN
 CREW_RUN = json.load(open(os.path.join(BASEDIR, "data", "test_crew_run.json")))
 ### Graph

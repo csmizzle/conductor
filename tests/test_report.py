@@ -6,6 +6,7 @@ from tests.constants import (
     TEST_KEY_QUESTIONS_NARRATIVE,
     CREW_RUN,
     REPORT_V2_JSON,
+    ENRICHED_REPORT_V2_JSON,
     GRAPH_PNG,
     BASEDIR,
 )
@@ -157,17 +158,28 @@ def test_report_v2_to_html() -> None:
 
 
 def test_report_v2_to_docx() -> None:
-    report_v2 = ReportV2.parse_obj(REPORT_V2_JSON)
+    report_v2 = ReportV2.model_validate(REPORT_V2_JSON)
     doc = report_v2_to_docx(report=report_v2)
     assert isinstance(doc, DocumentObject)
     # doc.save("tests/test_report_v2.docx")
 
 
 def test_report_v2_to_pdf() -> None:
-    report_v2 = ReportV2.parse_obj(REPORT_V2_JSON)
+    report_v2 = ReportV2.model_validate(REPORT_V2_JSON)
     report_v2_to_pdf(
         report=report_v2,
         filename=os.path.join(BASEDIR, "data", "test_report_v2.pdf"),
+        graph_file=GRAPH_PNG,
+        watermark=True,
+    )
+    assert True
+
+
+def test_report_v2_to_pdf_with_images() -> None:
+    report_v2 = ReportV2.model_validate(ENRICHED_REPORT_V2_JSON)
+    report_v2_to_pdf(
+        report=report_v2,
+        filename=os.path.join(BASEDIR, "data", "test_report_with_images_v2.pdf"),
         graph_file=GRAPH_PNG,
         watermark=True,
     )

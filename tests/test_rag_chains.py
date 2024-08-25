@@ -117,7 +117,7 @@ def test_crew_run_to_report() -> None:
 
 
 def test_extract_graph_from_report() -> None:
-    report = ReportV2.parse_obj(REPORT_V2_JSON)
+    report = ReportV2.model_validate(REPORT_V2_JSON)
     graph = extract_graph_from_report(
         report, sections_filter=["Company Structure", "Personnel"]
     )
@@ -125,7 +125,7 @@ def test_extract_graph_from_report() -> None:
 
 
 def test_extract_timeline_from_report() -> None:
-    report = ReportV2.parse_obj(REPORT_V2_JSON)
+    report = ReportV2.model_validate(REPORT_V2_JSON)
     timeline = extract_timeline_from_report(
         report, sections_filter=["Company History", "Recent Events"]
     )

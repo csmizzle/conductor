@@ -6,6 +6,7 @@ import pdfkit
 from langchain.prompts import PromptTemplate
 from conductor.reports.models import ParsedReport, Report, ReportV2
 from conductor.llms import openai_gpt_4o
+from conductor.zen import get_image
 from textwrap import dedent
 import tempfile
 from langchain.output_parsers import PydanticOutputParser
@@ -15,6 +16,8 @@ from docx import Document
 from jinja2 import Environment, FileSystemLoader
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ListStyle
+from reportlab.lib.units import inch
+from reportlab.lib import colors
 from reportlab.platypus import (
     SimpleDocTemplate,
     Paragraph,
@@ -23,6 +26,8 @@ from reportlab.platypus import (
     ListFlowable,
     Image,
     PageBreak,
+    Table,
+    TableStyle,
 )
 import html
 import os
@@ -316,13 +321,76 @@ def report_v2_to_pdf(
             if paragraph.title:
                 paragraph_title = Paragraph(paragraph.title, styles["Heading3"])
                 document_elements.append(paragraph_title)
-            raw_paragraph_content = " ".join(paragraph.sentences)
-            # add sources to the document
-            if section.sources and len(section.sources) > 0:
-                for source in section.sources:
-                    sources.add(source)
-            paragraph_content = Paragraph(raw_paragraph_content, styles["Normal"])
-            document_elements.append(paragraph_content)
+            # check if paragraph has an image
+            if paragraph.images:
+                image_content = get_image(paragraph.images.results[0].original_url)
+                if image_content:
+                    # save image to a temporary file and add to document elements
+                    with tempfile.NamedTemporaryFile() as f:
+                        f.write(image_content)
+                        image = Image(f.name)
+                        # format image for table
+                        image.drawHeight = 2 * inch * image.drawHeight / image.drawWidth
+                        image.drawWidth = 2 * inch
+                        raw_paragraph_content = " ".join(paragraph.sentences)
+                        paragraph_content = Paragraph(
+                            raw_paragraph_content, styles["Normal"]
+                        )
+                        table_data = [[paragraph_content, image]]
+                        table = Table(table_data)
+                        table.setStyle(
+                            TableStyle(
+                                [
+                                    (
+                                        "VALIGN",
+                                        (0, 0),
+                                        (-1, -1),
+                                        "TOP",
+                                    ),  # Align text and image to the top
+                                    (
+                                        "LEFTPADDING",
+                                        (0, 0),
+                                        (-1, -1),
+                                        0,
+                                    ),  # Remove left padding
+                                    (
+                                        "RIGHTPADDING",
+                                        (0, 0),
+                                        (-1, -1),
+                                        10,
+                                    ),  # Add some space between image and text
+                                    (
+                                        "TOPPADDING",
+                                        (0, 0),
+                                        (-1, -1),
+                                        0,
+                                    ),  # Remove top padding
+                                    (
+                                        "BOTTOMPADDING",
+                                        (0, 0),
+                                        (-1, -1),
+                                        0,
+                                    ),  # Remove bottom padding
+                                    (
+                                        "BACKGROUND",
+                                        (0, 0),
+                                        (-1, -1),
+                                        colors.white,
+                                    ),  # Background color if needed
+                                ]
+                            )
+                        )
+                        # Add the table to the content
+                        document_elements.append(table)
+            else:
+                # append paragraph content to document elements
+                raw_paragraph_content = " ".join(paragraph.sentences)
+                # add sources to the document
+                if section.sources and len(section.sources) > 0:
+                    for source in section.sources:
+                        sources.add(source)
+                paragraph_content = Paragraph(raw_paragraph_content, styles["Normal"])
+                document_elements.append(paragraph_content)
             # add space between paragraphs
             document_elements.append(Spacer(1, 12))
     # add graph to the document

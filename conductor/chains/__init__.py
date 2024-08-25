@@ -155,31 +155,57 @@ def match_queries_to_paragraphs(
     Returns:
         ReportV2: _description_
     """
-    section_paragraph_image_matches = []
+    section_paragraph_matches = []
     matched_queries = []
+    matched_images = []
     # iterate through paragraphs and match image search results
     for idx0 in range(len(report.report.sections)):
         if report.report.sections[idx0].title in sections_filter:
             for idx1 in range(len(report.report.sections[idx0].paragraphs)):
+                section_paragraph_key = f"{idx0}-{idx1}"
                 paragraph_text = " ".join(
                     report.report.sections[idx0].paragraphs[idx1].sentences
                 )
                 # run match chain on paragraph text with image search results query
                 for idx2 in range(len(image_search_results)):
+                    # ensure the image search result has not been matched
                     if idx2 not in matched_queries:
                         search_query = image_search_results[idx2].query
                         image_match = run_query_match_chain(
                             search_query=search_query, text=paragraph_text
                         )
+                        # if the search query matches the paragraph text, assign the image to the paragraph
                         if image_match.determination == "RELEVANT":
-                            print(
-                                f"Matched '{search_query}' to paragraph text, assigning image..."
-                            )
-                            matched_queries.append(idx2)
-                            section_paragraph_image_matches.append([idx0, idx1, idx2])
-                            report.report.sections[idx0].paragraphs[
-                                idx1
-                            ].images = image_search_results[idx2]
+                            if section_paragraph_key not in section_paragraph_matches:
+                                if (
+                                    image_search_results[idx2].query
+                                    not in matched_images
+                                ):
+                                    print(
+                                        f"Matched '{search_query}' to paragraph text, assigning image..."
+                                    )
+                                    matched_queries.append(idx2)
+                                    matched_images.append(
+                                        image_search_results[idx2]
+                                        .results[0]
+                                        .original_url
+                                    )
+                                    report.report.sections[idx0].paragraphs[
+                                        idx1
+                                    ].images = image_search_results[idx2]
+                                    section_paragraph_matches.append(
+                                        section_paragraph_key
+                                    )
+                                else:
+                                    print(
+                                        "Image URL already assigned to paragraph, skipping..."
+                                    )
+                                    continue
+                            else:
+                                print(
+                                    "Images already assigned to paragraph, skipping..."
+                                )
+                                continue
                         else:
                             print(
                                 f"Search query '{search_query}' did not match paragraph text, skipping..."
