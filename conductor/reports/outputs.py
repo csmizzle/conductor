@@ -15,9 +15,10 @@ from langsmith import traceable
 from docx import Document
 from jinja2 import Environment, FileSystemLoader
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet, ListStyle
+from reportlab.lib.styles import getSampleStyleSheet, ListStyle, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib import colors
+from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.platypus import (
     SimpleDocTemplate,
     Paragraph,
@@ -314,6 +315,13 @@ def report_v2_to_pdf(
     title = Paragraph(report.report.title, styles["Title"])
     # append title to document elements
     document_elements.append(title)
+    image_counter = 0
+    # Create a custom paragraph style with justified alignment
+    justified_paragraph_style = ParagraphStyle(
+        name="Justified",
+        parent=styles["Normal"],  # Use 'Normal' as the base
+        alignment=TA_JUSTIFY,  # Justified alignment
+    )
     for section in report.report.sections:
         section_title = Paragraph(section.title, styles["Heading2"])
         document_elements.append(section_title)
@@ -325,6 +333,7 @@ def report_v2_to_pdf(
             if paragraph.images:
                 image_content = get_image(paragraph.images.results[0].original_url)
                 if image_content:
+                    image_counter += 1
                     # save image to a temporary file and add to document elements
                     with tempfile.NamedTemporaryFile() as f:
                         f.write(image_content)
@@ -332,11 +341,53 @@ def report_v2_to_pdf(
                         # format image for table
                         image.drawHeight = 2 * inch * image.drawHeight / image.drawWidth
                         image.drawWidth = 2 * inch
+                        # Create a caption for the image
+                        if "Caption" not in styles:
+                            caption_style = ParagraphStyle(
+                                name="Caption",
+                                parent=styles["Normal"],  # Use 'Normal' as the base
+                                fontSize=10,
+                                italic=True,
+                                alignment=1,  # Centered alignment
+                                spaceBefore=6,  # Space before the caption
+                                spaceAfter=6,  # Space after the caption
+                            )
+                            styles.add(caption_style)
+                        caption = Paragraph(
+                            f"Figure {image_counter}: {paragraph.images.results[0].title.rstrip(" ... ")}",
+                            styles["Caption"],
+                        )
+                        # Combine image and caption in a nested table
+                        image_table = Table([[image], [caption]])
+                        image_table.setStyle(
+                            TableStyle(
+                                [
+                                    (
+                                        "ALIGN",
+                                        (0, 0),
+                                        (-1, -1),
+                                        "CENTER",
+                                    ),  # Center the image and caption
+                                    (
+                                        "TOPPADDING",
+                                        (0, 0),
+                                        (-1, 0),
+                                        0,
+                                    ),  # Remove top padding of the image
+                                    (
+                                        "BOTTOMPADDING",
+                                        (0, 1),
+                                        (-1, -1),
+                                        0,
+                                    ),  # Remove bottom padding of the caption
+                                ]
+                            )
+                        )
                         raw_paragraph_content = " ".join(paragraph.sentences)
                         paragraph_content = Paragraph(
-                            raw_paragraph_content, styles["Normal"]
+                            raw_paragraph_content, justified_paragraph_style
                         )
-                        table_data = [[paragraph_content, image]]
+                        table_data = [[paragraph_content, image_table]]
                         table = Table(table_data)
                         table.setStyle(
                             TableStyle(
@@ -389,7 +440,9 @@ def report_v2_to_pdf(
                 if section.sources and len(section.sources) > 0:
                     for source in section.sources:
                         sources.add(source)
-                paragraph_content = Paragraph(raw_paragraph_content, styles["Normal"])
+                paragraph_content = Paragraph(
+                    raw_paragraph_content, justified_paragraph_style
+                )
                 document_elements.append(paragraph_content)
             # add space between paragraphs
             document_elements.append(Spacer(1, 12))

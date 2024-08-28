@@ -64,8 +64,14 @@ REPORT_V2_JSON = json.load(open(os.path.join(BASEDIR, "data", "test_report_v2.js
 ENRICHED_REPORT_V2_JSON = json.load(
     open(os.path.join(BASEDIR, "data", "test_enriched_report.json"))
 )
+BARDEEN_REPORT_JSON = json.load(
+    open(os.path.join(BASEDIR, "data", "test_crew_run_bardeen_to_report.json"))
+)
 ### CREW RUN
 CREW_RUN = json.load(open(os.path.join(BASEDIR, "data", "test_crew_run.json")))
+CREW_RUN_BARDEEN = json.load(
+    open(os.path.join(BASEDIR, "data", "test_rag_marketing_bardeen.json"))
+)
 ### Graph
 GRAPH_JSON = json.load(
     open(os.path.join(BASEDIR, "data", "test_extract_graph_from_report.json"))

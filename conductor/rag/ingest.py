@@ -19,6 +19,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 import requests
 import logging
 from tqdm import tqdm
+from typing import Union
 
 
 logger = logging.getLogger(__name__)
@@ -213,7 +214,7 @@ def image_from_url_to_db(
     client: ElasticsearchRetrieverClient,
     metadata: str = None,
     save_path: str = None,
-) -> list[str]:
+) -> Union[list[str], None]:
     """Ingest an image from a URL to Elasticsearch
 
     Args:
@@ -226,15 +227,19 @@ def image_from_url_to_db(
     Returns:
         list[str]: _description_
     """
-    # ingest image
-    image = describe_image_from_url(
-        image_url=image_url,
-        model=model,
-        metadata=metadata,
-        save_path=save_path,
-    )
-    # insert document
-    return client.create_insert_image_document(image)
+    try:
+        # ingest image
+        image = describe_image_from_url(
+            image_url=image_url,
+            model=model,
+            metadata=metadata,
+            save_path=save_path,
+        )
+        # insert document
+        return client.create_insert_image_document(image)
+    except Exception as e:
+        print(f"Error uploading image {image_url} to db")
+        print(e)
 
 
 def queries_to_image_results(

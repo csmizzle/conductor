@@ -18,7 +18,7 @@ class RagUrlMarketingCrew:
 
     def __init__(
         self,
-        company_url: str,
+        url: str,
         # search_query: str,
         elasticsearch: Elasticsearch,
         index_name: str,
@@ -26,7 +26,7 @@ class RagUrlMarketingCrew:
         redis: bool = False,
         task_callback: Callable = None,
     ) -> None:
-        self.company_url = company_url
+        self.url = url
         # self.search_query = search_query
         self.elasticsearch = elasticsearch
         self.index_name = index_name
@@ -120,14 +120,14 @@ class RagUrlMarketingCrew:
         url_collection_task = tasks.url_collection_task(
             name="URL Collection Research",
             agent=data_collection_agent,
-            company_url=self.company_url,
+            company_url=self.url,
         )
         team_tasks.append(url_collection_task)
         # determine who the company is
         company_determination_search_task = tasks.vector_metadata_search_task(
             name="Company Determination Research",
             agent=vector_meta_search_agent,
-            url=self.company_url,
+            url=self.url,
         )
         team_tasks.append(company_determination_search_task)
         # get the company structure

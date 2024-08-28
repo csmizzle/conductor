@@ -5,8 +5,10 @@ from tests.constants import (
     TEST_KEY_QUESTIONS_BULLETED,
     TEST_KEY_QUESTIONS_NARRATIVE,
     CREW_RUN,
+    CREW_RUN_BARDEEN,
     REPORT_V2_JSON,
     ENRICHED_REPORT_V2_JSON,
+    BARDEEN_REPORT_JSON,
     GRAPH_PNG,
     BASEDIR,
 )
@@ -34,6 +36,7 @@ from conductor.crews.rag_marketing.chains import crew_run_to_report
 from conductor.crews.models import CrewRun
 from langsmith import unit
 from docx.document import Document as DocumentObject
+from reportlab.platypus import SimpleDocTemplate
 import os
 
 
@@ -137,7 +140,7 @@ def test_key_questions_narrative_to_report() -> None:
 
 
 def test_crew_run_to_report() -> None:
-    crew_run = CrewRun.parse_obj(CREW_RUN)
+    crew_run = CrewRun.model_validate(CREW_RUN)
     report = crew_run_to_report(
         crew_run=crew_run,
         title="TRSS Report",
@@ -150,11 +153,34 @@ def test_crew_run_to_report() -> None:
     assert isinstance(report, ReportV2)
 
 
+def test_crew_run_bardeen_to_report() -> None:
+    crew_run = CrewRun.model_validate(CREW_RUN_BARDEEN)
+    report = crew_run_to_report(
+        crew_run=crew_run,
+        title="Bardeen Report",
+        description="Bardeen Report",
+        section_titles_endswith_filter="Research",
+        tone=ReportTone.ANALYTICAL,
+        style=ReportStyleV2.NARRATIVE,
+        point_of_view=ReportPointOfView.THIRD_PERSON,
+    )
+    assert isinstance(report, ReportV2)
+
+
+def test_bardeen_report_to_pdf() -> None:
+    report_v2 = ReportV2.model_validate(BARDEEN_REPORT_JSON)
+    report = report_v2_to_pdf(
+        report=report_v2,
+        filename=os.path.join(BASEDIR, "data", "test_bardeen_report.pdf"),
+        watermark=True,
+    )
+    assert isinstance(report, SimpleDocTemplate)
+
+
 def test_report_v2_to_html() -> None:
-    report_v2 = ReportV2.parse_obj(REPORT_V2_JSON)
+    report_v2 = ReportV2.model_validate(REPORT_V2_JSON)
     html = report_v2_to_html(report=report_v2)
     assert isinstance(html, str)
-    # report_v2_to_pdf(report=report_v2, filename="tests/test_report_v2.pdf")
 
 
 def test_report_v2_to_docx() -> None:
@@ -166,21 +192,21 @@ def test_report_v2_to_docx() -> None:
 
 def test_report_v2_to_pdf() -> None:
     report_v2 = ReportV2.model_validate(REPORT_V2_JSON)
-    report_v2_to_pdf(
+    report = report_v2_to_pdf(
         report=report_v2,
         filename=os.path.join(BASEDIR, "data", "test_report_v2.pdf"),
         graph_file=GRAPH_PNG,
         watermark=True,
     )
-    assert True
+    assert isinstance(report, SimpleDocTemplate)
 
 
 def test_report_v2_to_pdf_with_images() -> None:
     report_v2 = ReportV2.model_validate(ENRICHED_REPORT_V2_JSON)
-    report_v2_to_pdf(
+    report = report_v2_to_pdf(
         report=report_v2,
         filename=os.path.join(BASEDIR, "data", "test_report_with_images_v2.pdf"),
         graph_file=GRAPH_PNG,
         watermark=True,
     )
-    assert True
+    assert isinstance(report, SimpleDocTemplate)
