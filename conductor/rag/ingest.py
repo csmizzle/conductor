@@ -290,7 +290,8 @@ def insert_image_urls_to_db(
                 + entry.title,  # append the query and title for metadata
                 save_path=save_path if save_path else None,
             )
-            added_documents.extend(document)
+            if added_documents:
+                added_documents.extend(document)
     return added_documents
 
 
