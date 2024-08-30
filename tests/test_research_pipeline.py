@@ -56,13 +56,13 @@ def test_research_pipeline_enriched_pdf(elasticsearch_test_agent_index) -> None:
         index_name=elasticsearch_test_agent_index,
     )
     pipeline = ResearchPipeline(
-        url="https://trssllc.com",
+        url="https://parenthetic.io",
         report_style=ReportStyleV2.NARRATIVE,
         report_tone=ReportTone.ANALYTICAL,
         report_point_of_view=ReportPointOfView.THIRD_PERSON,
         client=client,
-        report_title="TRSS Report",
-        report_description="TRSS Report",
+        report_title="Parenthetic Report",
+        report_description="Parenthetic Report",
         image_search_relationships=[
             RelationshipType.EMPLOYEE.value,
             RelationshipType.EXECUTIVE.value,
@@ -75,4 +75,4 @@ def test_research_pipeline_enriched_pdf(elasticsearch_test_agent_index) -> None:
     assert isinstance(pipeline.report, ReportV2)
     # assert that enriched operations work
     assert pipeline.pdf_document
-    pipeline.save_pdf("./pipeline_enriched.pdf")
+    pipeline.save_pdf("./parenthetic_pipeline_enriched.pdf")

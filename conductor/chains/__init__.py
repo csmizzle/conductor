@@ -185,17 +185,21 @@ def match_queries_to_paragraphs(
                                         f"Matched '{search_query}' to paragraph text, assigning image..."
                                     )
                                     matched_queries.append(idx2)
-                                    matched_images.append(
-                                        image_search_results[idx2]
-                                        .results[0]
-                                        .original_url
-                                    )
-                                    report.report.sections[idx0].paragraphs[
-                                        idx1
-                                    ].images = image_search_results[idx2]
-                                    section_paragraph_matches.append(
-                                        section_paragraph_key
-                                    )
+                                    if len(image_search_results[idx2].results) > 0:
+                                        matched_images.append(
+                                            image_search_results[idx2]
+                                            .results[0]
+                                            .original_url
+                                        )
+                                        report.report.sections[idx0].paragraphs[
+                                            idx1
+                                        ].images = image_search_results[idx2]
+                                        section_paragraph_matches.append(
+                                            section_paragraph_key
+                                        )
+                                    else:
+                                        print("No image results found, skipping...")
+                                        continue
                                 else:
                                     print(
                                         "Image URL already assigned to paragraph, skipping..."

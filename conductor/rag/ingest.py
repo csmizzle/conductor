@@ -256,13 +256,18 @@ def queries_to_image_results(
         )  # map raw query to image result
         # collect n results from results
         for idx in range(n_images):
-            image_result.results.append(
-                ImageResult(
-                    original_url=query["images_results"][idx]["original"],
-                    title=query["images_results"][idx]["title"],
+            if "images_results" in query:
+                image_result.results.append(
+                    ImageResult(
+                        original_url=query["images_results"][idx]["original"],
+                        title=query["images_results"][idx]["title"],
+                    )
                 )
-            )
-        image_results.append(image_result)
+                image_results.append(image_result)
+            else:
+                logger.info(
+                    f"No image results found for {query["search_parameters"]["q"]}"
+                )
     return image_results
 
 
