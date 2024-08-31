@@ -32,6 +32,7 @@ from reportlab.platypus import (
 )
 import html
 import os
+from PIL import UnidentifiedImageError
 
 
 BASEDIR = os.path.dirname(os.path.abspath(__file__))
@@ -333,106 +334,114 @@ def report_v2_to_pdf(
             if paragraph.images:
                 image_content = get_image(paragraph.images.results[0].original_url)
                 if image_content:
-                    image_counter += 1
-                    # save image to a temporary file and add to document elements
-                    with tempfile.NamedTemporaryFile() as f:
-                        f.write(image_content)
-                        image = Image(f.name)
-                        # format image for table
-                        image.drawHeight = 2 * inch * image.drawHeight / image.drawWidth
-                        image.drawWidth = 2 * inch
-                        # Create a caption for the image
-                        if "Caption" not in styles:
-                            caption_style = ParagraphStyle(
-                                name="Caption",
-                                parent=styles["Normal"],  # Use 'Normal' as the base
-                                fontSize=10,
-                                italic=True,
-                                alignment=1,  # Centered alignment
-                                spaceBefore=6,  # Space before the caption
-                                spaceAfter=6,  # Space after the caption
+                    try:
+                        # save image to a temporary file and add to document elements
+                        with tempfile.NamedTemporaryFile() as f:
+                            f.write(image_content)
+                            image = Image(f.name)
+                            # format image for table
+                            image.drawHeight = (
+                                2 * inch * image.drawHeight / image.drawWidth
                             )
-                            styles.add(caption_style)
-                        caption = Paragraph(
-                            f"Figure {image_counter}: {paragraph.images.results[0].title.rstrip(" ... ")}",
-                            styles["Caption"],
-                        )
-                        # Combine image and caption in a nested table
-                        image_table = Table([[image], [caption]])
-                        image_table.setStyle(
-                            TableStyle(
-                                [
-                                    (
-                                        "ALIGN",
-                                        (0, 0),
-                                        (-1, -1),
-                                        "CENTER",
-                                    ),  # Center the image and caption
-                                    (
-                                        "TOPPADDING",
-                                        (0, 0),
-                                        (-1, 0),
-                                        0,
-                                    ),  # Remove top padding of the image
-                                    (
-                                        "BOTTOMPADDING",
-                                        (0, 1),
-                                        (-1, -1),
-                                        0,
-                                    ),  # Remove bottom padding of the caption
-                                ]
+                            image.drawWidth = 2 * inch
+                            # Create a caption for the image
+                            if "Caption" not in styles:
+                                caption_style = ParagraphStyle(
+                                    name="Caption",
+                                    parent=styles["Normal"],  # Use 'Normal' as the base
+                                    fontSize=10,
+                                    italic=True,
+                                    alignment=1,  # Centered alignment
+                                    spaceBefore=6,  # Space before the caption
+                                    spaceAfter=6,  # Space after the caption
+                                )
+                                styles.add(caption_style)
+                            caption = Paragraph(
+                                f"Figure {image_counter}: {paragraph.images.results[0].title.rstrip(" ... ")}",
+                                styles["Caption"],
                             )
-                        )
-                        raw_paragraph_content = " ".join(paragraph.sentences)
-                        paragraph_content = Paragraph(
-                            raw_paragraph_content, justified_paragraph_style
-                        )
-                        table_data = [[paragraph_content, image_table]]
-                        table = Table(table_data)
-                        table.setStyle(
-                            TableStyle(
-                                [
-                                    (
-                                        "VALIGN",
-                                        (0, 0),
-                                        (-1, -1),
-                                        "TOP",
-                                    ),  # Align text and image to the top
-                                    (
-                                        "LEFTPADDING",
-                                        (0, 0),
-                                        (-1, -1),
-                                        0,
-                                    ),  # Remove left padding
-                                    (
-                                        "RIGHTPADDING",
-                                        (0, 0),
-                                        (-1, -1),
-                                        10,
-                                    ),  # Add some space between image and text
-                                    (
-                                        "TOPPADDING",
-                                        (0, 0),
-                                        (-1, -1),
-                                        0,
-                                    ),  # Remove top padding
-                                    (
-                                        "BOTTOMPADDING",
-                                        (0, 0),
-                                        (-1, -1),
-                                        0,
-                                    ),  # Remove bottom padding
-                                    (
-                                        "BACKGROUND",
-                                        (0, 0),
-                                        (-1, -1),
-                                        colors.white,
-                                    ),  # Background color if needed
-                                ]
+                            # Combine image and caption in a nested table
+                            image_table = Table([[image], [caption]])
+                            image_table.setStyle(
+                                TableStyle(
+                                    [
+                                        (
+                                            "ALIGN",
+                                            (0, 0),
+                                            (-1, -1),
+                                            "CENTER",
+                                        ),  # Center the image and caption
+                                        (
+                                            "TOPPADDING",
+                                            (0, 0),
+                                            (-1, 0),
+                                            0,
+                                        ),  # Remove top padding of the image
+                                        (
+                                            "BOTTOMPADDING",
+                                            (0, 1),
+                                            (-1, -1),
+                                            0,
+                                        ),  # Remove bottom padding of the caption
+                                    ]
+                                )
                             )
+                            raw_paragraph_content = " ".join(paragraph.sentences)
+                            paragraph_content = Paragraph(
+                                raw_paragraph_content, justified_paragraph_style
+                            )
+                            table_data = [[paragraph_content, image_table]]
+                            table = Table(table_data)
+                            table.setStyle(
+                                TableStyle(
+                                    [
+                                        (
+                                            "VALIGN",
+                                            (0, 0),
+                                            (-1, -1),
+                                            "TOP",
+                                        ),  # Align text and image to the top
+                                        (
+                                            "LEFTPADDING",
+                                            (0, 0),
+                                            (-1, -1),
+                                            0,
+                                        ),  # Remove left padding
+                                        (
+                                            "RIGHTPADDING",
+                                            (0, 0),
+                                            (-1, -1),
+                                            10,
+                                        ),  # Add some space between image and text
+                                        (
+                                            "TOPPADDING",
+                                            (0, 0),
+                                            (-1, -1),
+                                            0,
+                                        ),  # Remove top padding
+                                        (
+                                            "BOTTOMPADDING",
+                                            (0, 0),
+                                            (-1, -1),
+                                            0,
+                                        ),  # Remove bottom padding
+                                        (
+                                            "BACKGROUND",
+                                            (0, 0),
+                                            (-1, -1),
+                                            colors.white,
+                                        ),  # Background color if needed
+                                    ]
+                                )
+                            )
+                            # Add the table to the content
+                            image_counter += 1
+                            document_elements.append(table)
+                    except UnidentifiedImageError:
+                        print(
+                            f"Unable to load image from {paragraph.images.results[0].original_url}"
                         )
-                        # Add the table to the content
-                        document_elements.append(table)
+                        continue
             else:
                 # append paragraph content to document elements
                 raw_paragraph_content = " ".join(paragraph.sentences)
