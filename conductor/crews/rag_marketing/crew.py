@@ -271,6 +271,7 @@ class RagUrlMarketingCrew:
             name="Recent Events Search",
             agent=vector_search_agent,
             search_query="What are the most recent events for this company?",
+            instructions="Include any recent news, press releases, or other notable events including mergers and acquisitions.",
             context=[
                 company_determination_search_task,
                 company_structure_research_results,
