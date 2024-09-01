@@ -316,7 +316,7 @@ def report_v2_to_pdf(
     title = Paragraph(report.report.title, styles["Title"])
     # append title to document elements
     document_elements.append(title)
-    image_counter = 0
+    image_counter = 1
     # Create a custom paragraph style with justified alignment
     justified_paragraph_style = ParagraphStyle(
         name="Justified",
