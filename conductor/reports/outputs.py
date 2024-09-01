@@ -33,9 +33,10 @@ from reportlab.platypus import (
 import html
 import os
 from PIL import UnidentifiedImageError
-
+import logging
 
 BASEDIR = os.path.dirname(os.path.abspath(__file__))
+logger = logging.getLogger(__name__)
 
 
 def report_to_html(report: Report) -> str:
@@ -277,9 +278,12 @@ def add_watermark(canvas, doc):
     y = 750
 
     # Draw the watermark image on the page
-    canvas.drawImage(
-        os.getenv("WATERMARK_IMAGE"), x, y, width=75, height=25, mask="auto"
-    )
+    if os.getenv("WATERMARK_IMAGE"):
+        canvas.drawImage(
+            os.getenv("WATERMARK_IMAGE"), x, y, width=75, height=25, mask="auto"
+        )
+    else:
+        logging.info("No watermark image found, will not add watermark to PDF.")
 
     # add page number
     page_number_text = f"{doc.page}"
