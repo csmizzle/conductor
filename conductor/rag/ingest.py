@@ -257,10 +257,12 @@ def queries_to_image_results(
         # collect n results from results
         for idx in range(n_images):
             if "images_results" in query:
+                # created_caption = run_create_caption_
                 image_result.results.append(
                     ImageResult(
                         original_url=query["images_results"][idx]["original"],
                         title=query["images_results"][idx]["title"],
+                        # caption=
                     )
                 )
                 image_results.append(image_result)

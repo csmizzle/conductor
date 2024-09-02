@@ -118,3 +118,23 @@ query_to_paragraph_matching_prompt = PromptTemplate(
         "format_instructions": query_matcher_parser.get_format_instructions()
     },
 )
+
+
+CAPTION_PROMPT = """
+You are a world class short caption writer.
+Write short captions for reports that will go in professional reports.
+Use the search query and image title fields to write short, informational image captions.
+The caption should be no longer than 6 words.
+
+<search_query>
+{search_query}
+</search_query>
+
+<image_title>
+{image_title}
+</image_title>
+"""
+
+caption_prompt = PromptTemplate(
+    template=CAPTION_PROMPT, input_variables=["search_query", "image_title"]
+)

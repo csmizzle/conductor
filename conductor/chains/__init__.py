@@ -10,7 +10,7 @@ from conductor.reports.models import (
     QueryMatch,
     ReportV2,
 )
-
+from langchain_core.output_parsers import StrOutputParser
 from tqdm import tqdm
 
 graph_chain = prompts.graph_extraction_prompt | openai_gpt_4o | prompts.graph_parser
@@ -22,6 +22,7 @@ query_match_chain = (
     | openai_gpt_4o
     | prompts.query_matcher_parser
 )
+caption_chain = prompts.caption_prompt | openai_gpt_4o | StrOutputParser()
 
 
 def run_graph_chain(
@@ -93,6 +94,12 @@ def run_query_match_chain(search_query: str, text: str) -> QueryMatch:
             search_query=search_query,
             paragraph_text=text,
         )
+    )
+
+
+def run_create_caption_chain(image_title: str, search_query: str) -> str:
+    return caption_chain.invoke(
+        dict(image_title=image_title, search_query=search_query)
     )
 
 

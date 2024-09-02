@@ -35,19 +35,22 @@ vector_retriever = ElasticsearchRetriever.from_es_params(
 prompt = ChatPromptTemplate.from_template(
     """Answer the question based only on the context provided.
 
-Each sentence should have at least one source. If there are multiple sources for a sentence, separate them like this: [1][2].
+Each sentence should have at least one source.
+If there are multiple sources for a sentence, separate them like this: [1][2].
 Sources should be in the form of urls.
 If there is not a url and instead a description of an image, use the description in the source.
+Each URL is Sources should be unique and not repeated.
+Sources can be repeated if they are used in different sentences.
 Only include the sources that are relevant to the question.
 Do not start the answer with "According to the sources" or similar, make the answer sound natural and analytical.
 
 Example Answer with Sources:
 
-Acme Corp is run by John Doe.[1][2] He is the CEO of the company.[1] John has a background in finance and has worked in the industry for over 20 years.[2][3]
+Acme Corp is run by John Doe.[1][2] He is the CEO of the company.[1] John has a background in finance and has worked in the industry for over 20 years.[1][2][3]
 Sources:
-[1] https://example.com/source1
-[2] https://example.com/source2
-[3] https://example.com/source3
+[1] https://abc.com/source1
+[2] https://efg.com/source2
+[3] https://lmn.com/source3
 
 End of Example Answer
 

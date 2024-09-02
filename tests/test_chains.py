@@ -10,6 +10,7 @@ from conductor.chains import (
     run_timeline_chain,
     run_query_match_chain,
     match_queries_to_paragraphs,
+    run_create_caption_chain,
 )
 from conductor.rag.ingest import relationships_to_image_query, queries_to_image_results
 from conductor.reports.models import ReportV2
@@ -70,3 +71,11 @@ def test_match_queries_to_paragraphs() -> None:
     with open("tests/data/matched_paragraphs.json", "w") as f:
         json.dump(matched_paragraphs.model_dump(), f, indent=4)
     assert isinstance(matched_paragraphs, ReportV2)
+
+
+def test_caption_chain() -> None:
+    caption = run_create_caption_chain(
+        image_title="Jim Dinkins - Thomson Reuters Institute",
+        search_query="Jim Dinkins TRSS",
+    )
+    assert isinstance(caption, str)
