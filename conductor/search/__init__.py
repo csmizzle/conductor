@@ -6,8 +6,10 @@ from langchain_elasticsearch import ElasticsearchRetriever
 from conductor.rag.embeddings import BedrockEmbeddings
 from typing import Dict
 import os
+import logging
 
 
+logger = logging.getLogger(__name__)
 index_name = os.getenv("ELASTICSEARCH_INDEX")
 
 
@@ -42,11 +44,12 @@ If there is not a url and instead a description of an image, use the description
 Each URL is Sources should be unique and not repeated.
 Sources can be repeated if they are used in different sentences.
 Only include the sources that are relevant to the question.
-Do not start the answer with "According to the sources" or similar, make the answer sound natural and analytical.
+Do not say things like "According to the sources" or similar, make the answers sound natural and analytical.
 
 Example Answer with Sources:
 
 Acme Corp is run by John Doe.[1][2] He is the CEO of the company.[1] John has a background in finance and has worked in the industry for over 20 years.[1][2][3]
+
 Sources:
 [1] https://abc.com/source1
 [2] https://efg.com/source2
@@ -65,6 +68,8 @@ Question: {question}"""
 def format_docs(docs):
     return "\n\n".join(
         doc.page_content + "\nSource:" + doc.metadata["_source"]["metadata"]["url"]
+        if "url" in doc.metadata["_source"]["metadata"]
+        else "None"
         for doc in docs
     )
 
@@ -78,4 +83,7 @@ search_chain = (
 
 
 def search(query: str) -> str:
-    return search_chain.invoke(input=query)
+    logger.info("Searching index ...")
+    response = search_chain.invoke(input=query)
+    logger.info("Search complete ...")
+    return response
