@@ -360,10 +360,16 @@ def report_v2_to_pdf(
                                     spaceAfter=6,  # Space after the caption
                                 )
                                 styles.add(caption_style)
-                            caption = Paragraph(
-                                f"Figure {image_counter}: {paragraph.images.results[0].title.rstrip(" ... ")}",
-                                styles["Caption"],
-                            )
+                            if paragraph.images.results[0].caption:
+                                caption = Paragraph(
+                                    f"Figure {image_counter}: {paragraph.images.results[0].caption}",
+                                    styles["Caption"],
+                                )
+                            else:
+                                caption = Paragraph(
+                                    f"Figure {image_counter}: {paragraph.images.results[0].title.rstrip(" ... ")}",
+                                    styles["Caption"],
+                                )
                             # Combine image and caption in a nested table
                             image_table = Table([[image], [caption]])
                             image_table.setStyle(

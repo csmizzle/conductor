@@ -9,7 +9,7 @@ from conductor.reports.models import (
     ImageResult,
 )
 from conductor.chains.tools import ImageProcessor
-from conductor.chains import relationships_to_image_query
+from conductor.chains import relationships_to_image_query, run_create_caption_chain
 from bs4 import BeautifulSoup
 from datetime import datetime
 from conductor.rag.client import ElasticsearchRetrieverClient
@@ -257,12 +257,18 @@ def queries_to_image_results(
         # collect n results from results
         for idx in range(n_images):
             if "images_results" in query:
-                # created_caption = run_create_caption_
+                logger.info("Creating image cation ...")
+                original_url = query["images_results"][idx]["original"]
+                title = query["images_results"][idx]["title"]
+                created_caption = run_create_caption_chain(
+                    search_query=query["search_parameters"]["q"],
+                    image_title=title,
+                )
                 image_result.results.append(
                     ImageResult(
-                        original_url=query["images_results"][idx]["original"],
-                        title=query["images_results"][idx]["title"],
-                        # caption=
+                        original_url=original_url,
+                        title=title,
+                        caption=created_caption,
                     )
                 )
                 image_results.append(image_result)

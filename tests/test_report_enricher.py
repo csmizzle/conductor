@@ -33,5 +33,5 @@ def test_report_enricher(elasticsearch_test_image_index) -> None:
     )
     enriched_report = report_enricher.enrich()
     assert isinstance(enriched_report, ReportV2)
-    with open("tests/data/test_enriched_report.json", "w") as f:
+    with open("tests/data/test_enriched_report_with_captions.json", "w") as f:
         json.dump(enriched_report.model_dump(), f, indent=2)

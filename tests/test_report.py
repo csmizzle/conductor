@@ -8,6 +8,7 @@ from tests.constants import (
     CREW_RUN_BARDEEN,
     REPORT_V2_JSON,
     ENRICHED_REPORT_V2_JSON,
+    ENRICHED_REPORT_V2_JSON_WITH_CAPTIONS,
     BARDEEN_REPORT_JSON,
     GRAPH_PNG,
     BASEDIR,
@@ -206,6 +207,19 @@ def test_report_v2_to_pdf_with_images() -> None:
     report = report_v2_to_pdf(
         report=report_v2,
         filename=os.path.join(BASEDIR, "data", "test_report_with_images_v2.pdf"),
+        graph_file=GRAPH_PNG,
+        watermark=True,
+    )
+    assert isinstance(report, SimpleDocTemplate)
+
+
+def test_report_v2_to_pdf_with_image_captions() -> None:
+    report_v2 = ReportV2.model_validate(ENRICHED_REPORT_V2_JSON_WITH_CAPTIONS)
+    report = report_v2_to_pdf(
+        report=report_v2,
+        filename=os.path.join(
+            BASEDIR, "data", "test_report_with_image_captions_v2.pdf"
+        ),
         graph_file=GRAPH_PNG,
         watermark=True,
     )

@@ -123,6 +123,9 @@ class ImageResult(BaseModel):
 
     original_url: str = Field(..., description="The original URL of the image")
     title: str = Field(..., description="The title of the image in the search results")
+    caption: Optional[str] = Field(
+        ..., description="The caption of the image in the search results"
+    )
 
 
 class ImageSearchResult(BaseModel):

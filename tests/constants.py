@@ -64,6 +64,9 @@ REPORT_V2_JSON = json.load(open(os.path.join(BASEDIR, "data", "test_report_v2.js
 ENRICHED_REPORT_V2_JSON = json.load(
     open(os.path.join(BASEDIR, "data", "test_enriched_report.json"))
 )
+ENRICHED_REPORT_V2_JSON_WITH_CAPTIONS = json.load(
+    open(os.path.join(BASEDIR, "data", "test_enriched_report_with_captions.json"))
+)
 BARDEEN_REPORT_JSON = json.load(
     open(os.path.join(BASEDIR, "data", "test_crew_run_bardeen_to_report.json"))
 )
