@@ -1,6 +1,9 @@
 from conductor.chains import prompts
 from conductor.chains.tools import image_search
+from datetime import date
+from conductor.chains.models import SyntheticDocuments
 from conductor.llms import openai_gpt_4o
+from conductor.rag.client import ElasticsearchRetrieverClient
 from conductor.reports.models import (
     Graph,
     EntityType,
@@ -9,11 +12,15 @@ from conductor.reports.models import (
     ImageSearchResult,
     QueryMatch,
     ReportV2,
+    SectionV2,
 )
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.documents import Document
 from tqdm import tqdm
 
-graph_chain = prompts.graph_extraction_prompt | openai_gpt_4o | prompts.graph_parser
+graph_chain = (
+    prompts.graph_extraction_prompt | openai_gpt_4o | prompts.graph_retry_parser
+)
 timeline_chain = (
     prompts.timeline_extraction_prompt | openai_gpt_4o | prompts.timeline_parser
 )
@@ -23,6 +30,12 @@ query_match_chain = (
     | prompts.query_matcher_parser
 )
 caption_chain = prompts.caption_prompt | openai_gpt_4o | StrOutputParser()
+hyde_chain = prompts.hyde_prompt | openai_gpt_4o | prompts.hyde_parser
+sourced_section_writer_chain = (
+    prompts.sourced_section_writer_prompt
+    | openai_gpt_4o
+    | prompts.sourced_section_fixing_parser
+)
 
 
 def run_graph_chain(
@@ -100,6 +113,22 @@ def run_query_match_chain(search_query: str, text: str) -> QueryMatch:
 def run_create_caption_chain(image_title: str, search_query: str) -> str:
     return caption_chain.invoke(
         dict(image_title=image_title, search_query=search_query)
+    )
+
+
+def run_hyde_generation_chain(
+    context: str, objective: str, n_documents: int = 5, n_sentences: int = 5
+) -> SyntheticDocuments:
+    return hyde_chain.invoke(
+        dict(
+            date=date.today().strftime(
+                "%Y-%m-%d"
+            ),  # ground LLM in today's date for recent information
+            context=context,
+            objective=objective,
+            n_documents=n_documents,
+            n_sentences=n_sentences,
+        )
     )
 
 
@@ -229,3 +258,93 @@ def match_queries_to_paragraphs(
                         continue
     # return report with image search results
     return report
+
+
+def run_hyde_search(
+    context: str,
+    objective: str,
+    retriever: ElasticsearchRetrieverClient,
+    n_documents: int = 5,
+    n_sentences: int = 5,
+    k: int = 4,
+    fetch_k: int = 50,
+    unique: bool = True,
+) -> list[Document]:
+    """Run the HYDE search chain and get the most relevant documents.
+
+    Args:
+        context (str): Query context.
+        objective (str): Objective of the query.
+        retriever (ElasticsearchRetrieverClient): Elasticsearch retriever client.
+        n_documents (int, optional): Number of synthetic documents. Defaults to 5.
+        n_sentences (int, optional): Number of sentences in a synthetic document. Defaults to 5.
+        unique (bool, optional): Return unique documents. Defaults to True.
+
+    Returns:
+        list[Document]: List of relevant documents.
+    """
+    results = []
+    if unique:
+        urls = []
+    synthetic_documents = run_hyde_generation_chain(
+        context=context,
+        objective=objective,
+        n_documents=n_documents,
+        n_sentences=n_sentences,
+    )
+    for document in synthetic_documents.documents:
+        result = retriever.store.similarity_search(
+            query=document,
+            k=k,
+            fetch_k=fetch_k,
+        )
+        if unique:
+            # filter out duplicate urls if unique is True
+            for document in result:
+                if document.metadata["url"] not in urls:
+                    urls.append(document.metadata["url"])
+                    results.append(document)
+                else:
+                    continue
+        else:
+            results.extend(result)
+    return results
+
+
+def run_sourced_section_chain(
+    title: str,
+    style: str,
+    tone: str,
+    point_of_view: str,
+    context: str,
+    min_sentences: int = 3,
+    max_sentences: int = 5,
+    sections: list[str] = None,
+) -> SectionV2:
+    """Run the sourced section chain and get the most relevant documents.
+
+    Args:
+        title (str): Title of the section.
+        style (str): Style of the section.
+        tone (str): Tone of the section.
+        point_of_view (str): Point of view of the section.
+        context (str): Query context.
+        min_sentences (int, optional): Minimum number of sentences in a paragraph. Defaults to 3.
+        max_sentences (int, optional): Maximum number of sentences in a paragraph. Defaults to 5.
+        sections (list[str], optional): Previous sections. Defaults to None.
+
+    Returns:
+        SectionV2: Section with paragraphs and sources.
+    """
+    return sourced_section_writer_chain.invoke(
+        dict(
+            title=title,
+            style=style,
+            tone=tone,
+            point_of_view=point_of_view,
+            context=context,
+            min_sentences=min_sentences,
+            max_sentences=max_sentences,
+            previous_sections=sections,
+        )
+    )

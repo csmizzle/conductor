@@ -7,13 +7,20 @@ from conductor.chains import (
     Timeline,
     QueryMatch,
     RelationshipType,
+    SyntheticDocuments,
     run_timeline_chain,
     run_query_match_chain,
     match_queries_to_paragraphs,
     run_create_caption_chain,
+    run_hyde_generation_chain,
+    run_hyde_search,
+    run_sourced_section_chain,
 )
 from conductor.rag.ingest import relationships_to_image_query, queries_to_image_results
-from conductor.reports.models import ReportV2
+from conductor.rag.client import ElasticsearchRetrieverClient
+from elasticsearch import Elasticsearch
+from conductor.rag.embeddings import BedrockEmbeddings
+from conductor.reports.models import ReportV2, SectionV2
 from tests.constants import TEST_COMPLEX_NARRATIVE, GRAPH_JSON, REPORT_V2_JSON
 import os
 import json
@@ -79,3 +86,66 @@ def test_caption_chain() -> None:
         search_query="Jim Dinkins TRSS",
     )
     assert isinstance(caption, str)
+
+
+def test_hyde_chain() -> None:
+    synthetic_documents = run_hyde_generation_chain(
+        context="Thomson Reuters Special Services",
+        objective="Build out a report section on the company's leadership team",
+        n_documents=5,
+    )
+    assert isinstance(synthetic_documents, SyntheticDocuments)
+
+
+def test_hyde_search_chain() -> None:
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    embeddings = BedrockEmbeddings()
+    client = ElasticsearchRetrieverClient(
+        elasticsearch=elasticsearch,
+        embeddings=embeddings,
+        index_name=os.getenv("ELASTICSEARCH_INDEX"),
+    )
+    documents = run_hyde_search(
+        context="Thomson Reuters Special Services",
+        objective="Build out a report section on the company's leadership team",
+        retriever=client,
+    )
+    assert isinstance(documents, list)
+
+
+def test_run_sourced_section_chain() -> None:
+    sourced_section = run_sourced_section_chain(
+        title="Company Leadership",
+        style="NARRATIVE",
+        tone="ANALYTICAL",
+        point_of_view="THIRD_PERSON",
+        context="Thomson Reuters Special Services is a company that provides a range of services to clients in the financial industry led by Bob Smith in washington, DC. Source: trssllc.com.",
+    )
+    assert isinstance(sourced_section, SectionV2)
+
+
+def test_write_sourced_section() -> None:
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    embeddings = BedrockEmbeddings()
+    client = ElasticsearchRetrieverClient(
+        elasticsearch=elasticsearch,
+        embeddings=embeddings,
+        index_name=os.getenv("ELASTICSEARCH_INDEX"),
+    )
+    documents = run_hyde_search(
+        context="Thomson Reuters Special Services",
+        objective="Build out a report section on the company's leadership team",
+        retriever=client,
+    )
+    sourced_section = run_sourced_section_chain(
+        title="Company Leadership",
+        style="NARRATIVE",
+        tone="ANALYTICAL",
+        point_of_view="THIRD_PERSON",
+        context=[doc.page_content + doc.metadata["url"] for doc in documents],
+    )
+    assert isinstance(sourced_section, SectionV2)

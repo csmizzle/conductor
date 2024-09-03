@@ -260,11 +260,21 @@ class Section(BaseModel):
     paragraphs: List[Paragraph] = Field(description="List of paragraphs")
 
 
+class Source(BaseModel):
+    footnote: int = Field(description="Footnote number")
+    url: str = Field(description="URL of the source")
+
+
+class Sentence(BaseModel):
+    text: str = Field(description="Text of the sentence")
+    sources: List[Source] = Field(description="List of sources for the sentence")
+
+
 class ParagraphV2(BaseModel):
     title: Optional[str] = Field(
         default="", description="Title of the paragraph if needed"
     )
-    sentences: list[str] = Field(
+    sentences: list[Sentence] = Field(
         description="List of sentences in the paragraph. Each element in the list must contain only one sentence."
     )
     images: Optional[ImageSearchResult] = Field(
@@ -275,12 +285,12 @@ class ParagraphV2(BaseModel):
 class SectionV2(BaseModel):
     title: str = Field(description="Title of report section")
     paragraphs: List[ParagraphV2] = Field(description="List of paragraphs")
-    sources: Optional[List[str]] = Field(description="List of sources for the section")
     tone: Optional[ReportTone] = Field(description="Tone of the section")
     style: Optional[ReportStyleV2] = Field(description="Style of the section")
     point_of_view: Optional[ReportPointOfView] = Field(
         description="Point of view of the section"
     )
+    footnotes: list[Source] = Field(description="List of all sources for the section")
 
     class Config:
         use_enum_values = True

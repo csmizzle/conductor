@@ -5,6 +5,8 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.output_parsers import OutputFixingParser
 from conductor.reports.models import Graph, Timeline, QueryMatch
+from conductor.chains.models import SyntheticDocuments
+from conductor.reports.models import SectionV2
 
 
 # Entity extraction
@@ -137,4 +139,143 @@ The caption should be no longer than 6 words.
 
 caption_prompt = PromptTemplate(
     template=CAPTION_PROMPT, input_variables=["search_query", "image_title"]
+)
+
+
+HYDE_QUERY_GENERATION_PROMPT = """
+You are a world class synthetic document query generator.
+Your goal is to generate larger synthetic documents that will retrieve the most relevant documents from the vector database.
+First, evaluate the provided context, objective, and today's date.
+Use todays date to ground the information in recent data by using the date in the query.
+Second, generate synthetic documents that will retrieve the most relevant and recent documents from a vector store.
+Each document should have a minimum of {n_sentences} sentences.
+Finally, return the generated documents in the provided JSON format.
+
+<date>
+{date}
+</date>
+
+<context>
+{context}
+</context>
+
+<n_sentences>
+{n_sentences}
+</n_sentences>
+
+<objective>
+{objective}
+</objective>
+
+<n_documents>
+{n_documents}
+</n_documents>
+
+<format_instructions>
+{format_instructions}
+</format_instructions>
+"""
+
+
+hyde_parser = PydanticOutputParser(pydantic_object=SyntheticDocuments)
+hyde_fixing_parser = OutputFixingParser(parser=hyde_parser)
+hyde_prompt = PromptTemplate(
+    template=HYDE_QUERY_GENERATION_PROMPT,
+    input_variables=["date", "context", "objective", "n_documents", "n_sentences"],
+    partial_variables={
+        "format_instructions": hyde_fixing_parser.get_format_instructions()
+    },
+)
+
+
+SOURCED_SECTION_WRITER_PROMPT = """
+You are a world class writer and you have been tasked with writing a section of a report.
+Use as many paragraphs as needed to cover the context provided, be thorough, detailed, and include all relevant information.
+Pull all the information from the context provided and ensure that all information is accurate and well-sourced.
+
+First, use the provided title, style, tone, and point of view to guide your writing.
+Second, use the previous sections as a guide for reducing repetition and ensuring consistency.
+- If previous sections are not provided, ignore this step.
+Third, write the section with the provided context with their sources.
+- Each paragraph should be a minimum of {min_sentences} sentences and maximum of {max_sentences}, be sure to use the maximum if needed.
+- Each sentence should sourced with at least one source, in the form of footnotes.
+    - Sources should be in the form of urls.
+    - Sources should be unique and not repeated.
+    - Each url should only map to a single footnote number.
+        - If a source is used twice, it should use the same footnote number.
+    - If there is not a url and instead a description of an image, use the description in the source.
+    - If there are multiple sources for a sentence, separate them like this: [1][2].
+        - Parse these footnotes into the correct JSON format.
+- Be creative when beginning and ending paragraphs, avoid repetitive phrases such as "In conclusion" or "In summary".
+- Avoid repeating the same information in different ways, repetitive paragraph openers, and repetitive sentence structures.
+Thirdly, ensure that all footnotes are:
+- Mapped to the correct sentence.
+- One URL to one footnote.
+    - If you find a URL that is repeated, replace the repeated URL with the earlier footnote number and remove the duplicate later footnote number.
+Finally, return the section in the provided JSON format.
+
+
+Example:
+
+Context: Thomson Reuters Special Services was founded in 2018 by John Doe. The company specializes in providing security services to high net worth individuals and corporations. The company has a team of highly trained security professionals who have experience in the military and law enforcement. Source: trssllc.com.
+Output: Thomson Reuters Special Services was founded in 2018 by John Doe.[1] The company specializes in providing security services to high net worth individuals and corporations.[1] The company has a team of highly trained security professionals who have experience in the military and law enforcement.[1]
+
+End of Example
+
+
+Previous Sections:
+<previous_sections>
+{previous_sections}
+</previous_sections>
+
+
+Title:
+<title>
+{title}
+</title>
+
+Style:
+<style>
+{style}
+</style>
+
+Tone:
+<tone>
+{tone}
+</tone>
+
+Point of view:
+<point_of_view>
+{point_of_view}
+</point_of_view>
+
+Context:
+<context>
+{context}
+</context>
+
+Format Instructions:
+<format_instructions>
+{format_instructions}
+</format_instructions>
+"""
+
+
+sourced_section_parser = PydanticOutputParser(pydantic_object=SectionV2)
+sourced_section_fixing_parser = OutputFixingParser(parser=sourced_section_parser)
+sourced_section_writer_prompt = PromptTemplate(
+    template=SOURCED_SECTION_WRITER_PROMPT,
+    input_variables=[
+        "title",
+        "style",
+        "tone",
+        "point_of_view",
+        "context",
+        "min_sentences",
+        "max_sentences",
+        "previous_sections",
+    ],
+    partial_variables={
+        "format_instructions": sourced_section_fixing_parser.get_format_instructions()
+    },
 )
