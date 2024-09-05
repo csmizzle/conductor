@@ -14,6 +14,17 @@ from langsmith import traceable
 section_writer_chain = report_section_prompt | openai_gpt_4o | section_parser
 
 
+def style_to_prompt(style: ReportStyleV2) -> str:
+    # create extended prompt for the report style based on report style
+    if style == ReportStyleV2.BULLETED:
+        style = "as bulleted lists, avoiding long paragraphs."
+    if style == ReportStyleV2.NARRATIVE:
+        style = "as long form narratives, avoiding bullet points and short sentences."
+    if style == ReportStyleV2.MIXED:
+        style = "as a mixture of long form narratives and bulleted lists when it makes sense."
+    return style
+
+
 def task_run_to_report_section(
     task_run: TaskRun,
     style: ReportStyleV2,
@@ -37,13 +48,7 @@ def task_run_to_report_section(
     Returns:
         SectionV2: The converted Section Object.
     """
-    # create extended prompt for the report style based on reportstylev0
-    if style == ReportStyleV2.BULLETED:
-        style = "as bulleted lists, avoiding long paragraphs."
-    if style == ReportStyleV2.NARRATIVE:
-        style = "as long form narratives, avoiding bullet points and short sentences."
-    if style == ReportStyleV2.MIXED:
-        style = "as a mixture of long form narratives and bulleted lists when it makes sense."
+    style = style_to_prompt(style)
     return section_writer_chain.invoke(
         dict(
             title=task_run.section_name,

@@ -138,14 +138,20 @@ def test_write_sourced_section() -> None:
     )
     documents = run_hyde_search(
         context="Thomson Reuters Special Services",
-        objective="Build out a report section on the company's leadership team",
+        objective="Build out a report section on the company's leadership team. Include all personnel and their roles. Be extremely detailed and thorough.",
         retriever=client,
+        n_documents=10,
     )
+    documents = [
+        doc.page_content + "\nSource:" + doc.metadata["url"] for doc in documents
+    ]
     sourced_section = run_sourced_section_chain(
         title="Company Leadership",
-        style="NARRATIVE",
+        style="as long form narratives, avoiding bullet points and short sentences.",
         tone="ANALYTICAL",
         point_of_view="THIRD_PERSON",
-        context=[doc.page_content + doc.metadata["url"] for doc in documents],
+        context=documents,
     )
     assert isinstance(sourced_section, SectionV2)
+    with open("tests/data/test_sourced_section.json", "w") as f:
+        json.dump(sourced_section.model_dump(), f, indent=4)

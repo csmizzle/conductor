@@ -11,12 +11,22 @@ from conductor.reports.models import (
     Timeline,
     ImageSearchResult,
     QueryMatch,
+    ParsedReportV2,
     ReportV2,
+    ReportPointOfView,
+    ReportStyleV2,
+    ReportTone,
     SectionV2,
+)
+from conductor.reports.pydantic_templates.generate import (
+    BasicSourcedHyDEReportTemplateGenerator,
 )
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.documents import Document
 from tqdm import tqdm
+import logging
+
+logger = logging.getLogger(__name__)
 
 graph_chain = (
     prompts.graph_extraction_prompt | openai_gpt_4o | prompts.graph_retry_parser
@@ -36,6 +46,17 @@ sourced_section_writer_chain = (
     | openai_gpt_4o
     | prompts.sourced_section_fixing_parser
 )
+
+
+def style_to_prompt(style: ReportStyleV2) -> str:
+    # create extended prompt for the report style based on report style
+    if style == ReportStyleV2.BULLETED:
+        style = "as bulleted lists, avoiding long paragraphs."
+    if style == ReportStyleV2.NARRATIVE:
+        style = "as long form narratives, avoiding bullet points and short sentences."
+    if style == ReportStyleV2.MIXED:
+        style = "as a mixture of long form narratives and bulleted lists when it makes sense."
+    return style
 
 
 def run_graph_chain(
@@ -345,6 +366,82 @@ def run_sourced_section_chain(
             context=context,
             min_sentences=min_sentences,
             max_sentences=max_sentences,
-            previous_sections=sections,
+            previous_sections="\n".join(sections) if sections else None,
         )
     )
+
+
+def run_sourced_hyde_report_generation(
+    title: str,
+    description: str,
+    style: ReportStyleV2,
+    tone: ReportTone,
+    point_of_view: ReportPointOfView,
+    hyde_context: str,
+    hyde_section_objectives: list[str],
+    section_titles: list[str],
+    retriever: ElasticsearchRetrieverClient,
+) -> ReportV2:
+    """
+    Generates a sourced Hyde report.
+    Args:
+        title (str): The title of the report.
+        description (str): The description of the report.
+        style (ReportStyleV2): The style of the report.
+        tone (ReportTone): The tone of the report.
+        point_of_view (ReportPointOfView): The point of view of the report.
+        hyde_context (str): The Hyde context of the report.
+        hyde_section_objectives (list[str]): The objectives of each Hyde section.
+        section_titles (list[str]): The titles of each section.
+    Returns:
+        ReportV2: The generated report.
+    """
+    # generate report template
+    template_generator = BasicSourcedHyDEReportTemplateGenerator(
+        title=title,
+        style=style,
+        tone=tone,
+        point_of_view=point_of_view,
+        hyde_context=hyde_context,
+        section_titles=section_titles,
+        hyde_section_objectives=hyde_section_objectives,
+    )
+    report_template = template_generator.generate()
+    # generate sections
+    previous_sections = []
+    sections = []
+    logger.info("Generating report sections...")
+    for section_template in tqdm(report_template.section_templates):
+        retrieved_documents = run_hyde_search(
+            context=section_template.hyde_context,
+            objective=section_template.hyde_objective,
+            retriever=retriever,
+        )
+        documents = [
+            doc.page_content + "\nSource:" + doc.metadata["url"]
+            for doc in retrieved_documents
+        ]
+        section = run_sourced_section_chain(
+            title=section_template.title,
+            style=style_to_prompt(section_template.style),
+            tone=section_template.tone.value,
+            point_of_view=section_template.point_of_view.value,
+            context="\n".join(documents),
+            min_sentences=3,
+            max_sentences=5,
+            sections=previous_sections,
+        )
+        sections.append(section)
+        # update previous sections for context
+        section_text = ""
+        for paragraph in section.paragraphs:
+            for sentence in paragraph.sentences:
+                section_text += sentence.text + " "
+        previous_sections.append(section_text)
+    # generate report
+    report = ParsedReportV2(
+        title=title,
+        description=description,
+        sections=sections,
+    )
+    return ReportV2(report=report)

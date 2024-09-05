@@ -309,8 +309,8 @@ class ParsedReportV2(BaseModel):
 
 
 class ReportV2(BaseModel):
-    report: Optional[ParsedReportV2] = Field(description="Parsed report")
-    raw: list[str] = Field(description="Raw report sections")
+    report: ParsedReportV2 = Field(description="Parsed report")
+    raw: Optional[list[str]] = Field(description="Raw report sections", default=None)
 
 
 class Report(BaseModel):
@@ -325,3 +325,19 @@ class Generator(ABC):
     @abstractmethod
     def generate(self) -> Report:
         pass
+
+
+class SourcedHyDESectionTemplate(BaseModel):
+    title: str = Field(description="Title of the section")
+    style: ReportStyleV2 = Field(description="Style of the section")
+    tone: ReportTone = Field(description="Tone of the section")
+    point_of_view: ReportPointOfView = Field(description="Point of view of the section")
+    hyde_context: str = Field(description="Context for the HyDE search")
+    hyde_objective: str = Field(description="Objective for the HyDE search")
+
+
+class SourcedHyDEReportTemplate(BaseModel):
+    title: str = Field(description="Title of the report")
+    section_templates: List[SourcedHyDESectionTemplate] = Field(
+        description="Section templates"
+    )
