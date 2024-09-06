@@ -47,7 +47,7 @@ def ingest_webpage(url: str, limit: int = 50000, **kwargs) -> WebPage:
                 print(f"Zenrows Error: {zen_response.status_code}")
                 print(f"Zenrows Error: {zen_response.text}")
                 print("Sending request with requests instead ...")
-                normal_response = requests.get(url, timeout=10, **kwargs)
+                normal_response = requests.get(url, **kwargs)
                 if not normal_response.ok:
                     print(f"Requests Error: {zen_response.status_code}")
                     print(f"Requests Error: {zen_response.text}")
