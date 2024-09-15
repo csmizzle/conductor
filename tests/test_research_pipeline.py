@@ -75,4 +75,3 @@ def test_research_pipeline_enriched_pdf(elasticsearch_test_agent_index) -> None:
     assert isinstance(pipeline.report, ReportV2)
     # assert that enriched operations work
     assert pipeline.pdf_document
-    pipeline.save_pdf("./parenthetic_pipeline_enriched.pdf")

@@ -25,7 +25,6 @@ from conductor.crews.rag_marketing.crew import RagUrlMarketingCrew
 from elasticsearch import Elasticsearch
 from functools import partial
 import os
-import json
 
 
 def validate_crew_run(crew_run: CrewRun) -> None:
@@ -241,8 +240,6 @@ def test_rag_marketing_team_with_redis_cache(elasticsearch_test_agent_index) -> 
     )
     crew_run = crew.run()
     validate_crew_run(crew_run)
-    with open("tests/data/test_rag_marketing_bardeen.json", "w") as f:
-        json.dump(crew_run.model_dump(), f, indent=2)
 
 
 def test_marketing_with_callback() -> None:

@@ -34,6 +34,7 @@ pyvis = "^0.3.2"
 matplotlib = "^3.9.2"
 reportlab = "^4.2.2"
 imgkit = "^1.2.3"
+cohere = "5.9.1"
 
 
 [tool.poetry.group.dev.dependencies]
