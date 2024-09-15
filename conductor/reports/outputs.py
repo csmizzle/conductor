@@ -529,7 +529,8 @@ def report_v2_to_docx(report: ReportV2) -> Document:
     sources = set()
     # create sources for the report
     for section in report.report.sections:
-        sources.update(section.sources)
+        if section.sources:
+            sources.update(section.sources)
     sorted_sources = sorted(sources)
     document = Document()
     document.add_heading(report.report.title, level=1)
