@@ -31,7 +31,6 @@ class Entity(BaseModel):
 
     name: str = Field(..., description="The name of the entity")
     type: EntityType = Field(..., description="The type of the entity")
-    reason: str = Field(..., description="The reason for the entity label")
 
     class Config:
         use_enum_values = True
@@ -45,10 +44,6 @@ class Relationship(BaseModel):
     source: Entity = Field(..., description="The source entity")
     target: Entity = Field(..., description="The target entity")
     type: RelationshipType = Field(..., description="The type of the relationship")
-    reason: str = Field(
-        ...,
-        description="The reasoning for the relationship between the source and target entities",
-    )
 
     class Config:
         use_enum_values = True

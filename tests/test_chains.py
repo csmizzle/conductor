@@ -22,8 +22,6 @@ import json
 def test_run_set_graph_chain() -> None:
     graph = run_set_graph_chain(TEST_COMPLEX_NARRATIVE)
     assert isinstance(graph, Graph)
-    # with open("tests/data/test_graph.json", "w") as f:
-    #     json.dump(graph.model_dump(), f, indent=4)
 
 
 def test_run_timeline_chain() -> None:
