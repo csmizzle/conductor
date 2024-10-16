@@ -75,4 +75,4 @@ def test_report_to_speech_file() -> None:
     )
     assert isinstance(paragraph_transformed, SpeechFileResponse)
     assert os.path.exists("test_report.mp3")
-    # os.remove("test_report.mp3")
+    os.remove("test_report.mp3")
