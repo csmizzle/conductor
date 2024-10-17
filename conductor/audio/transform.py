@@ -13,11 +13,16 @@ class SpeechFileResponse(BaseModel):
     Response from the ElevenLabs API
     """
 
-    file_path: str
     response: Iterator[bytes]
 
     class Config:
         arbitrary_types_allowed = True
+
+    def save(self, output_path: str) -> None:
+        with open(output_path, "wb") as f:
+            for chunk in self.response:
+                if chunk:
+                    f.write(chunk)
 
 
 def text_to_speech_file(
@@ -25,7 +30,6 @@ def text_to_speech_file(
     text: str,
     voice_id: str,
     model_id: str,
-    output_path: str,
     voice_settings: VoiceSettings,
     output_format: str = "mp3_22050_32",
 ) -> SpeechFileResponse:
@@ -37,14 +41,7 @@ def text_to_speech_file(
         text=text,
         voice_settings=voice_settings,
     )
-    with open(output_path, "wb") as f:
-        for chunk in response:
-            if chunk:
-                f.write(chunk)
-    return SpeechFileResponse(
-        file_path=output_path,
-        response=response,
-    )
+    return SpeechFileResponse(response=response)
 
 
 class ReportAudioTransformer:
@@ -70,7 +67,6 @@ class ReportAudioTransformer:
         self,
         section: int,
         paragraph: int,
-        output_path: str,
         stability: float = 0.0,
         similarity_boost: float = 1.0,
         style: float = 0.0,
@@ -81,7 +77,6 @@ class ReportAudioTransformer:
         Args:
             section (int): section index
             paragraph (int): paragraph index
-            output_path (str): output file path
             stability (float, optional): stability. Defaults to 0.0.
             similarity_boost (float, optional): similarity boost. Defaults to 1.0.
             style (float, optional): style. Defaults to 0.0.
@@ -96,7 +91,6 @@ class ReportAudioTransformer:
             text=". ".join(paragraph.sentences),
             voice_id=self.voice_id,
             model_id=self.model_id,
-            output_path=output_path,
             voice_settings=VoiceSettings(
                 stability=stability,
                 similarity_boost=similarity_boost,
@@ -109,7 +103,6 @@ class ReportAudioTransformer:
     def transform_section(
         self,
         section: int,
-        output_path: str,
         stability: float = 0.0,
         similarity_boost: float = 1.0,
         style: float = 0.0,
@@ -119,7 +112,6 @@ class ReportAudioTransformer:
 
         Args:
             section (int): section index
-            output_path (str): output file path
             stability (float, optional): stability of voice. Defaults to 0.0.
             similarity_boost (float, optional): deviate from original voice. Defaults to 1.0.
             style (float, optional): style drift. Defaults to 0.0.
@@ -137,7 +129,6 @@ class ReportAudioTransformer:
             text=text,
             voice_id=self.voice_id,
             model_id=self.model_id,
-            output_path=output_path,
             voice_settings=VoiceSettings(
                 stability=stability,
                 similarity_boost=similarity_boost,
@@ -149,7 +140,6 @@ class ReportAudioTransformer:
 
     def transform_report(
         self,
-        output_path: str,
         stability: float = 0.0,
         similarity_boost: float = 1.0,
         style: float = 0.0,
@@ -158,7 +148,6 @@ class ReportAudioTransformer:
         """Generate an audio speech file for the entire report
 
         Args:
-            output_path (str): output file path
             stability (float, optional): stability of voice. Defaults to 0.0.
             similarity_boost (float, optional): deviate from original voice. Defaults to 1.0.
             style (float, optional): style drift. Defaults to 0.0.
@@ -176,7 +165,6 @@ class ReportAudioTransformer:
             text=text,
             voice_id=self.voice_id,
             model_id=self.model_id,
-            output_path=output_path,
             voice_settings=VoiceSettings(
                 stability=stability,
                 similarity_boost=similarity_boost,
