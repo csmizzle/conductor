@@ -22,7 +22,7 @@ class TeamTaskAssignment(BaseModel):
     tasks: list[Task]
 
 
-class AsyncSearchCrew(BaseModel):
+class SearchCrew(BaseModel):
     company_structure: Crew
     personnel: Crew
     swot: Crew
@@ -117,9 +117,7 @@ class RagUrlMarketingCrew:
     def _run_company_determination(self) -> CrewOutput:
         return self.run_team_task(self._build_determination_task)
 
-    def build_async_search_task(
-        self, company_determination_search_task: Task
-    ) -> AsyncSearchCrew:
+    def build_search_task(self, company_determination_search_task: Task) -> list[Crew]:
         # company structure
         company_structure_research_agent = self.agents.company_structure_research_agent(
             elasticsearch=self.elasticsearch,
@@ -229,49 +227,43 @@ class RagUrlMarketingCrew:
             agent=market_research_agent,
             context=[company_determination_search_task],
         )
-        return AsyncSearchCrew(
-            company_structure=Crew(
+        return [
+            Crew(
                 agents=[company_structure_research_agent],
                 tasks=[company_structure_research_task],
             ),
-            personnel=Crew(
-                agents=[personnel_research_agent], tasks=[personnel_research_task]
-            ),
-            swot=Crew(agents=[swot_research_agent], tasks=[swot_research_task]),
-            competitors=Crew(
+            Crew(agents=[personnel_research_agent], tasks=[personnel_research_task]),
+            Crew(agents=[swot_research_agent], tasks=[swot_research_task]),
+            Crew(
                 agents=[competitors_research_agent], tasks=[competitors_research_task]
             ),
-            company_history=Crew(
+            Crew(
                 agents=[company_history_research_agent],
                 tasks=[company_history_research_task],
             ),
-            pricing=Crew(
-                agents=[pricing_research_agent], tasks=[pricing_research_task]
-            ),
-            recent_events=Crew(
+            Crew(agents=[pricing_research_agent], tasks=[pricing_research_task]),
+            Crew(
                 agents=[recent_events_research_agent],
                 tasks=[recent_events_research_task],
             ),
-            products_services=Crew(
+            Crew(
                 agents=[products_services_research_agent],
                 tasks=[products_services_research_task],
             ),
-            market=Crew(agents=[market_research_agent], tasks=[market_research_task]),
-        )
+            Crew(agents=[market_research_agent], tasks=[market_research_task]),
+        ]
 
-    async def _execute_async_crews(
-        self, async_crews: AsyncSearchCrew
-    ) -> list[CrewOutput]:
+    async def _execute_async_crews(self, search_crew: SearchCrew) -> list[CrewOutput]:
         # kick off all search tasks
-        company_structure_result = async_crews.company_structure.kickoff_async()
-        personnel_result = async_crews.personnel.kickoff_async()
-        swot_result = async_crews.swot.kickoff_async()
-        competitors_result = async_crews.competitors.kickoff_async()
-        company_history_result = async_crews.company_history.kickoff_async()
-        pricing_result = async_crews.pricing.kickoff_async()
-        recent_events_result = async_crews.recent_events.kickoff_async()
-        products_services_result = async_crews.products_services.kickoff_async()
-        market_result = async_crews.market.kickoff_async()
+        company_structure_result = search_crew.company_structure.kickoff_async()
+        personnel_result = search_crew.personnel.kickoff_async()
+        swot_result = search_crew.swot.kickoff_async()
+        competitors_result = search_crew.competitors.kickoff_async()
+        company_history_result = search_crew.company_history.kickoff_async()
+        pricing_result = search_crew.pricing.kickoff_async()
+        recent_events_result = search_crew.recent_events.kickoff_async()
+        products_services_result = search_crew.products_services.kickoff_async()
+        market_result = search_crew.market.kickoff_async()
         # wait for all results
         results = await asyncio.gather(
             company_structure_result,
@@ -286,8 +278,8 @@ class RagUrlMarketingCrew:
         )
         return results
 
-    def run_search_task(self, async_crews: AsyncSearchCrew) -> list[CrewOutput]:
-        results = asyncio.run(self._execute_async_crews(async_crews))
+    def run_search_task(self, search_crew: SearchCrew) -> list[CrewOutput]:
+        results = asyncio.run(self._execute_async_crews(search_crew))
         return results
 
     def build_research_task(
@@ -447,18 +439,22 @@ class RagUrlMarketingCrew:
     def run(self) -> CrewRun:
         # create team tasking so i can access tasks for context later
         company_determination_team = self._build_determination_task()
-        company_determination_search_task = self.run_team_task(
-            company_determination_team
-        )
         # get the company determination task
-        determined_company_task = company_determination_search_task.tasks[-1]
-        async_search_team = self.build_async_search_task(
+        determined_company_task = company_determination_team.tasks[-1]
+        self.run_team_task(company_determination_team)
+        # create a search team for the desired sections
+        search_team = self.build_search_task(
             company_determination_search_task=determined_company_task
         )
-        self.run_search_task(async_search_team)
+        # self.run_search_task(search_team)
+        for crew in search_team:
+            crew.kickoff()
+        # build research team
+        print("Building research team ...")
         research_team = self.build_research_task(
             company_determination_search_task=determined_company_task
         )
+        print("Kicking off research team ...")
         # run the search task
         if self.cache:
             crew = RedisCacheHandlerCrew(
