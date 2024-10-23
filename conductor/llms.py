@@ -13,7 +13,6 @@ rate_limiter = InMemoryRateLimiter(
     check_every_n_seconds=0.1,
     max_bucket_size=10,
 )
-
 bedrock_config = Config(
     retries={
         "max_attempts": 10,

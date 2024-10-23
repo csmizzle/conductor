@@ -6,9 +6,32 @@ from conductor.crews.models import CrewRun
 from conductor.crews.cache import RedisCrewCacheHandler
 from conductor.crews.handlers import RedisCacheHandlerCrew
 from crewai.agents.cache.cache_handler import CacheHandler
-from conductor.llms import claude_sonnet
+from crewai.crew import CrewOutput
+from crewai.llm import LLM
 from elasticsearch import Elasticsearch
+from pydantic import BaseModel
 from typing import Callable
+import asyncio
+
+
+claude_sonnet = LLM(model="anthropic.claude-3-sonnet-20240229-v1:0")
+
+
+class TeamTaskAssignment(BaseModel):
+    team: list[Agent]
+    tasks: list[Task]
+
+
+class AsyncSearchCrew(BaseModel):
+    company_structure: Crew
+    personnel: Crew
+    swot: Crew
+    competitors: Crew
+    company_history: Crew
+    pricing: Crew
+    recent_events: Crew
+    products_services: Crew
+    market: Crew
 
 
 class RagUrlMarketingCrew:
@@ -28,6 +51,8 @@ class RagUrlMarketingCrew:
     ) -> None:
         self.url = url
         # self.search_query = search_query
+        self.tasks = RagMarketingTasks()
+        self.agents = MarketingRagAgents()
         self.elasticsearch = elasticsearch
         self.index_name = index_name
         self.cache = cache
@@ -36,116 +61,107 @@ class RagUrlMarketingCrew:
         else:
             self.cache_handler = CacheHandler()
         self.task_callback = task_callback
+        self.company_determination_run = None
 
-    def build_team(self) -> tuple[list[Agent], list[Task]]:
-        team = []
-        agents = MarketingRagAgents()
-        tasks = RagMarketingTasks()
-        # create all agents and add them to the team
-        data_collection_agent = agents.data_collection_agent(
-            elasticsearch=self.elasticsearch,
-            index_name=self.index_name,
-            llm=claude_sonnet,
-        )
-        vector_search_agent = agents.vector_search_agent(
-            elasticsearch=self.elasticsearch,
-            index_name=self.index_name,
-            llm=claude_sonnet,
-        )
-        vector_meta_search_agent = agents.vector_search_metadata_agent(
-            elasticsearch=self.elasticsearch,
-            index_name=self.index_name,
-            llm=claude_sonnet,
-        )
-        # get company structure, personnel, swot, competitors, company history, pricing, recent events, products, services, market
-        company_structure_research_agent = agents.company_structure_research_agent(
-            elasticsearch=self.elasticsearch,
-            index_name=self.index_name,
-            llm=claude_sonnet,
-        )
-        personnel_research_agent = agents.personnel_research_agent(
-            elasticsearch=self.elasticsearch,
-            index_name=self.index_name,
-            llm=claude_sonnet,
-        )
-        swot_research_agent = agents.swot_research_agent(
-            elasticsearch=self.elasticsearch,
-            index_name=self.index_name,
-            llm=claude_sonnet,
-        )
-        competitors_research_agent = agents.competitor_research_agent(
-            elasticsearch=self.elasticsearch,
-            index_name=self.index_name,
-            llm=claude_sonnet,
-        )
-        company_history_research_agent = agents.company_history_research_agent(
-            elasticsearch=self.elasticsearch,
-            index_name=self.index_name,
-            llm=claude_sonnet,
-        )
-        pricing_research_agent = agents.pricing_research_agent(
-            elasticsearch=self.elasticsearch,
-            index_name=self.index_name,
-            llm=claude_sonnet,
-        )
-        recent_events_research_agent = agents.recent_events_research_agent(
-            elasticsearch=self.elasticsearch,
-            index_name=self.index_name,
-            llm=claude_sonnet,
-        )
-        products_services_research_agent = agents.product_and_services_research_agent(
-            elasticsearch=self.elasticsearch,
-            index_name=self.index_name,
-            llm=claude_sonnet,
-        )
-        market_research_agent = agents.market_research_agent(
-            elasticsearch=self.elasticsearch,
-            index_name=self.index_name,
-            llm=claude_sonnet,
-        )
-
-        team.append(data_collection_agent)
-        team.append(swot_research_agent)
-        team.append(vector_search_agent)
-        team.append(company_structure_research_agent)
-        team.append(personnel_research_agent)
-        team.append(competitors_research_agent)
-        team.append(company_history_research_agent)
-        team.append(pricing_research_agent)
-        team.append(recent_events_research_agent)
-        team.append(products_services_research_agent)
-        team.append(market_research_agent)
-        # create all tasks and add them to the team
+    def _build_determination_task(self) -> TeamTaskAssignment:
+        company_determination_team = []
         team_tasks = []
-        url_collection_task = tasks.url_collection_task(
+        # search by metadata string
+        vector_meta_search_agent = self.agents.vector_search_metadata_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
+        # create the company determination task
+        data_collection_agent = self.agents.data_collection_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
+        company_determination_team.append(data_collection_agent)
+        url_collection_task = self.tasks.url_collection_task(
             name="URL Collection Research",
             agent=data_collection_agent,
             company_url=self.url,
         )
         team_tasks.append(url_collection_task)
-        # determine who the company is
-        company_determination_search_task = tasks.vector_metadata_search_task(
+        company_determination_search_task = self.tasks.vector_metadata_search_task(
             name="Company Determination Research",
             agent=vector_meta_search_agent,
             url=self.url,
         )
         team_tasks.append(company_determination_search_task)
-        # get the company structure
-        company_structure_research_task = tasks.company_structure_research_task(
+        return TeamTaskAssignment(
+            team=company_determination_team,
+            tasks=team_tasks,
+        )
+
+    def run_team_task(self, teak_task: TeamTaskAssignment) -> CrewOutput:
+        if self.cache:
+            crew = RedisCacheHandlerCrew(
+                agents=teak_task.team,
+                tasks=teak_task.tasks,
+                cache=self.cache,
+                _cache_handler=self.cache_handler,
+                task_callback=self.task_callback,
+            )
+        else:
+            crew = Crew(
+                agents=teak_task.team,
+                tasks=teak_task.tasks,
+                task_callback=self.task_callback,
+            )
+        result = crew.kickoff()
+        return result
+
+    def _run_company_determination(self) -> CrewOutput:
+        return self.run_team_task(self._build_determination_task)
+
+    def build_async_search_task(
+        self, company_determination_search_task: Task
+    ) -> AsyncSearchCrew:
+        # company structure
+        company_structure_research_agent = self.agents.company_structure_research_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
+        company_structure_research_task = self.tasks.company_structure_research_task(
             name="Company Structure Research",
             agent=company_structure_research_agent,
             context=[company_determination_search_task],
         )
-        team_tasks.append(company_structure_research_task)
-        # get the personnel information
-        personnel_research_task = tasks.personnel_research_task(
+        # personnel
+        personnel_research_agent = self.agents.personnel_research_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
+        personnel_research_task = self.tasks.personnel_research_task(
             name="Personnel Research",
             agent=personnel_research_agent,
             context=[company_determination_search_task],
         )
-        team_tasks.append(personnel_research_task)
-        # get the competitors information
-        competitors_research_task = tasks.competitor_research_task(
+        # SWOT analysis
+        swot_research_agent = self.agents.swot_research_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
+        swot_research_task = self.tasks.swot_research_task(
+            name="SWOT Research",
+            agent=swot_research_agent,
+            context=[
+                company_determination_search_task,
+            ],
+        )
+        # competitors task
+        competitors_research_agent = self.agents.competitor_research_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
+        competitors_research_task = self.tasks.competitor_research_task(
             name="Competitor Research",
             agent=competitors_research_agent,
             context=[
@@ -154,54 +170,139 @@ class RagUrlMarketingCrew:
                 company_structure_research_task,
             ],
         )
-        team_tasks.append(competitors_research_task)
-        # get the company history information
-        company_history_research_task = tasks.company_history_research_task(
+        # company history
+        company_history_research_agent = self.agents.company_history_research_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
+        company_history_research_task = self.tasks.company_history_research_task(
             name="Company History Research",
             agent=company_history_research_agent,
             context=[company_determination_search_task],
         )
-        team_tasks.append(company_history_research_task)
-        # get the pricing information
-        pricing_research_task = tasks.pricing_research_task(
+        # pricing research
+        pricing_research_agent = self.agents.pricing_research_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
+        pricing_research_task = self.tasks.pricing_research_task(
             name="Pricing Research",
             agent=pricing_research_agent,
             context=[company_determination_search_task],
         )
-        team_tasks.append(pricing_research_task)
-        # get the recent events information
-        recent_events_research_task = tasks.recent_events_research_task(
+        # recent events
+        recent_events_research_agent = self.agents.recent_events_research_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
+        recent_events_research_task = self.tasks.recent_events_research_task(
             name="Recent Events Research",
             agent=recent_events_research_agent,
             context=[company_determination_search_task],
         )
-        team_tasks.append(recent_events_research_task)
-        # get the products and services information
-        products_services_research_task = tasks.products_and_services_research_task(
-            name="Products and Service Research",
-            agent=products_services_research_agent,
-            context=[company_determination_search_task],
+        # products and services
+        products_services_research_agent = (
+            self.agents.product_and_services_research_agent(
+                elasticsearch=self.elasticsearch,
+                index_name=self.index_name,
+                llm=claude_sonnet,
+            )
         )
-        team_tasks.append(products_services_research_task)
-        # market research information
-        market_research_task = tasks.market_analysis_research_task(
+        products_services_research_task = (
+            self.tasks.products_and_services_research_task(
+                name="Products and Service Research",
+                agent=products_services_research_agent,
+                context=[company_determination_search_task],
+            )
+        )
+        # market research
+        market_research_agent = self.agents.market_research_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
+        market_research_task = self.tasks.market_analysis_research_task(
             name="Market Research",
             agent=market_research_agent,
             context=[company_determination_search_task],
         )
-        team_tasks.append(market_research_task)
-        # get the company swot information
-        swot_research_task = tasks.swot_research_task(
-            name="SWOT Research",
-            agent=swot_research_agent,
-            context=[
-                company_determination_search_task,
-            ],
+        return AsyncSearchCrew(
+            company_structure=Crew(
+                agents=[company_structure_research_agent],
+                tasks=[company_structure_research_task],
+            ),
+            personnel=Crew(
+                agents=[personnel_research_agent], tasks=[personnel_research_task]
+            ),
+            swot=Crew(agents=[swot_research_agent], tasks=[swot_research_task]),
+            competitors=Crew(
+                agents=[competitors_research_agent], tasks=[competitors_research_task]
+            ),
+            company_history=Crew(
+                agents=[company_history_research_agent],
+                tasks=[company_history_research_task],
+            ),
+            pricing=Crew(
+                agents=[pricing_research_agent], tasks=[pricing_research_task]
+            ),
+            recent_events=Crew(
+                agents=[recent_events_research_agent],
+                tasks=[recent_events_research_task],
+            ),
+            products_services=Crew(
+                agents=[products_services_research_agent],
+                tasks=[products_services_research_task],
+            ),
+            market=Crew(agents=[market_research_agent], tasks=[market_research_task]),
         )
-        team_tasks.append(swot_research_task)
+
+    async def _execute_async_crews(
+        self, async_crews: AsyncSearchCrew
+    ) -> list[CrewOutput]:
+        # kick off all search tasks
+        company_structure_result = async_crews.company_structure.kickoff_async()
+        personnel_result = async_crews.personnel.kickoff_async()
+        swot_result = async_crews.swot.kickoff_async()
+        competitors_result = async_crews.competitors.kickoff_async()
+        company_history_result = async_crews.company_history.kickoff_async()
+        pricing_result = async_crews.pricing.kickoff_async()
+        recent_events_result = async_crews.recent_events.kickoff_async()
+        products_services_result = async_crews.products_services.kickoff_async()
+        market_result = async_crews.market.kickoff_async()
+        # wait for all results
+        results = await asyncio.gather(
+            company_structure_result,
+            personnel_result,
+            swot_result,
+            competitors_result,
+            company_history_result,
+            pricing_result,
+            recent_events_result,
+            products_services_result,
+            market_result,
+        )
+        return results
+
+    def run_search_task(self, async_crews: AsyncSearchCrew) -> list[CrewOutput]:
+        results = asyncio.run(self._execute_async_crews(async_crews))
+        return results
+
+    def build_research_task(
+        self, company_determination_search_task: Task
+    ) -> TeamTaskAssignment:
         # Question tasks
         # get the company structure results
-        company_structure_research_results = tasks.vector_multi_search_task(
+        team = []
+        team_tasks = []
+        vector_search_agent = self.agents.vector_search_agent(
+            elasticsearch=self.elasticsearch,
+            index_name=self.index_name,
+            llm=claude_sonnet,
+        )
+        company_structure_research_results = self.tasks.vector_multi_search_task(
             name="Company Structure Search",
             agent=vector_search_agent,
             search_query="What is the structure of this company? Include things like beneficial owners, subsidiaries, and parent companies.",
@@ -210,7 +311,7 @@ class RagUrlMarketingCrew:
         )
         team_tasks.append(company_structure_research_results)
         # get the company history results
-        company_history_research_results = tasks.vector_multi_search_task(
+        company_history_research_results = self.tasks.vector_multi_search_task(
             name="Company History Search",
             agent=vector_search_agent,
             search_query="What is the history of this company?",
@@ -222,7 +323,7 @@ class RagUrlMarketingCrew:
         )
         team_tasks.append(company_history_research_results)
         # get the personnel results
-        personnel_research_results = tasks.vector_multi_search_task(
+        personnel_research_results = self.tasks.vector_multi_search_task(
             name="Personnel Search",
             agent=vector_search_agent,
             search_query="Who are the executives of this company?",
@@ -236,7 +337,7 @@ class RagUrlMarketingCrew:
         )
         team_tasks.append(personnel_research_results)
         # get the competitors results
-        competitors_research_results = tasks.vector_multi_search_task(
+        competitors_research_results = self.tasks.vector_multi_search_task(
             name="Competitors Search",
             agent=vector_search_agent,
             search_query="Who are the competitors of this company",
@@ -251,7 +352,7 @@ class RagUrlMarketingCrew:
         )
         team_tasks.append(competitors_research_results)
         # get the pricing results
-        pricing_research_results = tasks.vector_multi_search_task(
+        pricing_research_results = self.tasks.vector_multi_search_task(
             name="Pricing Search",
             agent=vector_search_agent,
             search_query="What is the pricing information for this company?",
@@ -267,7 +368,7 @@ class RagUrlMarketingCrew:
         )
         team_tasks.append(pricing_research_results)
         # get the recent events results
-        recent_events_research_results = tasks.vector_multi_search_task(
+        recent_events_research_results = self.tasks.vector_multi_search_task(
             name="Recent Events Search",
             agent=vector_search_agent,
             search_query="What are the most recent events for this company?",
@@ -284,7 +385,7 @@ class RagUrlMarketingCrew:
         )
         team_tasks.append(recent_events_research_results)
         # get the products and services results
-        products_services_research_results = tasks.vector_multi_search_task(
+        products_services_research_results = self.tasks.vector_multi_search_task(
             name="Products and Services Search",
             agent=vector_search_agent,
             search_query="What are the key products and services for this company?",
@@ -301,7 +402,7 @@ class RagUrlMarketingCrew:
         )
         team_tasks.append(products_services_research_results)
         # get the market results
-        market_research_results = tasks.vector_multi_search_task(
+        market_research_results = self.tasks.vector_multi_search_task(
             name="Market Search",
             agent=vector_search_agent,
             search_query="What market does this company operate in? What is their TAM/SAM/SOM?",
@@ -319,7 +420,7 @@ class RagUrlMarketingCrew:
         )
         team_tasks.append(market_research_results)
         # get the swot results from vector search
-        swot_research_results = tasks.vector_multi_search_task(
+        swot_research_results = self.tasks.vector_multi_search_task(
             name="SWOT Search",
             agent=vector_search_agent,
             search_query="What are strengths, weaknesses, opportunities, and threats for this company?",
@@ -338,22 +439,39 @@ class RagUrlMarketingCrew:
         )
         team_tasks.append(swot_research_results)
         # get the swot company information
-        return team, team_tasks
+        return TeamTaskAssignment(
+            team=team,
+            tasks=team_tasks,
+        )
 
     def run(self) -> CrewRun:
-        team, team_tasks = self.build_team()
+        # create team tasking so i can access tasks for context later
+        company_determination_team = self._build_determination_task()
+        company_determination_search_task = self.run_team_task(
+            company_determination_team
+        )
+        # get the company determination task
+        determined_company_task = company_determination_search_task.tasks[-1]
+        async_search_team = self.build_async_search_task(
+            company_determination_search_task=determined_company_task
+        )
+        self.run_search_task(async_search_team)
+        research_team = self.build_research_task(
+            company_determination_search_task=determined_company_task
+        )
+        # run the search task
         if self.cache:
             crew = RedisCacheHandlerCrew(
-                agents=team,
-                tasks=team_tasks,
+                agents=research_team.team,
+                tasks=research_team.tasks,
                 cache=self.cache,
                 _cache_handler=self.cache_handler,
                 task_callback=self.task_callback,
             )
         else:
             crew = Crew(
-                agents=team,
-                tasks=team_tasks,
+                agents=research_team.team,
+                tasks=research_team.tasks,
                 task_callback=self.task_callback,
             )
         result = crew.kickoff()

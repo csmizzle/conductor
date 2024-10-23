@@ -232,7 +232,7 @@ def test_rag_marketing_team_with_redis_cache(elasticsearch_test_agent_index) -> 
         hosts=[os.getenv("ELASTICSEARCH_URL")],
     )
     crew = RagUrlMarketingCrew(
-        company_url="https://www.bardeen.ai/",
+        url="https://www.bardeen.ai/",
         elasticsearch=elasticsearch,
         index_name=elasticsearch_test_agent_index,
         cache=True,
