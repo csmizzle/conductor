@@ -33,16 +33,18 @@ class AgentBuilderFromReportSection:
         )
 
 
-def build_from_section(report_title: str) -> ResearchAgentTemplate:
-    return AgentBuilderFromReportSection(report_title).build()
+def build_from_section(section_title: str) -> ResearchAgentTemplate:
+    return AgentBuilderFromReportSection(section_title).build()
 
 
-def build_from_report_sections(report_titles: list[str]) -> list[ResearchAgentTemplate]:
-    return [build_from_section(title) for title in report_titles]
+def build_from_report_sections(
+    section_titles: list[str],
+) -> list[ResearchAgentTemplate]:
+    return [build_from_section(title) for title in section_titles]
 
 
 def build_from_report_sections_parallel(
-    report_titles: list[str],
+    section_titles: list[str],
 ) -> list[ResearchAgentTemplate]:
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        return list(executor.map(build_from_section, report_titles))
+        return list(executor.map(build_from_section, section_titles))
