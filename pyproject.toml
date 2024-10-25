@@ -37,6 +37,7 @@ imgkit = "^1.2.3"
 cohere = "5.9.1"
 elevenlabs = "^1.10.0"
 dspy = "^2.5.15"
+langgraph = "^0.2.39"
 
 
 [tool.poetry.group.dev.dependencies]
