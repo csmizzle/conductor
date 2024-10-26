@@ -3,7 +3,6 @@ Prompts for entity extraction
 """
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
-from langchain.output_parsers import OutputFixingParser
 from conductor.reports.models import Graph, Timeline, QueryMatch
 
 
@@ -35,7 +34,7 @@ Finally, return the extracted entities and relationships in the provided JSON fo
 """
 
 graph_parser = PydanticOutputParser(pydantic_object=Graph)
-graph_retry_parser = OutputFixingParser(parser=graph_parser)
+# graph_retry_parser = OutputFixingParser(parser=graph_parser)
 graph_extraction_prompt = PromptTemplate(
     template=ENTITY_EXTRACTION_PROMPT,
     input_variables=[
@@ -43,9 +42,7 @@ graph_extraction_prompt = PromptTemplate(
         "relationship_types",
         "text",
     ],
-    partial_variables={
-        "format_instructions": graph_retry_parser.get_format_instructions()
-    },
+    partial_variables={"format_instructions": graph_parser.get_format_instructions()},
 )
 
 
@@ -68,8 +65,6 @@ Finally, return the extracted events in the provided JSON format.
 """
 
 timeline_parser = PydanticOutputParser(pydantic_object=Timeline)
-
-
 timeline_extraction_prompt = PromptTemplate(
     template=TIMELINE_EXTRACTION_PROMPT,
     input_variables=[
