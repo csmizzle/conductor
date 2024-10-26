@@ -2,7 +2,7 @@ from conductor.crews.cache import RedisCrewCacheHandler
 from crewai.telemetry import Telemetry
 from crewai.utilities import FileHandler, Logger, RPMController
 from crewai import Crew
-from crewai.llm import LLM
+from crewai import LLM
 from pydantic import PrivateAttr, model_validator
 
 
