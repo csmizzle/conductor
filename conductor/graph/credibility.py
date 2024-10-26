@@ -32,5 +32,5 @@ class SourceCredibilityAnalysisSignature(dspy.Signature):
 source_analysis = dspy.TypedChainOfThought(SourceCredibilityAnalysisSignature)
 
 
-def get_source_credibility(source: str):
+def get_source_credibility(source: str) -> dspy.Prediction:
     return source_analysis(source=Source(source=source))
