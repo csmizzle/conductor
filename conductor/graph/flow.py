@@ -29,6 +29,7 @@ crew_llm = LLM("bedrock/anthropic.claude-3-sonnet-20240229-v1:0")
 class ResearchTeam(BaseModel):
     title: str
     agents: list[Agent]
+    tasks: list[Task]
 
 
 class ResearchAgentFactory:
@@ -100,6 +101,43 @@ def build_agent_from_template(
         tools=tools,
     )
     return factory.build()
+
+
+def build_agents_from_templates(
+    templates: list[ResearchAgentTemplate], llm: LLM, tools: list
+) -> list[Agent]:
+    """
+    Builds a list of agents from templates
+    """
+    agents = []
+    for template in templates:
+        agents.append(
+            build_agent_from_template(template=template, llm=llm, tools=tools)
+        )
+    return agents
+
+
+def build_agents_from_templates_parallel(
+    templates: list[ResearchAgentTemplate], llm: LLM, tools: list
+) -> list[Agent]:
+    """
+    Builds a list of agents from templates in parallel
+    """
+    agents = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+        for template in templates:
+            futures.append(
+                executor.submit(
+                    build_agent_from_template,
+                    template=template,
+                    llm=llm,
+                    tools=tools,
+                )
+            )
+        for future in concurrent.futures.as_completed(futures):
+            agents.append(future.result())
+    return agents
 
 
 # task builder
@@ -213,36 +251,88 @@ def build_agent_search_tasks_parallel(
     return tasks
 
 
+def build_agents_search_tasks_parallel(
+    agent_templates: list[ResearchAgentTemplate],
+    agents: list[Agent],
+) -> list[Task]:
+    """
+    Builds a list of tasks for the agents to search for information in parallel
+    """
+    tasks = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+        for agent_template, agent in zip(agent_templates, agents):
+            futures.append(
+                executor.submit(
+                    build_agent_search_tasks_parallel,
+                    agent=agent,
+                    research_questions=agent_template.research_questions,
+                )
+            )
+        for future in concurrent.futures.as_completed(futures):
+            tasks.extend(future.result())
+    return tasks
+
+
 class ResearchTeamFactory:
     """
     Create a team of agents from a
     """
 
-    def __init__(self, team_name: str, agents: list[ResearchAgentTemplate]) -> None:
-        self.team_name = team_name
-        self.agents = agents
+    def __init__(
+        self,
+        title: str,
+        agent_templates: list[ResearchAgentTemplate],
+        llm: LLM,
+        tools: list,
+    ) -> None:
+        self.title = title
+        self.agent_templates = agent_templates
+        self.llm = llm
+        self.tools = tools
 
     def build(self) -> ResearchTeam:
         """
         Build a research team from a list of agents
         """
-        agents = []
-        for agent in self.agents:
-            agents.append(build_agent_from_template(agent))
-        return ResearchTeam(team_name=self.team_name, agents=agents)
+        agents = build_agents_from_templates_parallel(
+            templates=self.agent_templates, llm=self.llm, tools=self.tools
+        )
+        tasks = build_agents_search_tasks_parallel(
+            agent_templates=self.agent_templates, agents=agents
+        )
+        return ResearchTeam(
+            title=self.title,
+            agents=agents,
+            tasks=tasks,
+        )
 
 
 def build_research_team(
-    team_name: str, agents: list[ResearchAgentTemplate]
+    title: str, agent_templates: list[ResearchAgentTemplate], llm: LLM, tools: list
 ) -> ResearchTeam:
     """
     Builds a research team from a list of agents
     """
-    return ResearchTeamFactory(team_name=team_name, agents=agents).build()
+    return ResearchTeamFactory(
+        title=title,
+        agent_templates=agent_templates,
+        llm=llm,
+        tools=tools,
+    ).build()
 
 
-def build_research_team_from_template(template: ResearchTeamTemplate) -> ResearchTeam:
+def build_research_team_from_template(
+    team_template: ResearchTeamTemplate,
+    llm: LLM,
+    tools: list,
+) -> ResearchTeam:
     """
     Builds a research team from a template
     """
-    return build_research_team(template.team_name, template.agents)
+    return build_research_team(
+        title=team_template.title,
+        agent_templates=team_template.agent_templates,
+        tools=tools,
+        llm=llm,
+    )

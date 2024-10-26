@@ -6,6 +6,12 @@ from conductor.graph.flow import (
     build_agent_search_task,
     build_agent_search_tasks,
     build_agent_search_tasks_parallel,
+    build_agents_search_tasks_parallel,
+    ResearchTeamTemplate,
+    ResearchTeam,
+    ResearchTeamFactory,
+    build_research_team,
+    build_research_team_from_template,
 )
 from crewai import LLM, Agent, Task
 from conductor.builder.agent import ResearchAgentTemplate
@@ -122,3 +128,114 @@ def test_build_agent_search_tasks_parallel() -> None:
     )
     assert isinstance(tasks, list)
     assert all([isinstance(task, Task) for task in tasks])
+
+
+def test_build_agents_search_tasks_parallel() -> None:
+    research_questions = [
+        "What is the company's mission?",
+        "What are the company's values?",
+    ]
+    template = ResearchAgentTemplate(
+        title="Company Researcher", research_questions=research_questions
+    )
+    llm = LLM("openai/gpt-4o")
+    agent = build_agent_from_template(template=template, llm=llm, tools=[])
+    tasks = build_agents_search_tasks_parallel(
+        agents=[agent, agent], agent_templates=[template, template]
+    )
+    assert isinstance(tasks, list)
+    assert all([isinstance(task, Task) for task in tasks])
+
+
+def test_research_team_factory() -> None:
+    title = "Company Research Team"
+    agent_templates = [
+        ResearchAgentTemplate(
+            title="Company Researcher",
+            research_questions=[
+                "What is the company's mission?",
+                "What are the company's values?",
+            ],
+        ),
+        ResearchAgentTemplate(
+            title="Company Researcher",
+            research_questions=[
+                "What is the company's mission?",
+                "What are the company's values?",
+            ],
+        ),
+    ]
+    llm = LLM("openai/gpt-4o")
+    tools = []
+    builder = ResearchTeamFactory(
+        title=title,
+        agent_templates=agent_templates,
+        llm=llm,
+        tools=tools,
+    )
+    team = builder.build()
+    assert isinstance(team, ResearchTeam)
+    assert all([isinstance(agent, Agent) for agent in team.agents])
+    assert all([isinstance(task, Task) for task in team.tasks])
+
+
+def test_build_research_team() -> None:
+    title = "Company Research Team"
+    agent_templates = [
+        ResearchAgentTemplate(
+            title="Company Researcher",
+            research_questions=[
+                "What is the company's mission?",
+                "What are the company's values?",
+            ],
+        ),
+        ResearchAgentTemplate(
+            title="Company Researcher",
+            research_questions=[
+                "What is the company's mission?",
+                "What are the company's values?",
+            ],
+        ),
+    ]
+    llm = LLM("openai/gpt-4o")
+    tools = []
+    team = build_research_team(
+        title=title,
+        agent_templates=agent_templates,
+        llm=llm,
+        tools=tools,
+    )
+    assert isinstance(team, ResearchTeam)
+    assert all([isinstance(agent, Agent) for agent in team.agents])
+    assert all([isinstance(task, Task) for task in team.tasks])
+
+
+def test_build_research_team_from_template() -> None:
+    title = "Company Research Team"
+    agent_templates = [
+        ResearchAgentTemplate(
+            title="Company Researcher",
+            research_questions=[
+                "What is the company's mission?",
+                "What are the company's values?",
+            ],
+        ),
+        ResearchAgentTemplate(
+            title="Company Researcher",
+            research_questions=[
+                "What is the company's mission?",
+                "What are the company's values?",
+            ],
+        ),
+    ]
+    team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
+    llm = LLM("openai/gpt-4o")
+    tools = []
+    team = build_research_team_from_template(
+        team_template=team_template,
+        llm=llm,
+        tools=tools,
+    )
+    assert isinstance(team, ResearchTeam)
+    assert all([isinstance(agent, Agent) for agent in team.agents])
+    assert all([isinstance(task, Task) for task in team.tasks])

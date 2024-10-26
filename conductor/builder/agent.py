@@ -15,7 +15,7 @@ class ResearchAgentTemplate(BaseModel):
 
 class ResearchTeamTemplate(BaseModel):
     title: str
-    agents: list[ResearchAgentTemplate]
+    agent_templates: list[ResearchAgentTemplate]
 
 
 class AgentBuilderFromReportSection:
