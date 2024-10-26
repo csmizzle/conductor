@@ -12,8 +12,11 @@ from conductor.builder.agent import ResearchAgentTemplate, ResearchTeamTemplate
 from crewai.agent import Agent
 from crewai import Task
 from pydantic import BaseModel, InstanceOf
+import concurrent.futures
 from crewai import LLM
 import dspy
+from tqdm import tqdm
+
 
 # configure dspy
 llm = dspy.LM("openai/gpt-4o")
@@ -100,7 +103,7 @@ def build_agent_from_template(
 
 
 # task builder
-class ResearchAgentSearchTaskFactory:
+class ResearchQuestionAgentSearchTaskFactory:
     """
     Agent task factory that create
     """
@@ -108,46 +111,106 @@ class ResearchAgentSearchTaskFactory:
     def __init__(
         self,
         agent: Agent,
-        research_questions: list[str],
-        expected_output: InstanceOf[BaseModel],
+        research_question: str,
+        output_pydantic: InstanceOf[BaseModel] = None,
     ) -> None:
         self.agent = agent
-        self.research_questions = research_questions
-        self.expected_output = expected_output
+        self.research_question = research_question
+        self.output_pydantic = output_pydantic
 
     def _build_description(self) -> str:
         description = dspy.ChainOfThought(
-            "agent_role: str, agent_research_questions: list[str], agent_goal: str, agent_backstory: str -> task_description: str"
+            "agent_role: str, agent_research_question: str, agent_goal: str, agent_backstory: str -> search_engine_task_description: str"
         )
         return description(
             agent_role=self.agent.role,
-            agent_research_questions=self.research_questions,
+            agent_research_question=self.research_question,
             agent_goal=self.agent.goal,
             agent_backstory=self.agent.backstory,
-        ).task_description
+        ).search_engine_task_description
+
+    def _build_expected_output(self, task_description: str) -> str:
+        expected_output = dspy.ChainOfThought(
+            "agent_role: str, agent_research_question: str, agent_goal: str, agent_backstory: str, task_description: str -> search_engine_expected_output: str"
+        )
+        return expected_output(
+            agent_role=self.agent.role,
+            agent_research_question=self.research_question,
+            agent_goal=self.agent.goal,
+            agent_backstory=self.agent.backstory,
+            task_description=task_description,
+        ).search_engine_expected_output
 
     def build(self) -> Task:
         """
         Builds a task for the agent to search for information
         """
+        task_description = self._build_description()
+        expected_output = self._build_expected_output(task_description)
         return Task(
-            description=self._build_description(),
+            description=task_description,
             agent=self.agent,
-            expected_output=self.expected_output,
+            output_pydantic=self.output_pydantic,
+            expected_output=expected_output,
         )
 
 
 def build_agent_search_task(
-    agent: Agent, research_questions: list[str], expected_output: InstanceOf[BaseModel]
+    agent: Agent, research_question: str, output_pydantic: InstanceOf[BaseModel] = None
 ) -> Task:
     """
     Builds a task for the agent to search for information
     """
-    return ResearchAgentSearchTaskFactory(
+    return ResearchQuestionAgentSearchTaskFactory(
         agent=agent,
-        research_questions=research_questions,
-        expected_output=expected_output,
+        research_question=research_question,
+        output_pydantic=output_pydantic,
     ).build()
+
+
+def build_agent_search_tasks(
+    agent: Agent,
+    research_questions: list[str],
+    output_pydantic: InstanceOf[BaseModel] = None,
+) -> list[Task]:
+    """
+    Builds a list of tasks for the agent to search for information
+    """
+    tasks = []
+    for research_question in tqdm(research_questions):
+        tasks.append(
+            build_agent_search_task(
+                agent=agent,
+                research_question=research_question,
+                output_pydantic=output_pydantic,
+            )
+        )
+    return tasks
+
+
+def build_agent_search_tasks_parallel(
+    agent: Agent,
+    research_questions: list[str],
+    output_pydantic: InstanceOf[BaseModel] = None,
+) -> list[Task]:
+    """
+    Builds a list of tasks for the agent to search for information in parallel
+    """
+    tasks = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+        for research_question in research_questions:
+            futures.append(
+                executor.submit(
+                    build_agent_search_task,
+                    agent=agent,
+                    research_question=research_question,
+                    output_pydantic=output_pydantic,
+                )
+            )
+        for future in concurrent.futures.as_completed(futures):
+            tasks.append(future.result())
+    return tasks
 
 
 class ResearchTeamFactory:
