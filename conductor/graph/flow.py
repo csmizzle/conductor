@@ -9,13 +9,17 @@ New things that need to happen:
 The first thing I will need is an crewai agent factory
 """
 from conductor.builder.agent import ResearchAgentTemplate, ResearchTeamTemplate
+from crewai.flow.flow import Flow, listen, start
+from conductor.crews.rag_marketing import tools
 from crewai.agent import Agent
-from crewai import Task
+from crewai import Task, Crew
 from pydantic import BaseModel, InstanceOf
+from elasticsearch import Elasticsearch
 import concurrent.futures
 from crewai import LLM
 import dspy
 from tqdm import tqdm
+import asyncio
 
 
 # configure dspy
@@ -336,3 +340,182 @@ def build_research_team_from_template(
         tools=tools,
         llm=llm,
     )
+
+
+def build_organization_determination_crew(
+    website_url: str, elasticsearch: Elasticsearch, index_name: str, llm: LLM
+):
+    organization_determination_agent = Agent(
+        role="Organization Determination Agent",
+        goal="Determine the organization from the website",
+        backstory="The agent is tasked with determining the organization from the website.",
+        tools=[
+            tools.ScrapeWebsiteWithContentIngestTool(
+                elasticsearch=elasticsearch,
+                index_name=index_name,
+            )
+        ],
+        allow_delegation=False,
+        llm=llm,
+    )
+    organization_determination_task = Task(
+        description=f"Determine the organization from the website {website_url}",
+        agent=organization_determination_agent,
+        expected_output="The determined organization from the website content with a sentence on reasoning.",
+    )
+    company_determination_crew = Crew(
+        name="company_determination_crew",
+        agents=[organization_determination_agent],
+        tasks=[organization_determination_task],
+    )
+    return company_determination_crew
+
+
+class TaskSpecification:
+    def __init__(self, task: Task, specification: str) -> None:
+        self.task = task
+        self.specification = specification
+
+    def _specify_description(self) -> str:
+        specifier = dspy.ChainOfThought(
+            "task_description: str, specification: str -> specified_task_description: str"
+        )
+        return specifier(
+            task_description=self.task.description, specification=self.specification
+        ).specified_task_description
+
+    def _specify_expected_output(self) -> str:
+        specifier = dspy.ChainOfThought(
+            "task_description: str, specification: str -> specified_expected_output: str"
+        )
+        return specifier(
+            task_description=self.task.description, specification=self.specification
+        ).specified_expected_output
+
+    def specify(self) -> Task:
+        """
+        Specify the task
+        """
+        specified_description = self._specify_description()
+        specified_expected_output = self._specify_expected_output()
+        return Task(
+            description=specified_description,
+            agent=self.task.agent,
+            expected_output=specified_expected_output,
+            output_pydantic=self.task.output_pydantic,
+        )
+
+
+def specify_task(task: Task, specification: str) -> Task:
+    """
+    Specify a task
+    """
+    return TaskSpecification(task=task, specification=specification).specify()
+
+
+def specify_tasks(tasks: list[Task], specification: str) -> list[Task]:
+    """
+    Specify a list of tasks
+    """
+    specified_tasks = []
+    for task in tasks:
+        specified_tasks.append(specify_task(task=task, specification=specification))
+    return specified_tasks
+
+
+def specify_tasks_parallel(tasks: list[Task], specification: str) -> list[Task]:
+    """
+    Specify a list of tasks in parallel
+    """
+    specified_tasks = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+        for task in tasks:
+            futures.append(
+                executor.submit(specify_task, task=task, specification=specification)
+            )
+        for future in concurrent.futures.as_completed(futures):
+            specified_tasks.append(future.result())
+    return specified_tasks
+
+
+def specify_research_team(team: ResearchTeam, specification: str) -> ResearchTeam:
+    """
+    Specify a research team
+    """
+    tasks = specify_tasks_parallel(tasks=team.tasks, specification=specification)
+    return ResearchTeam(title=team.title, agents=team.agents, tasks=tasks)
+
+
+class ResearchTeamRunner:
+    """`
+    Run a research team by executing the tasks in parallel
+    """
+
+    def __init__(self, team: ResearchTeam) -> None:
+        self.team = team
+
+    def run(self) -> list:
+        """
+        Run the research team
+        """
+        pass
+
+
+class ResearchFlow(Flow):
+    """
+    Flow for analyzing a company by first determining the company from their website
+    - Step 1: Determine the company from the website
+    - Step 2: Employ a research team to gather information about the company
+    - Step 3: Analyze the information with a RAG workflow
+    """
+
+    def __init__(
+        self,
+        website_url: str,
+        elasticsearch: Elasticsearch,
+        index_name: str,
+        llm: LLM,
+        **kwargs,
+    ) -> None:
+        super().__init__(**kwargs)
+        self.website_url = website_url
+        self.company_determination_crew = build_organization_determination_crew(
+            website_url=website_url,
+            elasticsearch=elasticsearch,
+            index_name=index_name,
+            llm=llm,
+        )
+
+    @start()
+    def determine_organization(self) -> str:
+        """Run the determination crew to get the organization from the website
+
+        Returns:
+            str: organization determination
+        """
+        return self.company_determination_crew.kickoff(
+            {"website_url": self.website_url}
+        )
+
+    @listen(determine_organization)
+    def get_organization(self, organization_determination):
+        pass
+
+
+async def arun_research_flow(
+    website_url: str, elasticsearch: Elasticsearch, index_name: str, llm: LLM
+) -> str:
+    flow = ResearchFlow(
+        website_url=website_url,
+        elasticsearch=elasticsearch,
+        index_name=index_name,
+        llm=llm,
+    )
+    return await flow.kickoff()
+
+
+def run_research_flow(
+    website_url: str, elasticsearch: Elasticsearch, index_name: str, llm: LLM
+) -> str:
+    return asyncio.run(arun_research_flow(website_url, elasticsearch, index_name, llm))

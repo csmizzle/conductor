@@ -12,9 +12,15 @@ from conductor.graph.flow import (
     ResearchTeamFactory,
     build_research_team,
     build_research_team_from_template,
+    build_organization_determination_crew,
+    TaskSpecification,
+    specify_research_team,
 )
 from crewai import LLM, Agent, Task
+from crewai.crew import CrewOutput
 from conductor.builder.agent import ResearchAgentTemplate
+from elasticsearch import Elasticsearch
+import os
 
 
 def test_research_agent_factory() -> None:
@@ -239,3 +245,79 @@ def test_build_research_team_from_template() -> None:
     assert isinstance(team, ResearchTeam)
     assert all([isinstance(agent, Agent) for agent in team.agents])
     assert all([isinstance(task, Task) for task in team.tasks])
+
+
+def test_organization_determination_crew(elasticsearch_test_agent_index) -> None:
+    website_url = "https://www.trssllc.com"
+    llm = LLM("openai/gpt-4o")
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    crew = build_organization_determination_crew(
+        website_url=website_url,
+        llm=llm,
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_test_agent_index,
+    )
+    result = crew.kickoff({"website_url": website_url})
+    assert isinstance(result, CrewOutput)
+
+
+def test_task_specification() -> None:
+    title = "Company Research Team"
+    agent_templates = [
+        ResearchAgentTemplate(
+            title="Company Researcher",
+            research_questions=[
+                "What is the company's mission?",
+                "What are the company's values?",
+            ],
+        ),
+    ]
+    team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
+    llm = LLM("openai/gpt-4o")
+    tools = []
+    team = build_research_team_from_template(
+        team_template=team_template,
+        llm=llm,
+        tools=tools,
+    )
+    task = team.tasks[0]
+    specifier = TaskSpecification(
+        task=task, specification="The company is Thomson Reuters Special Services LLC."
+    )
+    specified_task = specifier.specify()
+    assert isinstance(specified_task, Task)
+
+
+def test_research_team_specification() -> None:
+    title = "Company Research Team"
+    agent_templates = [
+        ResearchAgentTemplate(
+            title="Company Researcher",
+            research_questions=[
+                "What is the company's mission?",
+                "What are the company's values?",
+            ],
+        ),
+        ResearchAgentTemplate(
+            title="Company Researcher",
+            research_questions=[
+                "What is the company's mission?",
+                "What are the company's values?",
+            ],
+        ),
+    ]
+    team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
+    research_team = build_research_team_from_template(
+        team_template=team_template,
+        llm=LLM("openai/gpt-4o"),
+        tools=[],
+    )
+    specified_team = specify_research_team(
+        team=research_team,
+        specification="The company is Thomson Reuters Special Services LLC.",
+    )
+    assert isinstance(specified_team, ResearchTeam)
+    assert all([isinstance(agent, Agent) for agent in specified_team.agents])
+    assert all([isinstance(task, Task) for task in specified_team.tasks])

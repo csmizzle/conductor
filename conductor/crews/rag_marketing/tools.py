@@ -141,6 +141,68 @@ class ScrapeWebsiteIngestTool(ScrapeWebsiteTool):
         )
 
 
+class ScrapeWebsiteWithContentIngestTool(ScrapeWebsiteTool):
+    name: str = "Get website content to add to the vector database"
+    description: str = "A tool that can be used to read a website content and ingest into vector database. Returns the content of the website."
+    args_schema: Type[BaseModel] = ScrapeWebsiteToolSchema
+    website_url: Optional[str] = None
+    cookies: Optional[dict] = None
+    headers: Optional[dict] = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.google.com/",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Accept-Encoding": "gzip, deflate, br",
+    }
+
+    def __init__(
+        self,
+        elasticsearch: Elasticsearch,
+        index_name: str,
+        website_url: Optional[str] = None,
+        cookies: Optional[dict] = None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self._vector_database = ElasticsearchRetrieverClient(
+            elasticsearch=elasticsearch,
+            embeddings=BedrockEmbeddings(),
+            index_name=index_name,
+        )
+        if website_url is not None:
+            self.website_url = website_url
+            self.description = (
+                f"A tool that can be used to read {website_url}'s content."
+            )
+            self.args_schema = ScrapeWebsiteToolSchema
+            self._generate_description()
+            if cookies is not None:
+                self.cookies = {cookies["name"]: os.getenv(cookies["value"])}
+
+    def _run(
+        self,
+        **kwargs: Any,
+    ) -> Any:
+        # check if documents already in vector database by looking at the metadata URL
+        url = kwargs.get("website_url", self.website_url)
+        ingested_content = ingest(
+            client=self._vector_database,
+            url=url,
+            headers=self.headers,
+            cookies=self.cookies,
+        )
+        if ingested_content:
+            try:
+                print("Getting content from the vector database ...")
+                data = self._vector_database.find_document_by_url(url=url)
+                # return the text of the first document
+                return get_content_and_source_from_response(data)
+            except Exception as e:
+                print(e)
+
+
 class VectorSearchTool(BaseTool):
     """
     Search a vector database for relevant information.
