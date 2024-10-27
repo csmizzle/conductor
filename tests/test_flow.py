@@ -366,6 +366,13 @@ def test_research_flow(elasticsearch_test_agent_index) -> None:
                 "What are the company's values?",
             ],
         ),
+        ResearchAgentTemplate(
+            title="Company Social Media Researcher",
+            research_questions=[
+                "What is the company's social media presence?",
+                "What are the company's social media values?",
+            ],
+        ),
     ]
     team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
     research_team = build_research_team_from_template(

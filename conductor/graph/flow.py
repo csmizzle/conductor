@@ -66,11 +66,12 @@ class ResearchAgentFactory:
 
     def _build_goal(self) -> str:
         goal = dspy.ChainOfThought(
-            "agent_name: str, research_questions: list[str] -> goal: str"
+            "agent_name: str, research_questions: list[str] -> search_engine_research_goal: str"
         )
-        return goal(
+        generated_goal = goal(
             agent_name=self.agent_name, research_questions=self.research_questions
-        ).goal
+        ).search_engine_research_goal
+        return generated_goal
 
     def build(self) -> Agent:
         """
@@ -471,6 +472,7 @@ class ResearchTeamRunner:
 
     @staticmethod
     def _run_research_crew(crew: Crew) -> None:
+        print(f"Running crew {crew.id} ...")
         return crew.kickoff()
 
     def _assemble_crews(self) -> None:
@@ -536,18 +538,21 @@ class ResearchFlow(Flow):
         Returns:
             str: organization determination
         """
+        print("Determining organization ...")
         return self.company_determination_crew.kickoff(
             {"website_url": self.website_url}
         )
 
     @listen(determine_organization)
     def specify_research_team(self, organization_determination: str):
+        print("Specifying research team ...")
         self.specified_research_team = specify_research_team(
             team=self.research_team, specification=organization_determination
         )
 
     @listen(specify_research_team)
     def run_research_team(self) -> list[CrewOutput]:
+        print("Running research team ...")
         return run_research_team(self.specified_research_team)
 
 
