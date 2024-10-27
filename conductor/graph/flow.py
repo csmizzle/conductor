@@ -12,8 +12,11 @@ from conductor.builder.agent import ResearchAgentTemplate, ResearchTeamTemplate
 from crewai.flow.flow import Flow, listen, start
 from conductor.crews.rag_marketing import tools
 from crewai.agent import Agent
+from crewai.crew import CrewOutput
+from crewai_tools.tools.base_tool import BaseTool
 from crewai import Task, Crew
 from pydantic import BaseModel, InstanceOf
+from typing import Union
 from elasticsearch import Elasticsearch
 import concurrent.futures
 from crewai import LLM
@@ -42,7 +45,11 @@ class ResearchAgentFactory:
     """
 
     def __init__(
-        self, agent_name: str, research_questions: list[str], llm: LLM, tools: list
+        self,
+        agent_name: str,
+        research_questions: list[str],
+        llm: LLM,
+        tools: list[InstanceOf[BaseTool]],
     ) -> None:
         self.agent_name = agent_name
         self.research_questions = research_questions
@@ -79,7 +86,10 @@ class ResearchAgentFactory:
 
 
 def build_agent(
-    agent_name: str, research_questions: list[str], llm: LLM, tools: list
+    agent_name: str,
+    research_questions: list[str],
+    llm: LLM,
+    tools: list[InstanceOf[BaseTool]],
 ) -> Agent:
     """
     Builds an agent using the ResearchAgentFactory
@@ -93,7 +103,7 @@ def build_agent(
 
 
 def build_agent_from_template(
-    template: ResearchAgentTemplate, llm: LLM, tools: list
+    template: ResearchAgentTemplate, llm: LLM, tools: list[InstanceOf[BaseTool]]
 ) -> Agent:
     """
     Builds an agent from a template
@@ -108,7 +118,7 @@ def build_agent_from_template(
 
 
 def build_agents_from_templates(
-    templates: list[ResearchAgentTemplate], llm: LLM, tools: list
+    templates: list[ResearchAgentTemplate], llm: LLM, tools: list[InstanceOf[BaseTool]]
 ) -> list[Agent]:
     """
     Builds a list of agents from templates
@@ -122,7 +132,7 @@ def build_agents_from_templates(
 
 
 def build_agents_from_templates_parallel(
-    templates: list[ResearchAgentTemplate], llm: LLM, tools: list
+    templates: list[ResearchAgentTemplate], llm: LLM, tools: list[InstanceOf[BaseTool]]
 ) -> list[Agent]:
     """
     Builds a list of agents from templates in parallel
@@ -173,7 +183,7 @@ class ResearchQuestionAgentSearchTaskFactory:
 
     def _build_expected_output(self, task_description: str) -> str:
         expected_output = dspy.ChainOfThought(
-            "agent_role: str, agent_research_question: str, agent_goal: str, agent_backstory: str, task_description: str -> search_engine_expected_output: str"
+            "agent_role: str, agent_research_question: str, agent_goal: str, agent_backstory: str, task_description: str -> ingested_documents_expected_output: str"
         )
         return expected_output(
             agent_role=self.agent.role,
@@ -181,7 +191,7 @@ class ResearchQuestionAgentSearchTaskFactory:
             agent_goal=self.agent.goal,
             agent_backstory=self.agent.backstory,
             task_description=task_description,
-        ).search_engine_expected_output
+        ).ingested_documents_expected_output
 
     def build(self) -> Task:
         """
@@ -288,7 +298,7 @@ class ResearchTeamFactory:
         title: str,
         agent_templates: list[ResearchAgentTemplate],
         llm: LLM,
-        tools: list,
+        tools: list[InstanceOf[BaseTool]],
     ) -> None:
         self.title = title
         self.agent_templates = agent_templates
@@ -313,7 +323,10 @@ class ResearchTeamFactory:
 
 
 def build_research_team(
-    title: str, agent_templates: list[ResearchAgentTemplate], llm: LLM, tools: list
+    title: str,
+    agent_templates: list[ResearchAgentTemplate],
+    llm: LLM,
+    tools: list[InstanceOf[BaseTool]],
 ) -> ResearchTeam:
     """
     Builds a research team from a list of agents
@@ -329,7 +342,7 @@ def build_research_team(
 def build_research_team_from_template(
     team_template: ResearchTeamTemplate,
     llm: LLM,
-    tools: list,
+    tools: list[InstanceOf[BaseTool]],
 ) -> ResearchTeam:
     """
     Builds a research team from a template
@@ -454,12 +467,38 @@ class ResearchTeamRunner:
 
     def __init__(self, team: ResearchTeam) -> None:
         self.team = team
+        self.crews: list[Crew] = self._assemble_crews()
 
-    def run(self) -> list:
+    @staticmethod
+    def _run_research_crew(crew: Crew) -> None:
+        return crew.kickoff()
+
+    def _assemble_crews(self) -> None:
+        crews = []
+        for agent, task in zip(self.team.agents, self.team.tasks):
+            crews.append(Crew(name="research_crew", agents=[agent], tasks=[task]))
+        return crews
+
+    def run(self) -> list[CrewOutput]:
+        """Run the assembled teams in parallel
+
+        Returns:
+            outputs: the crew outputs
         """
-        Run the research team
-        """
-        pass
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = []
+            for crew in self.crews:
+                futures.append(executor.submit(self._run_research_crew, crew))
+            return [
+                future.result() for future in concurrent.futures.as_completed(futures)
+            ]
+
+
+def run_research_team(team: ResearchTeam) -> list[CrewOutput]:
+    """
+    Run a research team by executing the tasks in parallel
+    """
+    return ResearchTeamRunner(team=team).run()
 
 
 class ResearchFlow(Flow):
@@ -472,6 +511,7 @@ class ResearchFlow(Flow):
 
     def __init__(
         self,
+        research_team: ResearchTeam,
         website_url: str,
         elasticsearch: Elasticsearch,
         index_name: str,
@@ -486,6 +526,8 @@ class ResearchFlow(Flow):
             index_name=index_name,
             llm=llm,
         )
+        self.research_team = research_team
+        self.specified_research_team: Union[ResearchTeam, None] = None
 
     @start()
     def determine_organization(self) -> str:
@@ -499,14 +541,25 @@ class ResearchFlow(Flow):
         )
 
     @listen(determine_organization)
-    def get_organization(self, organization_determination):
-        pass
+    def specify_research_team(self, organization_determination: str):
+        self.specified_research_team = specify_research_team(
+            team=self.research_team, specification=organization_determination
+        )
+
+    @listen(specify_research_team)
+    def run_research_team(self) -> list[CrewOutput]:
+        return run_research_team(self.specified_research_team)
 
 
 async def arun_research_flow(
-    website_url: str, elasticsearch: Elasticsearch, index_name: str, llm: LLM
+    research_team: ResearchTeam,
+    website_url: str,
+    elasticsearch: Elasticsearch,
+    index_name: str,
+    llm: LLM,
 ) -> str:
     flow = ResearchFlow(
+        research_team=research_team,
         website_url=website_url,
         elasticsearch=elasticsearch,
         index_name=index_name,
@@ -516,6 +569,18 @@ async def arun_research_flow(
 
 
 def run_research_flow(
-    website_url: str, elasticsearch: Elasticsearch, index_name: str, llm: LLM
+    research_team: ResearchTeam,
+    website_url: str,
+    elasticsearch: Elasticsearch,
+    index_name: str,
+    llm: LLM,
 ) -> str:
-    return asyncio.run(arun_research_flow(website_url, elasticsearch, index_name, llm))
+    return asyncio.run(
+        arun_research_flow(
+            research_team=research_team,
+            website_url=website_url,
+            elasticsearch=elasticsearch,
+            index_name=index_name,
+            llm=llm,
+        )
+    )

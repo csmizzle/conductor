@@ -15,10 +15,12 @@ from conductor.graph.flow import (
     build_organization_determination_crew,
     TaskSpecification,
     specify_research_team,
+    run_research_flow,
 )
 from crewai import LLM, Agent, Task
 from crewai.crew import CrewOutput
 from conductor.builder.agent import ResearchAgentTemplate
+from conductor.crews.rag_marketing import tools
 from elasticsearch import Elasticsearch
 import os
 
@@ -114,6 +116,32 @@ def test_build_agent_search_tasks() -> None:
     )
     llm = LLM("openai/gpt-4o")
     agent = build_agent_from_template(template=template, llm=llm, tools=[])
+    tasks = build_agent_search_tasks(agent=agent, research_questions=research_questions)
+    assert isinstance(tasks, list)
+    assert all([isinstance(task, Task) for task in tasks])
+
+
+def test_build_agent_search_tasks_with_tools(elasticsearch_test_agent_index) -> None:
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    research_questions = [
+        "What is the company's mission?",
+        "What are the company's values?",
+    ]
+    template = ResearchAgentTemplate(
+        title="Company Researcher", research_questions=research_questions
+    )
+    llm = LLM("openai/gpt-4o")
+    agent = build_agent_from_template(
+        template=template,
+        llm=llm,
+        tools=[
+            tools.SerpSearchEngineIngestTool(
+                elasticsearch=elasticsearch, index_name=elasticsearch_test_agent_index
+            )
+        ],
+    )
     tasks = build_agent_search_tasks(agent=agent, research_questions=research_questions)
     assert isinstance(tasks, list)
     assert all([isinstance(task, Task) for task in tasks])
@@ -321,3 +349,40 @@ def test_research_team_specification() -> None:
     assert isinstance(specified_team, ResearchTeam)
     assert all([isinstance(agent, Agent) for agent in specified_team.agents])
     assert all([isinstance(task, Task) for task in specified_team.tasks])
+
+
+def test_research_flow(elasticsearch_test_agent_index) -> None:
+    title = "Company Research Team"
+    website_url = "https://www.trssllc.com"
+    llm = LLM("openai/gpt-4o")
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    agent_templates = [
+        ResearchAgentTemplate(
+            title="Company Researcher",
+            research_questions=[
+                "What is the company's mission?",
+                "What are the company's values?",
+            ],
+        ),
+    ]
+    team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
+    research_team = build_research_team_from_template(
+        team_template=team_template,
+        llm=llm,
+        tools=[
+            tools.SerpSearchEngineIngestTool(
+                elasticsearch=elasticsearch, index_name=elasticsearch_test_agent_index
+            )
+        ],
+    )
+    result = run_research_flow(
+        research_team=research_team,
+        website_url=website_url,
+        llm=llm,
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_test_agent_index,
+    )
+    assert isinstance(result, list)
+    assert all([isinstance(output, CrewOutput) for output in result])
