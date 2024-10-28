@@ -4,7 +4,7 @@ from crewai.crew import CrewOutput
 import concurrent.futures
 
 
-class ResearchTeamRunner:
+class TeamRunner:
     """`
     Run a research team by executing the tasks in parallel
     """
@@ -39,8 +39,8 @@ class ResearchTeamRunner:
             ]
 
 
-def run_research_team(team: models.Team) -> list[CrewOutput]:
+def run_team(team: models.Team) -> list[CrewOutput]:
     """
     Run a research team by executing the tasks in parallel
     """
-    return ResearchTeamRunner(team=team).run()
+    return TeamRunner(team=team).run()

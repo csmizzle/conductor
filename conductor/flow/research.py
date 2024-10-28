@@ -52,7 +52,6 @@ class ResearchAgentFactory(models.AgentFactory):
         )
 
 
-# task builder
 class ResearchQuestionAgentSearchTaskFactory(models.TaskFactory):
     """
     Agent task factory that create
@@ -79,7 +78,7 @@ class ResearchQuestionAgentSearchTaskFactory(models.TaskFactory):
 
     def _build_expected_output(self, task_description: str) -> str:
         generate_expected_output = dspy.ChainOfThought(
-            signatures.ResearchAgentExpectedOutput
+            signatures.ResearchTaskExpectedOutput
         )
         return generate_expected_output(
             agent_role=self.agent.role,

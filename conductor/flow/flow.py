@@ -12,7 +12,7 @@ from crewai.flow.flow import Flow, listen, start
 from crewai.crew import CrewOutput
 from typing import Union
 from elasticsearch import Elasticsearch
-from pydantic import BaseModel
+from pydantic import BaseModel, InstanceOf
 from crewai import LLM
 import dspy
 import asyncio
@@ -82,50 +82,50 @@ class ResearchFlow(Flow[ResearchFlowState]):
     @listen(specify_research_team)
     def run_research_team(self) -> list[CrewOutput]:
         print("Running research team ...")
-        research_team_output = runner.run_research_team(
-            self.state.specified_research_team
-        )
+        research_team_output = runner.run_team(self.state.specified_research_team)
         self.state.research_team_output = research_team_output
         return research_team_output
 
-    # @listen(run_research_team)
-    # def run_search_team(self) -> list[CrewOutput]:
-    #     print("Running search team ...")
-    #     search_team_output = run_search_team(self.research_team)
-    #     self.state.search_team_output = search_team_output
-    #     return search_team_output
+
+class SearchFlow(Flow):
+    def __init__(
+        self,
+        search_team: models.Team,
+        organization_determination: str,
+        elasticsearch: Elasticsearch,
+        index_name: str,
+        llm: LLM,
+        **kwargs,
+    ) -> None:
+        super().__init__(**kwargs)
+        self.organization_determination = organization_determination
+        self.search_team = search_team
+        self.elasticsearch = elasticsearch
+        self.index_name = index_name
+        self.llm = llm
+
+    @start()
+    def specify_search_team(self):
+        print("Specifying search team ...")
+        specified_search_team = specify.specify_research_team(
+            team=self.search_team, specification=self.organization_determination
+        )
+        return specified_search_team
+
+    @listen(specify_search_team)
+    def run_research_team(
+        self, specified_research_team: models.Team
+    ) -> list[CrewOutput]:
+        print("Running search team ...")
+        research_team_output = runner.run_team(specified_research_team)
+        return research_team_output
 
 
-async def arun_research_flow(
-    research_team: models.Team,
-    website_url: str,
-    elasticsearch: Elasticsearch,
-    index_name: str,
-    llm: LLM,
+async def arun_flow(
+    flow: InstanceOf[Flow],
 ) -> str:
-    flow = ResearchFlow(
-        research_team=research_team,
-        website_url=website_url,
-        elasticsearch=elasticsearch,
-        index_name=index_name,
-        llm=llm,
-    )
     return await flow.kickoff()
 
 
-def run_research_flow(
-    research_team: models.Team,
-    website_url: str,
-    elasticsearch: Elasticsearch,
-    index_name: str,
-    llm: LLM,
-) -> str:
-    return asyncio.run(
-        arun_research_flow(
-            research_team=research_team,
-            website_url=website_url,
-            elasticsearch=elasticsearch,
-            index_name=index_name,
-            llm=llm,
-        )
-    )
+def run_flow(flow: InstanceOf[Flow]) -> str:
+    return asyncio.run(arun_flow(flow=flow))

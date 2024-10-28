@@ -10,13 +10,14 @@ from conductor.flow.builders import (
     build_agent_search_tasks,
     build_agent_search_tasks_parallel,
     build_agents_search_tasks_parallel,
-    build_research_team,
-    build_research_team_from_template,
+    build_team,
+    build_team_from_template,
 )
 from conductor.flow.research import (
     ResearchAgentFactory,
     ResearchQuestionAgentSearchTaskFactory,
 )
+from conductor.flow.search import SearchAgentFactory, SearchTaskFactory
 from conductor.flow.team import (
     ResearchTeamFactory,
 )
@@ -28,7 +29,9 @@ from conductor.flow.specify import (
     specify_research_team,
 )
 from conductor.flow.flow import (
-    run_research_flow,
+    ResearchFlow,
+    SearchFlow,
+    run_flow,
 )
 from crewai import LLM, Agent, Task
 from crewai.crew import CrewOutput
@@ -275,7 +278,7 @@ def test_build_research_team() -> None:
     ]
     llm = LLM("openai/gpt-4o")
     tools = []
-    team = build_research_team(
+    team = build_team(
         title=title,
         agent_templates=agent_templates,
         llm=llm,
@@ -310,7 +313,7 @@ def test_build_research_team_from_template() -> None:
     team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
     llm = LLM("openai/gpt-4o")
     tools = []
-    team = build_research_team_from_template(
+    team = build_team_from_template(
         team_template=team_template,
         llm=llm,
         tools=tools,
@@ -353,7 +356,7 @@ def test_task_specification() -> None:
     team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
     llm = LLM("openai/gpt-4o")
     tools = []
-    team = build_research_team_from_template(
+    team = build_team_from_template(
         team_template=team_template,
         llm=llm,
         tools=tools,
@@ -388,7 +391,7 @@ def test_research_team_specification() -> None:
         ),
     ]
     team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
-    research_team = build_research_team_from_template(
+    research_team = build_team_from_template(
         team_template=team_template,
         llm=LLM("openai/gpt-4o"),
         tools=[],
@@ -429,7 +432,7 @@ def test_research_flow(elasticsearch_test_agent_index) -> None:
         ),
     ]
     team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
-    research_team = build_research_team_from_template(
+    research_team = build_team_from_template(
         team_template=team_template,
         llm=llm,
         tools=[
@@ -441,7 +444,8 @@ def test_research_flow(elasticsearch_test_agent_index) -> None:
         task_factory=ResearchQuestionAgentSearchTaskFactory,
         team_factory=ResearchTeamFactory,
     )
-    result = run_research_flow(
+    result = run_flow(
+        flow=ResearchFlow,
         research_team=research_team,
         website_url=website_url,
         llm=llm,
@@ -450,3 +454,112 @@ def test_research_flow(elasticsearch_test_agent_index) -> None:
     )
     assert isinstance(result, list)
     assert all([isinstance(output, CrewOutput) for output in result])
+
+
+def test_search_agent() -> None:
+    agent_name = "Company Researcher"
+    research_questions = [
+        "What is the company's mission?",
+        "What are the company's values?",
+    ]
+    llm = LLM("openai/gpt-4o")
+    tools = []
+    agent = build_agent(
+        agent_name=agent_name,
+        research_questions=research_questions,
+        llm=llm,
+        tools=tools,
+        agent_factory=SearchAgentFactory,
+    )
+    assert isinstance(agent, Agent)
+
+
+def test_search_agent_task() -> None:
+    research_questions = [
+        "What is the company's mission?",
+        "What are the company's values?",
+    ]
+    template = ResearchAgentTemplate(
+        title="Company Researcher", research_questions=research_questions
+    )
+    llm = LLM("openai/gpt-4o")
+    agent = build_agent_from_template(
+        agent_factory=SearchAgentFactory, template=template, llm=llm, tools=[]
+    )
+    task = build_agent_search_task(
+        task_factory=SearchTaskFactory,
+        agent=agent,
+        research_question=research_questions[0],
+    )
+    assert isinstance(task, Task)
+
+
+def test_company_research_and_search(elasticsearch_test_agent_index) -> None:
+    title = "Company Research Team"
+    website_url = "https://www.trssllc.com"
+    research_llm = LLM("openai/gpt-4o")
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    agent_templates = [
+        ResearchAgentTemplate(
+            title="Company Structure Researcher",
+            research_questions=[
+                "Who leads their business divisions?",
+                "What are the company divisions?",
+            ],
+        ),
+        ResearchAgentTemplate(
+            title="Company Social Media Researcher",
+            research_questions=[
+                "What is the company's social media presence?",
+                "What are the company's social media values?",
+            ],
+        ),
+    ]
+    team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
+    research_team = build_team_from_template(
+        team_template=team_template,
+        llm=research_llm,
+        tools=[
+            tools.SerpSearchEngineIngestTool(
+                elasticsearch=elasticsearch, index_name=elasticsearch_test_agent_index
+            )
+        ],
+        agent_factory=ResearchAgentFactory,
+        task_factory=ResearchQuestionAgentSearchTaskFactory,
+        team_factory=ResearchTeamFactory,
+    )
+    research_flow = ResearchFlow(
+        research_team=research_team,
+        website_url=website_url,
+        llm=research_llm,
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_test_agent_index,
+    )
+    research_result = run_flow(flow=research_flow)
+    assert isinstance(research_result, list)
+    assert all([isinstance(output, CrewOutput) for output in research_result])
+    search_llm = LLM("bedrock/anthropic.claude-3-sonnet-20240229-v1:0")
+    search_team = build_team_from_template(
+        team_template=team_template,
+        llm=search_llm,
+        tools=[
+            tools.VectorSearchTool(
+                elasticsearch=elasticsearch, index_name=elasticsearch_test_agent_index
+            )
+        ],
+        agent_factory=SearchAgentFactory,
+        task_factory=SearchTaskFactory,
+        team_factory=ResearchTeamFactory,
+    )
+    search_flow = SearchFlow(
+        search_team=search_team,
+        organization_determination=research_flow.state.organization_determination,
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_test_agent_index,
+        llm=search_llm,
+    )
+    search_result = run_flow(search_flow)
+    assert isinstance(search_result, list)
+    assert all([isinstance(output, CrewOutput) for output in search_result])

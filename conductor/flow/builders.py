@@ -183,7 +183,7 @@ def build_agents_search_tasks_parallel(
     return tasks
 
 
-def build_research_team(
+def build_team(
     title: str,
     agent_templates: list[agent.ResearchAgentTemplate],
     llm: LLM,
@@ -205,7 +205,7 @@ def build_research_team(
     ).build()
 
 
-def build_research_team_from_template(
+def build_team_from_template(
     team_template: agent.ResearchTeamTemplate,
     llm: LLM,
     tools: list[InstanceOf[BaseTool]],
@@ -216,7 +216,7 @@ def build_research_team_from_template(
     """
     Builds a research team from a template
     """
-    return build_research_team(
+    return build_team(
         title=team_template.title,
         agent_templates=team_template.agent_templates,
         tools=tools,

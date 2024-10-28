@@ -11,11 +11,27 @@ class Team(BaseModel):
 
 class AgentFactory(ABC):
     @abstractmethod
+    def _build_backstory(self) -> str:
+        pass
+
+    @abstractmethod
+    def _build_goal(self) -> str:
+        pass
+
+    @abstractmethod
     def build(self) -> Agent:
         pass
 
 
 class TaskFactory(ABC):
+    @abstractmethod
+    def _build_description(self) -> str:
+        pass
+
+    @abstractmethod
+    def _build_expected_output(self, task_description: str) -> str:
+        pass
+
     @abstractmethod
     def build(self) -> Task:
         pass

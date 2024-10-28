@@ -3,13 +3,15 @@ Search team looks against the vector database to answer the research questions
 - Take search tasks and tailor them to the organization
 -
 """
-from pydantic import InstanceOf
+from pydantic import InstanceOf, BaseModel
 import dspy
 from crewai_tools import BaseTool
-from crewai import LLM, Agent
+from crewai import LLM, Agent, Task
+from conductor.flow import models
+from conductor.flow import signatures
 
 
-class SearchAgentFactory:
+class SearchAgentFactory(models.AgentFactory):
     """
     Factory class for creating agents
     """
@@ -28,11 +30,11 @@ class SearchAgentFactory:
 
     def _build_backstory(self) -> str:
         backstory = dspy.ChainOfThought(
-            "agent_name: str, research_questions: list[str] -> backstory: str"
+            "agent_name: str, research_questions: list[str] -> vector_database_search_backstory: str"
         )
         return backstory(
             agent_name=self.agent_name, research_questions=self.research_questions
-        ).backstory
+        ).vector_database_search_backstory
 
     def _build_goal(self) -> str:
         goal = dspy.ChainOfThought(
@@ -53,4 +55,54 @@ class SearchAgentFactory:
             backstory=self._build_backstory(),
             tools=self.tools,
             llm=self.llm,
+        )
+
+
+class SearchTaskFactory(models.TaskFactory):
+    """
+    Agent task factory that create
+    """
+
+    def __init__(
+        self,
+        agent: str,
+        research_question: str,
+        output_pydantic: InstanceOf[BaseModel] = None,
+    ) -> None:
+        self.agent = agent
+        self.research_question = research_question
+        self.output_pydantic = output_pydantic
+
+    def _build_description(self) -> str:
+        description = dspy.ChainOfThought(signatures.SearchTaskDescription)
+        return description(
+            agent_role=self.agent.role,
+            agent_research_question=self.research_question,
+            agent_goal=self.agent.goal,
+            agent_backstory=self.agent.backstory,
+        ).task_description
+
+    def _build_expected_output(self, task_description: str) -> str:
+        generate_expected_output = dspy.ChainOfThought(
+            signatures.SearchTaskExpectedOutput
+        )
+        return generate_expected_output(
+            agent_role=self.agent.role,
+            agent_research_question=self.research_question,
+            agent_goal=self.agent.goal,
+            agent_backstory=self.agent.backstory,
+            task_description=task_description,
+        ).expected_output
+
+    def build(self) -> Task:
+        """
+        Builds a task for the agent to search for information
+        """
+        task_description = self._build_description()
+        expected_output = self._build_expected_output(task_description)
+        return Task(
+            description=task_description,
+            agent=self.agent,
+            output_pydantic=self.output_pydantic,
+            expected_output=expected_output,
         )
