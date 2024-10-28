@@ -1,4 +1,8 @@
-from conductor.graph.flow import (
+"""
+Test flow components
+"""
+from conductor.flow.models import Team
+from conductor.flow.research import (
     ResearchAgentFactory,
     build_agent,
     build_agent_from_template,
@@ -8,13 +12,18 @@ from conductor.graph.flow import (
     build_agent_search_tasks_parallel,
     build_agents_search_tasks_parallel,
     ResearchTeamTemplate,
-    ResearchTeam,
     ResearchTeamFactory,
     build_research_team,
     build_research_team_from_template,
+)
+from conductor.flow.utils import (
     build_organization_determination_crew,
+)
+from conductor.flow.specify import (
     TaskSpecification,
     specify_research_team,
+)
+from conductor.flow.flow import (
     run_research_flow,
 )
 from crewai import LLM, Agent, Task
@@ -208,7 +217,7 @@ def test_research_team_factory() -> None:
         tools=tools,
     )
     team = builder.build()
-    assert isinstance(team, ResearchTeam)
+    assert isinstance(team, Team)
     assert all([isinstance(agent, Agent) for agent in team.agents])
     assert all([isinstance(task, Task) for task in team.tasks])
 
@@ -239,7 +248,7 @@ def test_build_research_team() -> None:
         llm=llm,
         tools=tools,
     )
-    assert isinstance(team, ResearchTeam)
+    assert isinstance(team, Team)
     assert all([isinstance(agent, Agent) for agent in team.agents])
     assert all([isinstance(task, Task) for task in team.tasks])
 
@@ -270,7 +279,7 @@ def test_build_research_team_from_template() -> None:
         llm=llm,
         tools=tools,
     )
-    assert isinstance(team, ResearchTeam)
+    assert isinstance(team, Team)
     assert all([isinstance(agent, Agent) for agent in team.agents])
     assert all([isinstance(task, Task) for task in team.tasks])
 
@@ -346,7 +355,7 @@ def test_research_team_specification() -> None:
         team=research_team,
         specification="The company is Thomson Reuters Special Services LLC.",
     )
-    assert isinstance(specified_team, ResearchTeam)
+    assert isinstance(specified_team, Team)
     assert all([isinstance(agent, Agent) for agent in specified_team.agents])
     assert all([isinstance(task, Task) for task in specified_team.tasks])
 
