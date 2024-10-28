@@ -12,10 +12,11 @@ from crewai.flow.flow import Flow, listen, start
 from crewai.crew import CrewOutput
 from typing import Union
 from elasticsearch import Elasticsearch
+from pydantic import BaseModel
 from crewai import LLM
 import dspy
 import asyncio
-from conductor.flow import research, models, specify
+from conductor.flow import models, specify, team
 from conductor.flow.utils import build_organization_determination_crew
 
 
@@ -24,7 +25,13 @@ llm = dspy.LM("openai/gpt-4o")
 dspy.configure(lm=llm)
 
 
-class ResearchFlow(Flow):
+class ResearchFlowState(BaseModel):
+    organization_determination: str = ""
+    research_team_output: list[CrewOutput] = []
+    specified_research_team: Union[models.Team, None] = None
+
+
+class ResearchFlow(Flow[ResearchFlowState]):
     """
     Flow for analyzing a company by first determining the company from their website
     - Step 1: Determine the company from the website
@@ -50,7 +57,6 @@ class ResearchFlow(Flow):
             llm=llm,
         )
         self.research_team = research_team
-        self.specified_research_team: Union[models.Team, None] = None
 
     @start()
     def determine_organization(self) -> str:
@@ -69,14 +75,16 @@ class ResearchFlow(Flow):
     @listen(determine_organization)
     def specify_research_team(self, organization_determination: str):
         print("Specifying research team ...")
-        self.specified_research_team = specify.specify_research_team(
+        self.state.specified_research_team = specify.specify_research_team(
             team=self.research_team, specification=organization_determination
         )
 
     @listen(specify_research_team)
     def run_research_team(self) -> list[CrewOutput]:
         print("Running research team ...")
-        research_team_output = research.run_research_team(self.specified_research_team)
+        research_team_output = team.run_research_team(
+            self.state.specified_research_team
+        )
         self.state.research_team_output = research_team_output
         return research_team_output
 

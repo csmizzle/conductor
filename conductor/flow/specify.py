@@ -1,7 +1,7 @@
 from crewai import Task
 import dspy
 import concurrent.futures
-from conductor.flow import models, research
+from conductor.flow import models
 
 
 class TaskSpecification:
@@ -77,4 +77,4 @@ def specify_research_team(team: models.Team, specification: str) -> models.Team:
     Specify a research team
     """
     tasks = specify_tasks_parallel(tasks=team.tasks, specification=specification)
-    return research.ResearchTeam(title=team.title, agents=team.agents, tasks=tasks)
+    return models.Team(title=team.title, agents=team.agents, tasks=tasks)

@@ -1,6 +1,7 @@
 """
 Test flow components
 """
+from conductor.builder.agent import ResearchAgentTemplate, ResearchTeamTemplate
 from conductor.flow.models import Team
 from conductor.flow.research import (
     ResearchAgentFactory,
@@ -11,7 +12,8 @@ from conductor.flow.research import (
     build_agent_search_tasks,
     build_agent_search_tasks_parallel,
     build_agents_search_tasks_parallel,
-    ResearchTeamTemplate,
+)
+from conductor.flow.team import (
     ResearchTeamFactory,
     build_research_team,
     build_research_team_from_template,
@@ -28,7 +30,6 @@ from conductor.flow.flow import (
 )
 from crewai import LLM, Agent, Task
 from crewai.crew import CrewOutput
-from conductor.builder.agent import ResearchAgentTemplate
 from conductor.crews.rag_marketing import tools
 from elasticsearch import Elasticsearch
 import os
@@ -369,10 +370,10 @@ def test_research_flow(elasticsearch_test_agent_index) -> None:
     )
     agent_templates = [
         ResearchAgentTemplate(
-            title="Company Researcher",
+            title="Company Structure Researcher",
             research_questions=[
-                "What is the company's mission?",
-                "What are the company's values?",
+                "Who leads their business divisions?",
+                "What are the company divisions?",
             ],
         ),
         ResearchAgentTemplate(
