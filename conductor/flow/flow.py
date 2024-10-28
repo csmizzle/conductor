@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from crewai import LLM
 import dspy
 import asyncio
-from conductor.flow import models, specify, team
+from conductor.flow import models, specify, runner
 from conductor.flow.utils import build_organization_determination_crew
 
 
@@ -82,7 +82,7 @@ class ResearchFlow(Flow[ResearchFlowState]):
     @listen(specify_research_team)
     def run_research_team(self) -> list[CrewOutput]:
         print("Running research team ...")
-        research_team_output = team.run_research_team(
+        research_team_output = runner.run_research_team(
             self.state.specified_research_team
         )
         self.state.research_team_output = research_team_output

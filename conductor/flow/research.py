@@ -1,14 +1,11 @@
 from pydantic import BaseModel, InstanceOf
 import dspy
-import concurrent.futures
-from tqdm import tqdm
 from crewai_tools import BaseTool
 from crewai import LLM, Task, Agent
-from conductor.builder.agent import ResearchAgentTemplate
-from conductor.flow import signatures
+from conductor.flow import signatures, models
 
 
-class ResearchAgentFactory:
+class ResearchAgentFactory(models.AgentFactory):
     """
     Factory class for creating agents
     """
@@ -55,77 +52,8 @@ class ResearchAgentFactory:
         )
 
 
-def build_agent(
-    agent_name: str,
-    research_questions: list[str],
-    llm: LLM,
-    tools: list[InstanceOf[BaseTool]],
-) -> Agent:
-    """
-    Builds an agent using the ResearchAgentFactory
-    """
-    return ResearchAgentFactory(
-        agent_name=agent_name,
-        research_questions=research_questions,
-        llm=llm,
-        tools=tools,
-    ).build()
-
-
-def build_agent_from_template(
-    template: ResearchAgentTemplate, llm: LLM, tools: list[InstanceOf[BaseTool]]
-) -> Agent:
-    """
-    Builds an agent from a template
-    """
-    factory = ResearchAgentFactory(
-        agent_name=template.title,
-        research_questions=template.research_questions,
-        llm=llm,
-        tools=tools,
-    )
-    return factory.build()
-
-
-def build_agents_from_templates(
-    templates: list[ResearchAgentTemplate], llm: LLM, tools: list[InstanceOf[BaseTool]]
-) -> list[Agent]:
-    """
-    Builds a list of agents from templates
-    """
-    agents = []
-    for template in templates:
-        agents.append(
-            build_agent_from_template(template=template, llm=llm, tools=tools)
-        )
-    return agents
-
-
-def build_agents_from_templates_parallel(
-    templates: list[ResearchAgentTemplate], llm: LLM, tools: list[InstanceOf[BaseTool]]
-) -> list[Agent]:
-    """
-    Builds a list of agents from templates in parallel
-    """
-    agents = []
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = []
-        for template in templates:
-            futures.append(
-                executor.submit(
-                    build_agent_from_template,
-                    template=template,
-                    llm=llm,
-                    tools=tools,
-                )
-            )
-        for future in concurrent.futures.as_completed(futures):
-            agents.append(future.result())
-    return agents
-
-
 # task builder
-class ResearchQuestionAgentSearchTaskFactory:
+class ResearchQuestionAgentSearchTaskFactory(models.TaskFactory):
     """
     Agent task factory that create
     """
@@ -173,84 +101,3 @@ class ResearchQuestionAgentSearchTaskFactory:
             output_pydantic=self.output_pydantic,
             expected_output=expected_output,
         )
-
-
-def build_agent_search_task(
-    agent: Agent, research_question: str, output_pydantic: InstanceOf[BaseModel] = None
-) -> Task:
-    """
-    Builds a task for the agent to search for information
-    """
-    return ResearchQuestionAgentSearchTaskFactory(
-        agent=agent,
-        research_question=research_question,
-        output_pydantic=output_pydantic,
-    ).build()
-
-
-def build_agent_search_tasks(
-    agent: Agent,
-    research_questions: list[str],
-    output_pydantic: InstanceOf[BaseModel] = None,
-) -> list[Task]:
-    """
-    Builds a list of tasks for the agent to search for information
-    """
-    tasks = []
-    for research_question in tqdm(research_questions):
-        tasks.append(
-            build_agent_search_task(
-                agent=agent,
-                research_question=research_question,
-                output_pydantic=output_pydantic,
-            )
-        )
-    return tasks
-
-
-def build_agent_search_tasks_parallel(
-    agent: Agent,
-    research_questions: list[str],
-    output_pydantic: InstanceOf[BaseModel] = None,
-) -> list[Task]:
-    """
-    Builds a list of tasks for the agent to search for information in parallel
-    """
-    tasks = []
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = []
-        for research_question in research_questions:
-            futures.append(
-                executor.submit(
-                    build_agent_search_task,
-                    agent=agent,
-                    research_question=research_question,
-                    output_pydantic=output_pydantic,
-                )
-            )
-        for future in concurrent.futures.as_completed(futures):
-            tasks.append(future.result())
-    return tasks
-
-
-def build_agents_search_tasks_parallel(
-    agent_templates: list[ResearchAgentTemplate],
-    agents: list[Agent],
-) -> list[Task]:
-    """
-    Builds a list of tasks for the agents to search for information in parallel
-    """
-    tasks = []
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = []
-        for agent_template, agent in zip(agent_templates, agents):
-            futures.append(
-                executor.submit(
-                    build_agent_search_tasks_parallel,
-                    agent=agent,
-                    research_questions=agent_template.research_questions,
-                )
-            )
-        for future in concurrent.futures.as_completed(futures):
-            tasks.extend(future.result())
-    return tasks

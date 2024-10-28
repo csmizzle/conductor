@@ -3,20 +3,22 @@ Test flow components
 """
 from conductor.builder.agent import ResearchAgentTemplate, ResearchTeamTemplate
 from conductor.flow.models import Team
-from conductor.flow.research import (
-    ResearchAgentFactory,
+from conductor.flow.builders import (
     build_agent,
     build_agent_from_template,
-    ResearchQuestionAgentSearchTaskFactory,
     build_agent_search_task,
     build_agent_search_tasks,
     build_agent_search_tasks_parallel,
     build_agents_search_tasks_parallel,
+    build_research_team,
+    build_research_team_from_template,
+)
+from conductor.flow.research import (
+    ResearchAgentFactory,
+    ResearchQuestionAgentSearchTaskFactory,
 )
 from conductor.flow.team import (
     ResearchTeamFactory,
-    build_research_team,
-    build_research_team_from_template,
 )
 from conductor.flow.utils import (
     build_organization_determination_crew,
@@ -66,6 +68,7 @@ def test_build_agent() -> None:
         research_questions=research_questions,
         llm=llm,
         tools=tools,
+        agent_factory=ResearchAgentFactory,
     )
     assert isinstance(agent, Agent)
 
@@ -79,7 +82,9 @@ def test_build_agent_from_template() -> None:
         ],
     )
     llm = LLM("openai/gpt-4o")
-    agent = build_agent_from_template(template=template, llm=llm, tools=[])
+    agent = build_agent_from_template(
+        agent_factory=ResearchAgentFactory, template=template, llm=llm, tools=[]
+    )
     assert isinstance(agent, Agent)
 
 
@@ -93,7 +98,9 @@ def test_build_agent_task_factory() -> None:
         title="Company Researcher", research_questions=research_questions
     )
     llm = LLM("openai/gpt-4o")
-    agent = build_agent_from_template(template=template, llm=llm, tools=[])
+    agent = build_agent_from_template(
+        agent_factory=ResearchAgentFactory, template=template, llm=llm, tools=[]
+    )
     # build agent search task
     task_builder = ResearchQuestionAgentSearchTaskFactory(
         agent=agent, research_question=research_questions[0]
@@ -111,8 +118,14 @@ def test_build_agent_search_task() -> None:
         title="Company Researcher", research_questions=research_questions
     )
     llm = LLM("openai/gpt-4o")
-    agent = build_agent_from_template(template=template, llm=llm, tools=[])
-    task = build_agent_search_task(agent=agent, research_question=research_questions[0])
+    agent = build_agent_from_template(
+        agent_factory=ResearchAgentFactory, template=template, llm=llm, tools=[]
+    )
+    task = build_agent_search_task(
+        task_factory=ResearchQuestionAgentSearchTaskFactory,
+        agent=agent,
+        research_question=research_questions[0],
+    )
     assert isinstance(task, Task)
 
 
@@ -125,8 +138,14 @@ def test_build_agent_search_tasks() -> None:
         title="Company Researcher", research_questions=research_questions
     )
     llm = LLM("openai/gpt-4o")
-    agent = build_agent_from_template(template=template, llm=llm, tools=[])
-    tasks = build_agent_search_tasks(agent=agent, research_questions=research_questions)
+    agent = build_agent_from_template(
+        agent_factory=ResearchAgentFactory, template=template, llm=llm, tools=[]
+    )
+    tasks = build_agent_search_tasks(
+        task_factory=ResearchQuestionAgentSearchTaskFactory,
+        agent=agent,
+        research_questions=research_questions,
+    )
     assert isinstance(tasks, list)
     assert all([isinstance(task, Task) for task in tasks])
 
@@ -144,6 +163,7 @@ def test_build_agent_search_tasks_with_tools(elasticsearch_test_agent_index) -> 
     )
     llm = LLM("openai/gpt-4o")
     agent = build_agent_from_template(
+        agent_factory=ResearchAgentFactory,
         template=template,
         llm=llm,
         tools=[
@@ -152,7 +172,11 @@ def test_build_agent_search_tasks_with_tools(elasticsearch_test_agent_index) -> 
             )
         ],
     )
-    tasks = build_agent_search_tasks(agent=agent, research_questions=research_questions)
+    tasks = build_agent_search_tasks(
+        task_factory=ResearchQuestionAgentSearchTaskFactory,
+        agent=agent,
+        research_questions=research_questions,
+    )
     assert isinstance(tasks, list)
     assert all([isinstance(task, Task) for task in tasks])
 
@@ -166,9 +190,13 @@ def test_build_agent_search_tasks_parallel() -> None:
         title="Company Researcher", research_questions=research_questions
     )
     llm = LLM("openai/gpt-4o")
-    agent = build_agent_from_template(template=template, llm=llm, tools=[])
+    agent = build_agent_from_template(
+        agent_factory=ResearchAgentFactory, template=template, llm=llm, tools=[]
+    )
     tasks = build_agent_search_tasks_parallel(
-        agent=agent, research_questions=research_questions
+        agent=agent,
+        research_questions=research_questions,
+        task_factory=ResearchQuestionAgentSearchTaskFactory,
     )
     assert isinstance(tasks, list)
     assert all([isinstance(task, Task) for task in tasks])
@@ -183,9 +211,13 @@ def test_build_agents_search_tasks_parallel() -> None:
         title="Company Researcher", research_questions=research_questions
     )
     llm = LLM("openai/gpt-4o")
-    agent = build_agent_from_template(template=template, llm=llm, tools=[])
+    agent = build_agent_from_template(
+        agent_factory=ResearchAgentFactory, template=template, llm=llm, tools=[]
+    )
     tasks = build_agents_search_tasks_parallel(
-        agents=[agent, agent], agent_templates=[template, template]
+        task_factory=ResearchQuestionAgentSearchTaskFactory,
+        agents=[agent, agent],
+        agent_templates=[template, template],
     )
     assert isinstance(tasks, list)
     assert all([isinstance(task, Task) for task in tasks])
@@ -248,6 +280,9 @@ def test_build_research_team() -> None:
         agent_templates=agent_templates,
         llm=llm,
         tools=tools,
+        agent_factory=ResearchAgentFactory,
+        task_factory=ResearchQuestionAgentSearchTaskFactory,
+        team_factory=ResearchTeamFactory,
     )
     assert isinstance(team, Team)
     assert all([isinstance(agent, Agent) for agent in team.agents])
@@ -279,6 +314,9 @@ def test_build_research_team_from_template() -> None:
         team_template=team_template,
         llm=llm,
         tools=tools,
+        agent_factory=ResearchAgentFactory,
+        task_factory=ResearchQuestionAgentSearchTaskFactory,
+        team_factory=ResearchTeamFactory,
     )
     assert isinstance(team, Team)
     assert all([isinstance(agent, Agent) for agent in team.agents])
@@ -319,6 +357,9 @@ def test_task_specification() -> None:
         team_template=team_template,
         llm=llm,
         tools=tools,
+        agent_factory=ResearchAgentFactory,
+        task_factory=ResearchQuestionAgentSearchTaskFactory,
+        team_factory=ResearchTeamFactory,
     )
     task = team.tasks[0]
     specifier = TaskSpecification(
@@ -351,6 +392,9 @@ def test_research_team_specification() -> None:
         team_template=team_template,
         llm=LLM("openai/gpt-4o"),
         tools=[],
+        agent_factory=ResearchAgentFactory,
+        task_factory=ResearchQuestionAgentSearchTaskFactory,
+        team_factory=ResearchTeamFactory,
     )
     specified_team = specify_research_team(
         team=research_team,
@@ -393,6 +437,9 @@ def test_research_flow(elasticsearch_test_agent_index) -> None:
                 elasticsearch=elasticsearch, index_name=elasticsearch_test_agent_index
             )
         ],
+        agent_factory=ResearchAgentFactory,
+        task_factory=ResearchQuestionAgentSearchTaskFactory,
+        team_factory=ResearchTeamFactory,
     )
     result = run_research_flow(
         research_team=research_team,
