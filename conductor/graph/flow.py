@@ -9,6 +9,7 @@ New things that need to happen:
 The first thing I will need is an crewai agent factory
 """
 from conductor.builder.agent import ResearchAgentTemplate, ResearchTeamTemplate
+from conductor.graph import signatures
 from crewai.flow.flow import Flow, listen, start
 from conductor.crews.rag_marketing import tools
 from crewai.agent import Agent
@@ -172,27 +173,25 @@ class ResearchQuestionAgentSearchTaskFactory:
         self.output_pydantic = output_pydantic
 
     def _build_description(self) -> str:
-        description = dspy.ChainOfThought(
-            "agent_role: str, agent_research_question: str, agent_goal: str, agent_backstory: str -> search_engine_task_description: str"
-        )
+        description = dspy.ChainOfThought(signatures.ResearchTaskDescription)
         return description(
             agent_role=self.agent.role,
             agent_research_question=self.research_question,
             agent_goal=self.agent.goal,
             agent_backstory=self.agent.backstory,
-        ).search_engine_task_description
+        ).task_description
 
     def _build_expected_output(self, task_description: str) -> str:
-        expected_output = dspy.ChainOfThought(
-            "agent_role: str, agent_research_question: str, agent_goal: str, agent_backstory: str, task_description: str -> ingested_documents_expected_output: str"
+        generate_expected_output = dspy.ChainOfThought(
+            signatures.ResearchAgentExpectedOutput
         )
-        return expected_output(
+        return generate_expected_output(
             agent_role=self.agent.role,
             agent_research_question=self.research_question,
             agent_goal=self.agent.goal,
             agent_backstory=self.agent.backstory,
             task_description=task_description,
-        ).ingested_documents_expected_output
+        ).expected_output
 
     def build(self) -> Task:
         """
@@ -539,9 +538,11 @@ class ResearchFlow(Flow):
             str: organization determination
         """
         print("Determining organization ...")
-        return self.company_determination_crew.kickoff(
+        organization_determination = self.company_determination_crew.kickoff(
             {"website_url": self.website_url}
         )
+        self.state.organization_determination = organization_determination
+        return organization_determination
 
     @listen(determine_organization)
     def specify_research_team(self, organization_determination: str):
@@ -553,7 +554,16 @@ class ResearchFlow(Flow):
     @listen(specify_research_team)
     def run_research_team(self) -> list[CrewOutput]:
         print("Running research team ...")
-        return run_research_team(self.specified_research_team)
+        research_team_output = run_research_team(self.specified_research_team)
+        self.state.research_team_output = research_team_output
+        return research_team_output
+
+    # @listen(run_research_team)
+    # def run_search_team(self) -> list[CrewOutput]:
+    #     print("Running search team ...")
+    #     search_team_output = run_search_team(self.research_team)
+    #     self.state.search_team_output = search_team_output
+    #     return search_team_output
 
 
 async def arun_research_flow(
