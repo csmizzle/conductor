@@ -26,7 +26,7 @@ def test_flow_retrieve_with_cohere() -> None:
         embeddings=BedrockEmbeddings(),
         cohere_api_key=os.getenv("COHERE_API_KEY"),
     )
-    documents = retriever.forward(
+    documents = retriever(
         query=query,
     )
     assert isinstance(documents, dspy.Prediction)
@@ -44,7 +44,7 @@ def test_flow_retrieve() -> None:
         index_name=elasticsearch_test_index,
         embeddings=BedrockEmbeddings(),
     )
-    documents = retriever.forward(
+    documents = retriever(
         query=query,
     )
     assert isinstance(documents, dspy.Prediction)

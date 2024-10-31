@@ -4,6 +4,7 @@ The signatures need to be defined to control the searching and aggregation
 of data collection efforts using search engines and APIs.
 """
 import dspy
+from conductor.flow.models import CitedAnswer as CitedAnswerModel
 
 # configure dspy
 llm = dspy.LM("openai/gpt-4o")
@@ -74,3 +75,11 @@ class SearchTaskExpectedOutput(dspy.Signature):
     expected_output = dspy.OutputField(
         desc="Output of the search task with source citations"
     )
+
+
+class CitedAnswer(dspy.Signature):
+    question: str = dspy.InputField(desc="The question to be answered")
+    documents: list[str] = dspy.InputField(
+        desc="The documents used to generate the answer"
+    )
+    answer: CitedAnswerModel = dspy.OutputField(desc="The answer to the question")

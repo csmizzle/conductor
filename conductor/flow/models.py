@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from crewai import Agent, Task
 from abc import ABC, abstractmethod
 
@@ -41,3 +41,15 @@ class TeamFactory(ABC):
     @abstractmethod
     def build(self) -> Team:
         pass
+
+
+class CitedAnswer(BaseModel):
+    answer: str = Field(description="The answer for the question")
+    citations: list[str] = Field(description="The URLs used in the answer")
+    faithfulness: float = Field(
+        ge=0, le=1, description="The faithfulness of the answer"
+    )
+    factual_correctness: float = Field(
+        ge=0, le=1, description="The factual correctness of the answer"
+    )
+    confidence: float = Field(ge=0, le=1, description="The confidence of the answer")
