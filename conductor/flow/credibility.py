@@ -9,7 +9,7 @@ llm = dspy.LM("openai/gpt-4o")
 dspy.configure(lm=llm)
 
 
-class SourceCredibility(Enum):
+class SourceCredibilityEnum(Enum):
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
@@ -21,7 +21,12 @@ class Source(BaseModel):
 
 class SourceCredibility(BaseModel):
     source: str = Field(description="The source of the information")
-    credibility: SourceCredibility = Field(description="The credibility of the source")
+    credibility: SourceCredibilityEnum = Field(
+        description="The credibility of the source"
+    )
+
+    class Config:
+        use_enum_values = True
 
 
 class SourceCredibilityAnalysisSignature(dspy.Signature):

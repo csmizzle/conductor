@@ -5,7 +5,7 @@ from pydantic import BaseModel, InstanceOf
 from crewai_tools import BaseTool
 from crewai import LLM, Agent, Task
 from conductor.builder import agent
-from conductor.builder.agent import ResearchAgentTemplate
+from conductor.builder.agent import ResearchAgentTemplate, ResearchTeamTemplate
 from conductor.flow import models
 import concurrent.futures
 from tqdm import tqdm
@@ -224,4 +224,17 @@ def build_team_from_template(
         agent_factory=agent_factory,
         task_factory=task_factory,
         team_factory=team_factory,
+    )
+
+
+def build_search_team_from_template(team: ResearchTeamTemplate) -> models.SearchTeam:
+    """
+    Builds a search team from a template
+    """
+    return models.SearchTeam(
+        title=team.title,
+        agents=[
+            models.SearchAgent(title=agent.title, questions=agent.research_questions)
+            for agent in team.agent_templates
+        ],
     )

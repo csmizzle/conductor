@@ -10,7 +10,11 @@ from pydantic import BaseModel, Field
 
 
 class CitedAnswerWithCredibility(BaseModel):
+    question: str = Field(description="The question")
     answer: str = Field(description="The answer for the question")
+    documents: list[str] = Field(
+        description="The documents used to generate the answer"
+    )
     answer_reasoning: str = Field(description="The reasoning behind the answer")
     citations: list[str] = Field(description="The URLs used in the answer")
     faithfulness: float = Field(
@@ -27,6 +31,9 @@ class CitedAnswerWithCredibility(BaseModel):
         description="The reasoning behind the source credibility"
     )
 
+    class Config:
+        use_enum_values = True
+
 
 class CitationRAG(dspy.Module):
     def __init__(
@@ -41,13 +48,15 @@ class CitationRAG(dspy.Module):
         self,
         question: str,
     ) -> CitedAnswer:
-        documents = self.retriever(query=question)
-        answer = self.generate_answer(question=question, documents=documents)
+        retrieved_documents = self.retriever(query=question)
+        answer = self.generate_answer(question=question, documents=retrieved_documents)
         source_confidences = [
             get_source_credibility(source=source) for source in answer.answer.citations
         ]
         answer_with_credibility = CitedAnswerWithCredibility(
+            question=question,
             answer=answer.answer.answer,
+            documents=retrieved_documents.documents,
             citations=answer.answer.citations,
             faithfulness=answer.answer.faithfulness,
             factual_correctness=answer.answer.factual_correctness,

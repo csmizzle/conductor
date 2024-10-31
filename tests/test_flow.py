@@ -12,6 +12,7 @@ from conductor.flow.builders import (
     build_agents_search_tasks_parallel,
     build_team,
     build_team_from_template,
+    build_search_team_from_template,
 )
 from conductor.flow.research import (
     ResearchAgentFactory,
@@ -27,17 +28,22 @@ from conductor.flow.utils import (
 from conductor.flow.specify import (
     TaskSpecification,
     specify_research_team,
+    specify_search_team,
 )
 from conductor.flow.flow import (
     ResearchFlow,
     SearchFlow,
     run_flow,
 )
+from conductor.flow.runner import run_search_team
+from conductor.flow.rag import ElasticRMClient
+from conductor.rag.embeddings import BedrockEmbeddings
 from crewai import LLM, Agent, Task
 from crewai.crew import CrewOutput
 from conductor.crews.rag_marketing import tools
 from elasticsearch import Elasticsearch
 import os
+import json
 
 
 def test_research_agent_factory() -> None:
@@ -563,3 +569,38 @@ def test_company_research_and_search(elasticsearch_test_agent_index) -> None:
     search_result = run_flow(search_flow)
     assert isinstance(search_result, list)
     assert all([isinstance(output, CrewOutput) for output in search_result])
+
+
+def test_search_team() -> None:
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    elasticsearch_test_index = os.getenv("ELASTICSEARCH_TEST_RAG_INDEX")
+    retriever = ElasticRMClient(
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_test_index,
+        embeddings=BedrockEmbeddings(),
+    )
+    title = "Company Research Team"
+    agent_templates = [
+        ResearchAgentTemplate(
+            title="Company Customer Base Researcher",
+            research_questions=[
+                "Who are the company's main customers?",
+                "What services to they provide to their customers?",
+            ],
+        ),
+    ]
+    team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
+    search_team = build_search_team_from_template(team=team_template)
+    specified_search_team = specify_search_team(
+        team=search_team,
+        specification="The company is Thomson Reuters Special Services LLC.",
+    )
+    answers = run_search_team(
+        team=specified_search_team,
+        retriever=retriever,
+    )
+    assert isinstance(answers, list)
+    with open("./tests/data/test_search_team_results.json", "w") as f:
+        json.dump([answer.model_dump() for answer in answers], f, indent=4)

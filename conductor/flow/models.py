@@ -9,6 +9,16 @@ class Team(BaseModel):
     tasks: list[Task]
 
 
+class SearchAgent(BaseModel):
+    title: str
+    questions: list[str]
+
+
+class SearchTeam(BaseModel):
+    title: str
+    agents: list[SearchAgent]
+
+
 class AgentFactory(ABC):
     @abstractmethod
     def _build_backstory(self) -> str:
