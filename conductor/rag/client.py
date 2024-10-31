@@ -99,11 +99,11 @@ class ElasticsearchRetrieverClient:
         """
         return self.store.delete(ids=document_ids)
 
-    def similarity_search(self, query: str) -> list[Document]:
+    def similarity_search(self, query: str, **kwargs) -> list[Document]:
         """
         Search Elasticsearch for similar documents
         """
-        return self.store.similarity_search(query=query)
+        return self.store.similarity_search(query=query, **kwargs)
 
     def find_document_by_url(self, url: str) -> dict:
         """
