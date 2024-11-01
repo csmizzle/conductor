@@ -34,6 +34,8 @@ from conductor.flow.flow import (
     ResearchFlow,
     SearchFlow,
     run_flow,
+    run_research_and_search,
+    RunResult,
 )
 from conductor.flow.runner import run_search_team
 from conductor.flow.rag import ElasticRMClient
@@ -604,3 +606,39 @@ def test_search_team() -> None:
     assert isinstance(answers, list)
     with open("./tests/data/test_search_team_results.json", "w") as f:
         json.dump([answer.model_dump() for answer in answers], f, indent=4)
+
+
+def test_run_research_and_search(elasticsearch_test_agent_index) -> None:
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    url = "https://www.trssllc.com"
+    title = "Company Research Team"
+    agent_templates = [
+        ResearchAgentTemplate(
+            title="Company Customer Base Researcher",
+            research_questions=[
+                "Who are the company's main customers?",
+                "What services to they provide to their customers?",
+            ],
+        ),
+        ResearchAgentTemplate(
+            title="Company Social Media Researcher",
+            research_questions=[
+                "What is the company's social media presence?",
+                "What are the company's social media values?",
+            ],
+        ),
+    ]
+    team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
+    results = run_research_and_search(
+        website_url=url,
+        research_llm=LLM("openai/gpt-4o"),
+        research_team=team_template,
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_test_agent_index,
+        embeddings=BedrockEmbeddings(),
+    )
+    assert isinstance(results, RunResult)
+    with open("./tests/data/test_team_results.json", "w") as f:
+        json.dump(results.model_dump(), f, indent=4)

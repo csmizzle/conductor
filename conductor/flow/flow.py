@@ -17,8 +17,10 @@ from crewai import LLM
 import dspy
 import asyncio
 from conductor.builder.agent import ResearchTeamTemplate
-from conductor.flow import models, specify, runner, retriever
+from conductor.flow import models, specify, runner, retriever, builders, research, team
 from conductor.flow.utils import build_organization_determination_crew
+from conductor.crews.rag_marketing import tools
+from langchain_core.embeddings import Embeddings
 
 
 # configure dspy
@@ -91,21 +93,21 @@ class ResearchFlow(Flow[ResearchFlowState]):
 class SearchFlow(Flow):
     def __init__(
         self,
-        research_team: ResearchTeamTemplate,
+        search_team: ResearchTeamTemplate,
         organization_determination: str,
         elastic_retriever: retriever.ElasticRMClient,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.organization_determination = organization_determination
-        self.research_team = research_team
+        self.search_team = search_team
         self.retriever = elastic_retriever
 
     @start()
     def specify_search_team(self):
         print("Specifying search team ...")
-        specified_search_team = specify.specify_search_team_from_template(
-            team=self.research_team, specification=self.organization_determination
+        specified_search_team = specify.specify_search_team(
+            team=self.search_team, specification=self.organization_determination
         )
         return specified_search_team
 
@@ -136,3 +138,61 @@ async def arun_search_flow(
 
 def run_search_flow(flow: InstanceOf[SearchFlow]) -> list[runner.SearchTeamAnswers]:
     return asyncio.run(arun_search_flow(flow=flow))
+
+
+class RunResult(BaseModel):
+    research: list[CrewOutput]
+    search: list[runner.SearchTeamAnswers]
+
+
+def run_research_and_search(
+    website_url: str,
+    research_llm: LLM,
+    research_team: ResearchTeamTemplate,
+    elasticsearch: Elasticsearch,
+    index_name: str,
+    embeddings: InstanceOf[Embeddings],
+) -> RunResult:
+    """
+    Executes the research and search flow for a given website URL.
+    Args:
+        website_url (str): The URL of the website to be researched.
+        research_llm (LLM): The language model used for research.
+        research_team (ResearchTeamTemplate): The template for building the research team.
+        elasticsearch (Elasticsearch): The Elasticsearch client instance.
+        index_name (str): The name of the Elasticsearch index.
+    Returns:
+        RunResult: An object containing the results of the research and search flows.
+    """
+    # research
+    built_research_team = builders.build_team_from_template(
+        team_template=research_team,
+        llm=research_llm,
+        tools=[
+            tools.SerpSearchEngineIngestTool(
+                elasticsearch=elasticsearch, index_name=index_name
+            )
+        ],
+        agent_factory=research.ResearchAgentFactory,
+        task_factory=research.ResearchQuestionAgentSearchTaskFactory,
+        team_factory=team.ResearchTeamFactory,
+    )
+    research_flow = ResearchFlow(
+        research_team=built_research_team,
+        website_url=website_url,
+        elasticsearch=elasticsearch,
+        index_name=index_name,
+        llm=research_llm,
+    )
+    research_results = run_flow(flow=research_flow)
+    # search
+    search_team = builders.build_search_team_from_template(team=research_team)
+    search_flow = SearchFlow(
+        search_team=search_team,
+        organization_determination=research_flow.state.organization_determination,
+        elastic_retriever=retriever.ElasticRMClient(
+            elasticsearch=elasticsearch, index_name=index_name, embeddings=embeddings
+        ),
+    )
+    answers = run_search_flow(flow=search_flow)
+    return RunResult(research=research_results, search=answers)
