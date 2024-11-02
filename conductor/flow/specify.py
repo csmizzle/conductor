@@ -19,13 +19,13 @@ class DescriptionSpecification:
         Specify the description
         """
         specifier = dspy.ChainOfThought(
-            "name:str, description: str, specification: str -> specified_question: str"
+            "value_name:str, description: str, specification: str -> specified_retrieval_question: str"
         )
         return specifier(
-            name=self.name,
+            value_name=self.name,
             description=self.description,
             specification=self.specification,
-        ).specified_question
+        ).specified_retrieval_question
 
 
 class QuestionSpecification:

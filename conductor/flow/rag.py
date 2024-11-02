@@ -41,7 +41,9 @@ class CitedValueWithCredibility(BaseModel):
     """Best value for a question"""
 
     question: str = Field(description="The question")
-    value: Union[str, NotAvailable] = Field(description="The value for the question")
+    value: Union[str, bool, NotAvailable] = Field(
+        description="The value for the question"
+    )
     documents: list[str] = Field(description="The documents used to generate the value")
     value_reasoning: str = Field(description="The reasoning behind the value")
     citations: list[str] = Field(description="The URLs used in the value")
@@ -59,6 +61,10 @@ class CitedValueWithCredibility(BaseModel):
 
     class Config:
         use_enum_values = True
+
+
+class CitedBooleanWithCredibility(CitedValueWithCredibility):
+    value: Union[bool, NotAvailable] = Field(description="The value for the question")
 
 
 class CitationRAG(dspy.Module):

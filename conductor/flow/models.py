@@ -79,7 +79,9 @@ class CitedAnswer(BaseModel):
 class CitedValue(BaseModel):
     """Best value for a question"""
 
-    value: Union[str, NotAvailable] = Field(description="The value for the question")
+    value: Union[str, bool, NotAvailable] = Field(
+        description="The value for the question"
+    )
     citations: list[str] = Field(description="The URLs used in the value")
     faithfulness: float = Field(ge=0, le=1, description="The faithfulness of the value")
     factual_correctness: float = Field(
