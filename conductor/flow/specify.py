@@ -4,6 +4,30 @@ import concurrent.futures
 from conductor.flow import models
 
 
+class DescriptionSpecification:
+    """
+    Specify a description
+    """
+
+    def __init__(self, name: str, description: str, specification: str) -> None:
+        self.name = name
+        self.description = description
+        self.specification = specification
+
+    def specify(self) -> str:
+        """
+        Specify the description
+        """
+        specifier = dspy.ChainOfThought(
+            "value_name:str, description: str, specification: str -> specified_retrieval_question: str"
+        )
+        return specifier(
+            value_name=self.name,
+            description=self.description,
+            specification=self.specification,
+        ).specified_retrieval_question
+
+
 class QuestionSpecification:
     """
     Specify a question
@@ -200,3 +224,46 @@ def specify_search_team(
         agents=team.agents, specification=specification
     )
     return models.SearchTeam(title=team.title, agents=agents)
+
+
+def specify_description(name: str, description: str, specification: str) -> str:
+    """
+    Specify a description
+    """
+    return DescriptionSpecification(
+        name=name, description=description, specification=specification
+    ).specify()
+
+
+def specify_descriptions(descriptions: list[str], specification: str) -> list[str]:
+    """
+    Specify a list of descriptions
+    """
+    specified_descriptions = []
+    for description in descriptions:
+        specified_descriptions.append(
+            specify_description(description=description, specification=specification)
+        )
+    return specified_descriptions
+
+
+def specify_descriptions_parallel(
+    descriptions: list[str], specification: str
+) -> list[str]:
+    """
+    Specify a list of descriptions in parallel
+    """
+    specified_descriptions = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+        for description in descriptions:
+            futures.append(
+                executor.submit(
+                    specify_description,
+                    description=description,
+                    specification=specification,
+                )
+            )
+        for future in concurrent.futures.as_completed(futures):
+            specified_descriptions.append(future.result())
+    return specified_descriptions

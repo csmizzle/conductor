@@ -5,6 +5,7 @@ of data collection efforts using search engines and APIs.
 """
 import dspy
 from conductor.flow.models import CitedAnswer as CitedAnswerModel
+from conductor.flow.models import CitedValue as CitedValueModel
 
 # configure dspy
 llm = dspy.LM("openai/gpt-4o")
@@ -83,3 +84,13 @@ class CitedAnswer(dspy.Signature):
         desc="The documents used to generate the answer"
     )
     answer: CitedAnswerModel = dspy.OutputField(desc="The answer to the question")
+
+
+class CitedValue(dspy.Signature):
+    """Best value for a question"""
+
+    question: str = dspy.InputField(desc="The question to be answered")
+    documents: list[str] = dspy.InputField(
+        desc="The documents used to generate the value"
+    )
+    value: CitedValueModel = dspy.OutputField(desc="Best value to the question")
