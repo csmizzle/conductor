@@ -13,6 +13,7 @@ class Interaction(BaseModel):
 
 
 class Conversation(BaseModel):
+    topic: str = Field(description="The conversation topic")
     conversation_history: list[Interaction] = Field(
         description="The conversation history"
     )

@@ -17,6 +17,7 @@ class SimulatedConversation(dspy.Module):
         max_conversation_turns: int = 5,
     ) -> None:
         self.max_conversation_turns = max_conversation_turns
+        self.conversation_topic = dspy.ChainOfThought("input:str -> topic:str")
         self.conversation_turn = dspy.ChainOfThought(signatures.ConversationTurn)
         self.researcher_response = dspy.ChainOfThought(signatures.ResearcherResponse)
         self.refined_question = dspy.ChainOfThought(signatures.RefinedQuestion)
@@ -25,8 +26,10 @@ class SimulatedConversation(dspy.Module):
     def forward(self, input_: str) -> dspy.Prediction:
         conversation_history = []
         documents = []
+        conversation_topic = self.conversation_topic(input=input_).topic
         for _ in range(self.max_conversation_turns):
             response = self.conversation_turn(
+                topic=conversation_topic,
                 conversation_history=conversation_history,
                 supporting_documents=documents,
                 input=input_,
@@ -39,16 +42,20 @@ class SimulatedConversation(dspy.Module):
             # get documents based on expert response
             documents = self.retriever(response)
             input_ = self.researcher_response(
+                topic=conversation_topic,
                 conversation_history=conversation_history,
                 input=input_,
                 response=response,
                 supporting_documents=documents,
             ).new_input
         generated_refined_question = self.refined_question(
-            conversation_history=conversation_history, input=input_
+            topic=conversation_topic,
+            conversation_history=conversation_history,
+            input=input_,
         ).refined_question
         return dspy.Prediction(
             input=input_,
+            topic=conversation_topic,
             conversation_history=conversation_history,
             refined_question=generated_refined_question,
         )

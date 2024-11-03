@@ -1,9 +1,12 @@
 import dspy
+from dsp.trackers.langfuse_tracker import LangfuseTracker
 from conductor.reports.builder.conversations import SimulatedConversation
 from conductor.flow.retriever import ElasticRMClient
 from elasticsearch import Elasticsearch
 from conductor.rag.embeddings import BedrockEmbeddings
 import os
+
+langfuse = LangfuseTracker()
 
 
 def test_simulated_conversation() -> None:
