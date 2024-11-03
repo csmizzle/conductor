@@ -6,9 +6,18 @@ from crewai_tools import BaseTool
 from crewai import LLM, Agent, Task
 from conductor.builder import agent
 from conductor.builder.agent import ResearchAgentTemplate, ResearchTeamTemplate
+from conductor.flow.research import (
+    ResearchAgentFactory,
+    ResearchQuestionAgentSearchTaskFactory,
+)
+from conductor.flow.team import (
+    ResearchTeamFactory,
+)
+from conductor.crews.rag_marketing import tools
 from conductor.flow import models
 import concurrent.futures
 from tqdm import tqdm
+from elasticsearch import Elasticsearch
 
 
 def build_agent(
@@ -224,6 +233,26 @@ def build_team_from_template(
         agent_factory=agent_factory,
         task_factory=task_factory,
         team_factory=team_factory,
+    )
+
+
+def build_research_team_from_template(
+    team_template: agent.ResearchTeamTemplate,
+    research_llm: LLM,
+    elasticsearch: Elasticsearch,
+    index_name: str,
+) -> models.Team:
+    return build_team_from_template(
+        team_template=team_template,
+        llm=research_llm,
+        tools=[
+            tools.SerpSearchEngineIngestTool(
+                elasticsearch=elasticsearch, index_name=index_name
+            )
+        ],
+        agent_factory=ResearchAgentFactory,
+        task_factory=ResearchQuestionAgentSearchTaskFactory,
+        team_factory=ResearchTeamFactory,
     )
 
 

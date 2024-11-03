@@ -6,8 +6,8 @@ from typing import Union
 
 class Interaction(BaseModel):
     input: str = Field(description="The researcher's input")
-    supporting_documents: Union[list[CitedAnswerWithCredibility], list] = Field(
-        description="The supporting documents"
+    input_support: Union[CitedAnswerWithCredibility, None] = Field(
+        description="The Input support"
     )
     response: str = Field(description="The writer's response")
 

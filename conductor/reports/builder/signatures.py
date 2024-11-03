@@ -3,6 +3,7 @@ Signatures for report building
 """
 import dspy
 from conductor.reports.builder import models
+from typing import Union
 
 
 class ConversationTurn(dspy.Signature):
@@ -19,8 +20,8 @@ class ConversationTurn(dspy.Signature):
     )
     topic: str = dspy.InputField(prefix="Topic: ")
     input: str = dspy.InputField(prefix="Researcher's Input: ")
-    supporting_documents: list[models.CitedAnswerWithCredibility] = dspy.InputField(
-        prefix="Supporting Documents: "
+    input_support: Union[models.CitedAnswerWithCredibility, None] = dspy.InputField(
+        prefix="Input Support: "
     )
     response: str = dspy.OutputField(prefix="Expert's Response: ")
 
@@ -40,8 +41,8 @@ class ResearcherResponse(dspy.Signature):
     topic = dspy.InputField(prefix="Topic: ")
     input: str = dspy.InputField(prefix="Researcher's Input: ")
     response: str = dspy.InputField(prefix="Expert's Response: ")
-    supporting_documents: list[models.CitedAnswerWithCredibility] = dspy.InputField(
-        prefix="Supporting Documents: "
+    input_support: Union[models.CitedAnswerWithCredibility, None] = dspy.InputField(
+        prefix="Input support: "
     )
     new_input: str = dspy.OutputField(prefix="Researcher's Updated Question: ")
 

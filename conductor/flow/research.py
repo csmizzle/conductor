@@ -16,11 +16,13 @@ class ResearchAgentFactory(models.AgentFactory):
         research_questions: list[str],
         llm: LLM,
         tools: list[InstanceOf[BaseTool]],
+        max_iter: int = 5,
     ) -> None:
         self.agent_name = agent_name
         self.research_questions = research_questions
         self.tools = tools
         self.llm = llm
+        self.max_iter = max_iter
 
     def _build_backstory(self) -> str:
         backstory = dspy.ChainOfThought(
@@ -49,6 +51,7 @@ class ResearchAgentFactory(models.AgentFactory):
             backstory=self._build_backstory(),
             tools=self.tools,
             llm=self.llm,
+            max_iter=self.max_iter,
         )
 
 

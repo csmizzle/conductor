@@ -25,28 +25,28 @@ class SimulatedConversation(dspy.Module):
 
     def forward(self, input_: str) -> dspy.Prediction:
         conversation_history = []
-        documents = []
+        input_support = None
         conversation_topic = self.conversation_topic(input=input_).topic
         for _ in range(self.max_conversation_turns):
             response = self.conversation_turn(
                 topic=conversation_topic,
                 conversation_history=conversation_history,
-                supporting_documents=documents,
+                input_support=input_support,
                 input=input_,
             ).response
             conversation_history.append(
                 models.Interaction(
-                    input=input_, supporting_documents=documents, response=response
+                    input=input_, input_support=input_support, response=response
                 )
             )
             # get documents based on expert response
-            documents = self.retriever(response)
+            input_support = self.retriever(response)
             input_ = self.researcher_response(
                 topic=conversation_topic,
                 conversation_history=conversation_history,
                 input=input_,
                 response=response,
-                supporting_documents=documents,
+                input_support=input_support,
             ).new_input
         generated_refined_question = self.refined_question(
             topic=conversation_topic,

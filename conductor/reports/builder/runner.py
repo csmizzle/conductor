@@ -62,14 +62,14 @@ class ResearchTeamSimulatedConversationRunner:
             max_conversation_turns=self.max_conversation_turns, retriever=self.retriever
         )
 
-    def run_research_agents(self) -> list[ResearchAgentConversations]:
+    def run_team_conversations(self) -> list[ResearchAgentConversations]:
         """
         Run simulated conversations for each research agent in parallel
         """
         agent_conversations = []
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = []
-            for agent in self.team.agents:
+            for agent in self.team.agent_templates:
                 runner = ResearchAgentSimulatedConversationRunner(
                     agent=agent,
                     retriever=self.retriever,
@@ -93,3 +93,35 @@ def run_agent_simulated_conversations(
         agent=agent, retriever=retriever, max_conversation_turns=max_conversation_turns
     )
     return runner.run_research_questions()
+
+
+def run_team_simulated_conversations(
+    team: ResearchTeamTemplate,
+    retriever: ElasticRMClient,
+    max_conversation_turns: int = 5,
+) -> list[ResearchAgentConversations]:
+    """
+    Run simulated conversations for research team
+    """
+    runner = ResearchTeamSimulatedConversationRunner(
+        team=team, retriever=retriever, max_conversation_turns=max_conversation_turns
+    )
+    return runner.run_team_conversations()
+
+
+def refine_team_from_conversations(
+    *,
+    initial_team: ResearchTeamTemplate,
+    conversations: list[ResearchAgentConversations],
+) -> ResearchTeamTemplate:
+    """
+    Map refined questions from conversations to team
+    """
+    for research_conversation in conversations:
+        for agent in initial_team.agent_templates:
+            if agent.title == research_conversation.agent.title:
+                new_questions = []
+                for conversation in research_conversation.conversations:
+                    new_questions.append(conversation.question)
+                agent.research_questions = new_questions
+    return initial_team

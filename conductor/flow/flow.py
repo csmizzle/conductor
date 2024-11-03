@@ -9,8 +9,8 @@ New things that need to happen:
 The first thing I will need is an crewai agent factory
 """
 from crewai.flow.flow import Flow, listen, start
+from typing import Union, Any
 from crewai.crew import CrewOutput
-from typing import Union
 from elasticsearch import Elasticsearch
 from pydantic import BaseModel, InstanceOf
 from crewai import LLM
@@ -26,6 +26,18 @@ from langchain_core.embeddings import Embeddings
 # configure dspy
 llm = dspy.LM("openai/gpt-4o")
 dspy.configure(lm=llm)
+
+
+class TeamFlow(Flow):
+    def __init__(self, team: models.Team, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.team = team
+
+    @start()
+    def run_team(self) -> list[CrewOutput]:
+        print("Running team ...")
+        research_team_output = runner.run_team(self.team)
+        return research_team_output
 
 
 class ResearchFlowState(BaseModel):
@@ -126,7 +138,7 @@ async def arun_flow(flow: InstanceOf[Flow]) -> str:
     return await flow.kickoff()
 
 
-def run_flow(flow: InstanceOf[Flow]) -> str:
+def run_flow(flow: InstanceOf[Flow]) -> Union[list[CrewOutput], Any]:
     return asyncio.run(arun_flow(flow=flow))
 
 
