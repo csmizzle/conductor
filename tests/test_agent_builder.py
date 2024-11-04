@@ -1,18 +1,23 @@
 from conductor.builder.agent import (
+    ResearchAgentTemplate,
+    ResearchTeamTemplate,
     build_from_section,
     build_from_report_sections,
     build_from_report_sections_parallel,
-    ResearchAgentTemplate,
-    ResearchTeamTemplate,
 )
+from tests.utils import save_model_to_test_data
 
 
 def test_build_from_section() -> None:
-    report_title = "Person Due Diligence"
+    team_title = "Person Due Diligence"
+    perspective = "Focus on the person's background and any foreign connections"
     agent = build_from_section(
-        team_title=report_title, section_title="Person Background"
+        team_title=team_title,
+        section_title="Person Background",
+        perspective=perspective,
     )
     assert isinstance(agent, ResearchAgentTemplate)
+    save_model_to_test_data(agent, "research_agent_template.json")
 
 
 def test_build_from_report_sections() -> None:
