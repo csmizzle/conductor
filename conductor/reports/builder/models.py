@@ -25,3 +25,13 @@ class ResearchAgentConversations(BaseModel):
     conversations: list[Conversation] = Field(
         description="The conversations with refined questions"
     )
+
+
+class SectionOutline(BaseModel):
+    section_title: str = Field(description="The section title")
+    section_content: str = Field(description="The section content")
+
+
+class ReportOutline(BaseModel):
+    report_title: str = Field(description="The report title")
+    report_sections: list[SectionOutline] = Field(description="The report sections")

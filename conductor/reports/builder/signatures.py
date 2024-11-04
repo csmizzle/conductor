@@ -60,3 +60,18 @@ class RefinedQuestion(dspy.Signature):
     topic: str = dspy.InputField(prefix="Topic: ")
     input: str = dspy.InputField(prefix="Researcher's Input: ")
     refined_question: str = dspy.OutputField(prefix="Refined Question: ")
+
+
+class SectionOutline(dspy.Signature):
+    """
+    You are generating an outline for a section of the report.
+    Use the specification to ground the outline.
+    Use the section title to guide the outline.
+    the section content should be multi level headers and bullet points.
+    the section headers should be marked by # and sub headers by ## and so on.
+    content should be marked by - and sub content by -- and so on.
+    """
+
+    specification: str = dspy.InputField(prefix="Specification: ")
+    section_title: str = dspy.InputField(prefix="Section Title: ")
+    section_outline: models.SectionOutline = dspy.OutputField()
