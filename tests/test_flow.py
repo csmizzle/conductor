@@ -32,7 +32,6 @@ from conductor.flow.specify import (
 )
 from conductor.flow.flow import (
     ResearchFlow,
-    SearchFlow,
     run_flow,
     run_research_and_search,
     RunResult,
@@ -257,6 +256,8 @@ def test_research_team_factory() -> None:
     builder = ResearchTeamFactory(
         title=title,
         agent_templates=agent_templates,
+        agent_factory=ResearchAgentFactory,
+        task_factory=ResearchQuestionAgentSearchTaskFactory,
         llm=llm,
         tools=tools,
     )
@@ -302,6 +303,7 @@ def test_build_research_team() -> None:
 
 def test_build_research_team_from_template() -> None:
     title = "Company Research Team"
+    perspective = "Focus on company risks and opportunities for investment"
     agent_templates = [
         ResearchAgentTemplate(
             title="Company Researcher",
@@ -318,7 +320,9 @@ def test_build_research_team_from_template() -> None:
             ],
         ),
     ]
-    team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
+    team_template = ResearchTeamTemplate(
+        title=title, perspective=perspective, agent_templates=agent_templates
+    )
     llm = LLM("openai/gpt-4o")
     tools = []
     team = build_team_from_template(
@@ -352,6 +356,7 @@ def test_organization_determination_crew(elasticsearch_test_agent_index) -> None
 
 def test_task_specification() -> None:
     title = "Company Research Team"
+    perspective = "Focus on company risks and opportunities for investment"
     agent_templates = [
         ResearchAgentTemplate(
             title="Company Researcher",
@@ -361,7 +366,9 @@ def test_task_specification() -> None:
             ],
         ),
     ]
-    team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
+    team_template = ResearchTeamTemplate(
+        title=title, perspective=perspective, agent_templates=agent_templates
+    )
     llm = LLM("openai/gpt-4o")
     tools = []
     team = build_team_from_template(
@@ -382,6 +389,7 @@ def test_task_specification() -> None:
 
 def test_research_team_specification() -> None:
     title = "Company Research Team"
+    perspective = "Focus on company risks and opportunities for investment"
     agent_templates = [
         ResearchAgentTemplate(
             title="Company Researcher",
@@ -398,7 +406,11 @@ def test_research_team_specification() -> None:
             ],
         ),
     ]
-    team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
+    team_template = ResearchTeamTemplate(
+        title=title,
+        agent_templates=agent_templates,
+        perspective=perspective,
+    )
     research_team = build_team_from_template(
         team_template=team_template,
         llm=LLM("openai/gpt-4o"),
@@ -418,6 +430,7 @@ def test_research_team_specification() -> None:
 
 def test_research_flow(elasticsearch_test_agent_index) -> None:
     title = "Company Research Team"
+    perspective = "Focus on company risks and opportunities for investment"
     website_url = "https://www.trssllc.com"
     llm = LLM("openai/gpt-4o")
     elasticsearch = Elasticsearch(
@@ -439,7 +452,11 @@ def test_research_flow(elasticsearch_test_agent_index) -> None:
             ],
         ),
     ]
-    team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
+    team_template = ResearchTeamTemplate(
+        title=title,
+        agent_templates=agent_templates,
+        perspective=perspective,
+    )
     research_team = build_team_from_template(
         team_template=team_template,
         llm=llm,
@@ -452,14 +469,14 @@ def test_research_flow(elasticsearch_test_agent_index) -> None:
         task_factory=ResearchQuestionAgentSearchTaskFactory,
         team_factory=ResearchTeamFactory,
     )
-    result = run_flow(
-        flow=ResearchFlow,
+    flow = ResearchFlow(
         research_team=research_team,
         website_url=website_url,
         llm=llm,
         elasticsearch=elasticsearch,
         index_name=elasticsearch_test_agent_index,
     )
+    result = run_flow(flow=flow)
     assert isinstance(result, list)
     assert all([isinstance(output, CrewOutput) for output in result])
 
@@ -502,77 +519,6 @@ def test_search_agent_task() -> None:
     assert isinstance(task, Task)
 
 
-def test_company_research_and_search(elasticsearch_test_agent_index) -> None:
-    title = "Company Research Team"
-    website_url = "https://www.trssllc.com"
-    research_llm = LLM("openai/gpt-4o")
-    elasticsearch = Elasticsearch(
-        hosts=[os.getenv("ELASTICSEARCH_URL")],
-    )
-    agent_templates = [
-        ResearchAgentTemplate(
-            title="Company Structure Researcher",
-            research_questions=[
-                "Who leads their business divisions?",
-                "What are the company divisions?",
-            ],
-        ),
-        ResearchAgentTemplate(
-            title="Company Social Media Researcher",
-            research_questions=[
-                "What is the company's social media presence?",
-                "What are the company's social media values?",
-            ],
-        ),
-    ]
-    team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
-    research_team = build_team_from_template(
-        team_template=team_template,
-        llm=research_llm,
-        tools=[
-            tools.SerpSearchEngineIngestTool(
-                elasticsearch=elasticsearch, index_name=elasticsearch_test_agent_index
-            )
-        ],
-        agent_factory=ResearchAgentFactory,
-        task_factory=ResearchQuestionAgentSearchTaskFactory,
-        team_factory=ResearchTeamFactory,
-    )
-    research_flow = ResearchFlow(
-        research_team=research_team,
-        website_url=website_url,
-        llm=research_llm,
-        elasticsearch=elasticsearch,
-        index_name=elasticsearch_test_agent_index,
-    )
-    research_result = run_flow(flow=research_flow)
-    assert isinstance(research_result, list)
-    assert all([isinstance(output, CrewOutput) for output in research_result])
-    search_llm = LLM("bedrock/anthropic.claude-3-sonnet-20240229-v1:0")
-    search_team = build_team_from_template(
-        team_template=team_template,
-        llm=search_llm,
-        tools=[
-            tools.VectorSearchTool(
-                elasticsearch=elasticsearch, index_name=elasticsearch_test_agent_index
-            )
-        ],
-        agent_factory=SearchAgentFactory,
-        task_factory=SearchTaskFactory,
-        team_factory=ResearchTeamFactory,
-    )
-    search_flow = SearchFlow(
-        search_team=search_team,
-        organization_determination=research_flow.state.organization_determination,
-        elasticsearch=elasticsearch,
-        index_name=elasticsearch_test_agent_index,
-        llm=search_llm,
-    )
-    search_result = run_flow(search_flow)
-    assert isinstance(search_result, list)
-    assert all([isinstance(output, CrewOutput) for output in search_result])
-
-
 def test_search_team() -> None:
     elasticsearch = Elasticsearch(
         hosts=[os.getenv("ELASTICSEARCH_URL")],
@@ -584,6 +530,8 @@ def test_search_team() -> None:
         embeddings=BedrockEmbeddings(),
     )
     title = "Company Research Team"
+    perspective = "Focus on company risks and opportunities for investment"
+    specification = "The company is Thomson Reuters Special Services LLC."
     agent_templates = [
         ResearchAgentTemplate(
             title="Company Customer Base Researcher",
@@ -593,11 +541,14 @@ def test_search_team() -> None:
             ],
         ),
     ]
-    team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
+    team_template = ResearchTeamTemplate(
+        title=title, perspective=perspective, agent_templates=agent_templates
+    )
     search_team = build_search_team_from_template(team=team_template)
     specified_search_team = specify_search_team(
         team=search_team,
-        specification="The company is Thomson Reuters Special Services LLC.",
+        perspective=perspective,
+        specification=specification,
     )
     answers = run_search_team(
         team=specified_search_team,
@@ -614,6 +565,7 @@ def test_run_research_and_search(elasticsearch_test_agent_index) -> None:
     )
     url = "https://www.trssllc.com"
     title = "Company Research Team"
+    perspective = "Focus on gaps that the company can fill using their social media presence. I suspect they aren't using social media to its full potential."
     agent_templates = [
         ResearchAgentTemplate(
             title="Company Customer Base Researcher",
@@ -630,10 +582,12 @@ def test_run_research_and_search(elasticsearch_test_agent_index) -> None:
             ],
         ),
     ]
-    team_template = ResearchTeamTemplate(title=title, agent_templates=agent_templates)
+    team_template = ResearchTeamTemplate(
+        title=title, perspective=perspective, agent_templates=agent_templates
+    )
     results = run_research_and_search(
         website_url=url,
-        research_llm=LLM("openai/gpt-4o"),
+        research_llm=LLM("bedrock/anthropic.claude-3-sonnet-20240229-v1:0"),
         research_team=team_template,
         elasticsearch=elasticsearch,
         index_name=elasticsearch_test_agent_index,

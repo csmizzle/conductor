@@ -83,8 +83,9 @@ def parallel_ingest(urls, client, headers=None, cookies=None):
             try:
                 result = future.result()
                 results.append(result)
-            except Exception:
+            except Exception as e:
                 results.append(f"Error processing: {url}")
+                print(f"Error: {url} --> {e}")
     return results
 
 

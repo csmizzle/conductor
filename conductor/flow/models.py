@@ -18,6 +18,7 @@ class SearchAgent(BaseModel):
 
 class SearchTeam(BaseModel):
     title: str
+    perspective: str
     agents: list[SearchAgent]
 
 

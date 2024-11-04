@@ -262,6 +262,7 @@ def build_search_team_from_template(team: ResearchTeamTemplate) -> models.Search
     """
     return models.SearchTeam(
         title=team.title,
+        perspective=team.perspective,
         agents=[
             models.SearchAgent(title=agent.title, questions=agent.research_questions)
             for agent in team.agent_templates

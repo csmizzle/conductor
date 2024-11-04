@@ -119,7 +119,9 @@ class SearchFlow(Flow):
     def specify_search_team(self):
         print("Specifying search team ...")
         specified_search_team = specify.specify_search_team(
-            team=self.search_team, specification=self.organization_determination
+            team=self.search_team,
+            specification=self.organization_determination,
+            perspective=self.search_team.perspective,
         )
         return specified_search_team
 
