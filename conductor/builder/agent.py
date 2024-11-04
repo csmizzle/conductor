@@ -52,9 +52,7 @@ class AgentBuilderFromReportSection:
 
 
 def build_from_section(
-    team_title: str,
-    section_title: str,
-    perspective: str,
+    team_title: str, section_title: str, perspective: str
 ) -> ResearchAgentTemplate:
     return AgentBuilderFromReportSection(
         team_title=team_title, section_title=section_title, perspective=perspective
@@ -62,9 +60,7 @@ def build_from_section(
 
 
 def build_from_report_sections(
-    team_title: str,
-    section_titles: list[str],
-    perspective: str,
+    team_title: str, section_titles: list[str], perspective: str
 ) -> ResearchTeamTemplate:
     agents = [
         build_from_section(

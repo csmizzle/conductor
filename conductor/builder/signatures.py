@@ -24,3 +24,13 @@ class ResearchQuestions(dspy.Signature):
     agent_perspective: str = dspy.InputField(prefix="Agent Perspective: ")
     agent_title: str = dspy.InputField(prefix="Agent Title: ")
     research_questions: list[str] = dspy.OutputField(prefix="Research Questions: ")
+
+
+class Perspective(dspy.Signature):
+    """
+    Generate a perspective for an agent based on the research team title and report section title
+    """
+
+    research_team_title: str = dspy.InputField(prefix="Research Team Title: ")
+    report_section_title: str = dspy.InputField(prefix="Report Section Title: ")
+    perspective: str = dspy.OutputField(prefix="Agent Perspective: ")
