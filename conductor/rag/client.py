@@ -5,11 +5,13 @@ Ingestion logic for RAG data
 - Vectorize data
 - Store data
 """
+from typing import List
 from elasticsearch import Elasticsearch
 from langchain_core.embeddings import Embeddings
 from langchain_elasticsearch import ElasticsearchStore
 from langchain_core.documents import Document
 from conductor.rag.models import WebPage, SourcedImageDescription
+from conductor.rag.chunking import WebPageContentSplitter
 
 
 class ElasticsearchRetrieverClient:
@@ -44,31 +46,30 @@ class ElasticsearchRetrieverClient:
             },
         )
 
-    def create_webpage_document(self, webpage: WebPage) -> Document:
+    def create_webpage_document(self, webpage: WebPage) -> List[Document]:
         """
         Ingest webpage document into Elasticsearch
         """
-        return Document(
-            page_content=webpage.content,
-            metadata={
-                "url": webpage.url,
-                "created_at": webpage.created_at,
-                "raw": webpage.raw,
-            },
-        )
+        chunker = WebPageContentSplitter(webpage=webpage)
+        return chunker.create_documents()
 
     def create_insert_webpage_document(self, webpage: WebPage) -> list[str]:
         """
         Insert webpage document into Elasticsearch
         """
         document = self.create_webpage_document(webpage)
-        return self.store.add_documents(documents=[document])
+        return self.store.add_documents(documents=document)
 
     def create_insert_webpage_documents(self, webpages: list[WebPage]) -> None:
         """
         Insert multiple webpage documents into Elasticsearch
         """
-        documents = [self.create_webpage_document(webpage) for webpage in webpages]
+        documents = []
+        created_documents = [
+            self.create_webpage_document(webpage) for webpage in webpages
+        ]
+        for created_document in created_documents:
+            documents.extend(created_document)
         return self.store.add_documents(documents=documents)
 
     def create_insert_image_document(self, image: SourcedImageDescription) -> list[str]:
