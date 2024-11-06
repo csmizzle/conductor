@@ -3,6 +3,7 @@ Use Claude to generate an outline of the report based on the user's input
 """
 import dspy
 from conductor.reports.builder import signatures
+from conductor.reports.builder import models
 from functools import partial
 import concurrent.futures
 
@@ -36,6 +37,31 @@ class OutlineBuilder(dspy.Module):
         return outlines
 
 
+class OutlineRefiner(dspy.Module):
+    """
+    Refine an outline based on the conversations
+    """
+
+    def __init__(self) -> None:
+        self.refine_outline = dspy.ChainOfThought(signatures.RefindedOutline)
+
+    def forward(
+        self,
+        conversations: list[models.ResearchAgentConversations],
+        perspective: str,
+        draft_outline: models.ReportOutline,
+    ) -> dspy.Prediction:
+        """
+        Refine the outline based on the conversations
+        """
+        refined_outline = self.refine_outline(
+            perspective=perspective,
+            conversations=conversations,
+            draft_outline=draft_outline,
+        )
+        return refined_outline
+
+
 def build_outline(
     specification: str, section_titles: list[str]
 ) -> list[signatures.SectionOutline]:
@@ -50,3 +76,20 @@ def build_outline(
         sections, key=lambda x: section_titles.index(x.section_title)
     )
     return sorted_outlines
+
+
+def build_refined_outline(
+    conversations: list[models.ResearchAgentConversations],
+    perspective: str,
+    draft_outline: models.ReportOutline,
+) -> dspy.Prediction:
+    """
+    Refine the outline based on the conversations
+    """
+    outline_refiner = OutlineRefiner()
+    refined_outline = outline_refiner(
+        conversations=conversations,
+        perspective=perspective,
+        draft_outline=draft_outline,
+    )
+    return refined_outline

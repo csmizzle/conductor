@@ -35,3 +35,10 @@ class SectionOutline(BaseModel):
 class ReportOutline(BaseModel):
     report_title: str = Field(description="The report title")
     report_sections: list[SectionOutline] = Field(description="The report sections")
+
+
+class ConversationReport(BaseModel):
+    outline: ReportOutline = Field(description="The report outline")
+    conversations: list[ResearchAgentConversations] = Field(
+        description="The research agent conversations"
+    )

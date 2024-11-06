@@ -75,3 +75,21 @@ class SectionOutline(dspy.Signature):
     specification: str = dspy.InputField(prefix="Specification: ")
     section_title: str = dspy.InputField(prefix="Section Title: ")
     section_outline: models.SectionOutline = dspy.OutputField()
+
+
+class RefindedOutline(dspy.Signature):
+    """
+    You are refining the outline based on the conversations.
+    Use the draft outline to as the structure of the refined outline.
+    Maintain the headers and sub headers from the draft outline.
+    Creatively blend the perspective into of the outline content.
+    Use the topics and content of the conversations to drive the refinement of the outline content.
+    The refined outline should both branch out to new compelling topics and close existing research gaps discovered during the conversation.
+    """
+
+    conversations: list[models.ResearchAgentConversations] = dspy.InputField(
+        prefix="Conversations: "
+    )
+    perspective: str = dspy.InputField(prefix="Perspective: ")
+    draft_outline: models.ReportOutline = dspy.InputField(prefix="Draft Outline: ")
+    refined_outline: models.ReportOutline = dspy.OutputField(prefix="Refined Outline: ")
