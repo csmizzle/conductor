@@ -19,13 +19,11 @@ class CitedAnswerWithCredibility(BaseModel):
     )
     answer_reasoning: str = Field(description="The reasoning behind the answer")
     citations: list[str] = Field(description="The URLs used in the answer")
-    faithfulness: float = Field(
-        ge=0, le=1, description="The faithfulness of the answer"
+    faithfulness: int = Field(ge=1, le=5, description="The faithfulness of the answer")
+    factual_correctness: int = Field(
+        ge=1, le=5, description="The factual correctness of the answer"
     )
-    factual_correctness: float = Field(
-        ge=0, le=1, description="The factual correctness of the answer"
-    )
-    confidence: float = Field(ge=0, le=1, description="The confidence of the answer")
+    confidence: int = Field(ge=1, le=5, description="The confidence of the answer")
     source_credibility: list[SourceCredibility] = Field(
         description="The credibility of the sources"
     )
@@ -47,11 +45,11 @@ class CitedValueWithCredibility(BaseModel):
     documents: list[str] = Field(description="The documents used to generate the value")
     value_reasoning: str = Field(description="The reasoning behind the value")
     citations: list[str] = Field(description="The URLs used in the value")
-    faithfulness: float = Field(ge=0, le=1, description="The faithfulness of the value")
-    factual_correctness: float = Field(
-        ge=0, le=1, description="The factual correctness of the value"
+    faithfulness: int = Field(ge=1, le=5, description="The faithfulness of the value")
+    factual_correctness: int = Field(
+        ge=1, le=5, description="The factual correctness of the value"
     )
-    confidence: float = Field(ge=0, le=1, description="The confidence of the value")
+    confidence: int = Field(ge=1, le=5, description="The confidence of the value")
     source_credibility: list[SourceCredibility] = Field(
         description="The credibility of the sources"
     )
