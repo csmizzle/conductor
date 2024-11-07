@@ -42,3 +42,30 @@ class ConversationReport(BaseModel):
     conversations: list[ResearchAgentConversations] = Field(
         description="The research agent conversations"
     )
+
+
+class Sentence(BaseModel):
+    content: str = Field(description="The sentence content from the question")
+    question: str = Field(description="The question for the sentence")
+
+
+class SentenceWithAnswer(Sentence):
+    answer: CitedAnswerWithCredibility = Field(description="The sentence answer")
+
+
+class Paragraph(BaseModel):
+    sentences: list[Sentence] = Field(description="The paragraph sentences")
+
+
+class SourcedParagraph(BaseModel):
+    sentences: list[SentenceWithAnswer] = Field(description="The paragraph sentences")
+
+
+class Section(BaseModel):
+    title: str = Field(description="The section title")
+    paragraphs: list[Paragraph] = Field(description="The section paragraphs")
+
+
+class SourcedSection(BaseModel):
+    title: str = Field(description="The section title")
+    paragraphs: list[SourcedParagraph] = Field(description="The section paragraphs")

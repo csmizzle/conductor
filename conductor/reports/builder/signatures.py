@@ -3,6 +3,7 @@ Signatures for report building
 """
 import dspy
 from conductor.reports.builder import models
+from conductor.flow.rag import CitedAnswerWithCredibility
 from typing import Union
 
 
@@ -93,3 +94,35 @@ class RefindedOutline(dspy.Signature):
     perspective: str = dspy.InputField(prefix="Perspective: ")
     draft_outline: models.ReportOutline = dspy.InputField(prefix="Draft Outline: ")
     refined_outline: models.ReportOutline = dspy.OutputField(prefix="Refined Outline: ")
+
+
+class SectionQuestion(dspy.Signature):
+    """
+    You are generating questions for a vector database that will get answers that will be transformed into sentences for a section of the report.
+    Use the section outline title to guide the questions.
+    Use the section outline content to tailor the questions to ensure that the answers will be relevant to the section.
+    The answers of the questions will be transformed into sentences for the section.
+    """
+
+    section_outline_title: str = dspy.InputField(prefix="Section Outline Title: ")
+    section_outline_content: str = dspy.InputField(prefix="Section Outline Content: ")
+    questions: list[str] = dspy.OutputField(prefix="Questions: ")
+
+
+class Section(dspy.Signature):
+    """
+    You are generating a section of the report.
+    The section should be constructed from the section outline title and have a similar structure to the section outline content.
+    Paragraphs should be constructed from sentences and not filled with any fluffy content.
+    Paragraphs should be at least 3 sentences long but no longer than 5 sentences.
+    Each sentence of the report is a transformation of a cited answer into a sentence.
+    The transformed sentence should be accompanied by its original question and answer.
+    If there are any worthwhile analytical insights, they should be included in the section.
+    Sections should be logically structured and flow from one topic to the next.
+    """
+
+    section_outline_title: str = dspy.InputField(prefix="Section Outline Title: ")
+    section_outline_content: str = dspy.InputField(prefix="Section Outline Content: ")
+    questions: list[str] = dspy.InputField(prefix="Questions: ")
+    answers: list[CitedAnswerWithCredibility] = dspy.InputField(prefix="Answers: ")
+    section: models.Section = dspy.OutputField(prefix="Section: ")

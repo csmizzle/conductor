@@ -3,17 +3,18 @@ from conductor.reports.builder.outline import (
     build_outline,
     build_refined_outline,
 )
+from conductor.reports.builder.writer import write_section
 from conductor.builder.agent import ResearchAgentTemplate, ResearchTeamTemplate
 from conductor.reports.builder.runner import (
     run_team_simulated_conversations,
 )
-from conductor.reports.builder.models import ReportOutline
+from conductor.reports.builder.models import ReportOutline, SourcedSection
 from conductor.flow.retriever import ElasticRMClient
 from conductor.rag.embeddings import BedrockEmbeddings
 import os
 from elasticsearch import Elasticsearch
 import dspy
-from tests.utils import save_model_to_test_data
+from tests.utils import save_model_to_test_data, load_model_from_test_data
 
 
 def test_outline_builder() -> None:
@@ -107,3 +108,22 @@ def test_build_refined_outline() -> None:
     assert isinstance(refined_outline, dspy.Prediction)
     assert isinstance(refined_outline.refined_outline, ReportOutline)
     save_model_to_test_data(refined_outline.refined_outline, "refined_outline.json")
+
+
+def test_write_section() -> None:
+    outline = load_model_from_test_data(ReportOutline, "refined_outline.json")
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    elasticsearch_test_index = os.getenv("ELASTICSEARCH_TEST_RAG_INDEX")
+    retriever = ElasticRMClient(
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_test_index,
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
+    section = write_section(
+        section=outline.report_sections[0], elastic_retriever=retriever
+    )
+    assert isinstance(section, SourcedSection)
+    save_model_to_test_data(section, "section.json")
