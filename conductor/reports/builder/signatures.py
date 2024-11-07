@@ -102,6 +102,7 @@ class SectionQuestion(dspy.Signature):
     Use the section outline title to guide the questions.
     Use the section outline content to tailor the questions to ensure that the answers will be relevant to the section.
     The answers of the questions will be transformed into sentences for the section.
+    The question should lend themselves to being transformed into sentences that will create a coherent section with a narrative flow.
     """
 
     section_outline_title: str = dspy.InputField(prefix="Section Outline Title: ")
@@ -118,7 +119,9 @@ class Section(dspy.Signature):
     Each sentence of the report is a transformation of a cited answer into a sentence.
     The transformed sentence should be accompanied by its original question and answer.
     If there are any worthwhile analytical insights, they should be included in the section.
-    Sections should be logically structured and flow from one topic to the next.
+    Sections should be logically structured and flow from one sentence to the next with a logical progression.
+    Use source credibility to highlight areas where you have high confidence in the answer and low confidence in the answer.
+    When referencing the source credibility, also provide a reason for the credibility score.
     """
 
     section_outline_title: str = dspy.InputField(prefix="Section Outline Title: ")

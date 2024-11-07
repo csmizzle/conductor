@@ -3,7 +3,8 @@ from conductor.reports.builder.outline import (
     build_outline,
     build_refined_outline,
 )
-from conductor.reports.builder.writer import write_section
+from conductor.reports.builder.writer import write_section, write_report
+from conductor.reports.builder import models
 from conductor.builder.agent import ResearchAgentTemplate, ResearchTeamTemplate
 from conductor.reports.builder.runner import (
     run_team_simulated_conversations,
@@ -127,3 +128,20 @@ def test_write_section() -> None:
     )
     assert isinstance(section, SourcedSection)
     save_model_to_test_data(section, "section.json")
+
+
+def test_write_report() -> None:
+    outline = load_model_from_test_data(ReportOutline, "refined_outline.json")
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    elasticsearch_test_index = os.getenv("ELASTICSEARCH_TEST_RAG_INDEX")
+    retriever = ElasticRMClient(
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_test_index,
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
+    report = write_report(outline=outline, elastic_retriever=retriever)
+    assert isinstance(report, models.Report)
+    save_model_to_test_data(report, "report.json")

@@ -22,10 +22,14 @@ class SectionWriter(dspy.Module):
         elastic_retriever: ElasticRMClient,
     ) -> None:
         self.rag = CitationRAG(elastic_retriever)
-        self.generate_section_questions = dspy.ChainOfThought(
-            signatures.SectionQuestion
+        self.generate_section_questions = dspy.ReAct(
+            signatures.SectionQuestion,
+            tools=[elastic_retriever],
         )
-        self.generate_section = dspy.ChainOfThought(signatures.Section)
+        self.generate_section = dspy.ReAct(
+            signatures.Section,
+            tools=[elastic_retriever],
+        )
 
     def forward(
         self,
@@ -51,7 +55,7 @@ class SectionWriter(dspy.Module):
             questions=questions.questions,
             answers=answers,
         )
-        # map question sourcing to paragraph sentences
+        # # map question sourcing to paragraph sentences
         sourced_paragraphs = []
         for paragraph in generated_section.section.paragraphs:
             sourced_sentences = []
@@ -73,6 +77,44 @@ class SectionWriter(dspy.Module):
         return sourced_section
 
 
+class ReportWriter:
+    """
+    Write a report from an outline
+    """
+
+    def __init__(
+        self,
+        elastic_retriever: ElasticRMClient,
+    ) -> None:
+        self.elastic_retriever = elastic_retriever
+
+    def write_section(
+        self, section_outline: models.SectionOutline
+    ) -> models.SourcedSection:
+        """
+        Write a section from a report outline
+        """
+        writer = SectionWriter(self.elastic_retriever)
+        return writer(section=section_outline)
+
+    def write(
+        self,
+        outline: models.ReportOutline,
+    ) -> models.Report:
+        # write sections in parallel
+        sections = []
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = []
+            for section in outline.report_sections:
+                futures.append(
+                    executor.submit(self.write_section, section_outline=section)
+                )
+            for future in concurrent.futures.as_completed(futures):
+                sections.append(future.result())
+        report = models.Report(sections=sections)
+        return report
+
+
 def write_section(
     section: models.SectionOutline,
     elastic_retriever: ElasticRMClient,
@@ -82,3 +124,14 @@ def write_section(
     """
     writer = SectionWriter(elastic_retriever)
     return writer(section=section)
+
+
+def write_report(
+    outline: models.ReportOutline,
+    elastic_retriever: ElasticRMClient,
+) -> dspy.Prediction:
+    """
+    Write a report from an outline
+    """
+    writer = ReportWriter(elastic_retriever)
+    return writer.write(outline=outline)

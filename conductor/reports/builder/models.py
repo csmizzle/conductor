@@ -69,3 +69,7 @@ class Section(BaseModel):
 class SourcedSection(BaseModel):
     title: str = Field(description="The section title")
     paragraphs: list[SourcedParagraph] = Field(description="The section paragraphs")
+
+
+class Report(BaseModel):
+    sections: list[SourcedSection] = Field(description="The report sections")
