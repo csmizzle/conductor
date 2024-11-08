@@ -155,6 +155,7 @@ def run_search_flow(flow: InstanceOf[SearchFlow]) -> list[runner.SearchTeamAnswe
 
 
 class RunResult(BaseModel):
+    specification: str
     research: list[CrewOutput]
     search: list[runner.SearchTeamAnswers]
 
@@ -203,10 +204,14 @@ def run_research_and_search(
     search_team = builders.build_search_team_from_template(team=research_team)
     search_flow = SearchFlow(
         search_team=search_team,
-        organization_determination=research_flow.state.organization_determination,
+        organization_determination=research_flow.state.organization_determination.raw,
         elastic_retriever=retriever.ElasticRMClient(
             elasticsearch=elasticsearch, index_name=index_name, embeddings=embeddings
         ),
     )
     answers = run_search_flow(flow=search_flow)
-    return RunResult(research=research_results, search=answers)
+    return RunResult(
+        research=research_results,
+        search=answers,
+        specification=research_flow.state.organization_determination.raw,
+    )

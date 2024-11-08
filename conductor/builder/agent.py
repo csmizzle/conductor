@@ -1,7 +1,6 @@
 import dspy
 from pydantic import BaseModel
 import concurrent.futures
-from functools import partial
 from tqdm import tqdm
 from conductor.builder import signatures
 
@@ -76,14 +75,21 @@ def build_from_report_sections_parallel(
     section_titles: list[str],
     perspective: str,
 ) -> ResearchTeamTemplate:
+    agents = []
     # build partial function with report title
-    build_from_section_partial = partial(
-        build_from_section, team_title=team_title, perspective=perspective
-    )
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        agents = list(
-            executor.map(build_from_section_partial, section_titles=section_titles)
-        )
-        return ResearchTeamTemplate(
-            title=team_title, perspective=perspective, agents=agents
-        )
+        futures = []
+        for section_title in section_titles:
+            futures.append(
+                executor.submit(
+                    build_from_section,
+                    team_title=team_title,
+                    section_title=section_title,
+                    perspective=perspective,
+                )
+            )
+        for future in concurrent.futures.as_completed(futures):
+            agents.append(future.result())
+    return ResearchTeamTemplate(
+        title=team_title, perspective=perspective, agent_templates=agents
+    )

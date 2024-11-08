@@ -334,3 +334,11 @@ class ResearchPipeline:
             self.report_to_pdf()
         if self.docx:
             self.report_to_docx()
+
+
+class ResearchPipelineV2:
+    """
+    Updated version of the ResearchPipeline class.
+    """
+
+    pass
