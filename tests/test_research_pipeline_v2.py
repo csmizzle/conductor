@@ -24,7 +24,7 @@ from elasticsearch import Elasticsearch
 import os
 
 
-def test_pipeline_v2(elasticsearch_test_agent_index) -> None:
+def test_pipeline_v2(elasticsearch_cloud_test_research_index) -> None:
     # search and answer research questions
     team_title = "Company Due Diligence"
     perspective = "Looking for strategic gaps in the company's operations and what they also do well."
@@ -43,11 +43,12 @@ def test_pipeline_v2(elasticsearch_test_agent_index) -> None:
         team_title=team_title, section_titles=section_titles, perspective=perspective
     )
     elasticsearch = Elasticsearch(
-        hosts=[os.getenv("ELASTICSEARCH_URL")],
+        hosts=[os.getenv("ELASTICSEARCH_CLOUD_URL")],
+        api_key=os.getenv("ELASTICSEARCH_CLOUD_API_ADMIN_KEY"),
     )
     retriever = ElasticRMClient(
         elasticsearch=elasticsearch,
-        index_name=elasticsearch_test_agent_index,
+        index_name=elasticsearch_cloud_test_research_index,
         embeddings=BedrockEmbeddings(),
         cohere_api_key=os.getenv("COHERE_API_KEY"),
     )
@@ -56,7 +57,7 @@ def test_pipeline_v2(elasticsearch_test_agent_index) -> None:
         website_url=url,
         research_team=team,
         elasticsearch=elasticsearch,
-        index_name=elasticsearch_test_agent_index,
+        index_name=elasticsearch_cloud_test_research_index,
         embeddings=BedrockEmbeddings(),
     )
     assert isinstance(run, RunResult)
@@ -72,7 +73,7 @@ def test_pipeline_v2(elasticsearch_test_agent_index) -> None:
         team_template=refined_team,
         research_llm=LLM("openai/gpt-4o-mini"),
         elasticsearch=elasticsearch,
-        index_name=elasticsearch_test_agent_index,
+        index_name=elasticsearch_cloud_test_research_index,
     )
     team_flow = TeamFlow(team=additional_research_team)
     results = run_flow(team_flow)
