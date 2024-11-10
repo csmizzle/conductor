@@ -14,7 +14,7 @@ class SimulatedConversation(dspy.Module):
     def __init__(
         self,
         retriever: ElasticRMClient,
-        max_conversation_turns: int = 5,
+        max_conversation_turns: int = 3,
     ) -> None:
         self.max_conversation_turns = max_conversation_turns
         self.conversation_topic = dspy.ChainOfThought("input:str -> topic:str")

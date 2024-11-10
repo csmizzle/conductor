@@ -54,6 +54,7 @@ class OutlineRefiner(dspy.Module):
         """
         Refine the outline based on the conversations
         """
+        # summarize the team conversations
         refined_outline = self.refine_outline(
             perspective=perspective,
             conversations=conversations,

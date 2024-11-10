@@ -8,7 +8,7 @@ import concurrent.futures
 
 
 class TeamRunner:
-    """`
+    """
     Run a research team by executing the tasks in parallel
     """
 
