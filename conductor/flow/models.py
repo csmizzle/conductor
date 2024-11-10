@@ -42,10 +42,6 @@ class TaskFactory(ABC):
         pass
 
     @abstractmethod
-    def _build_expected_output(self, task_description: str) -> str:
-        pass
-
-    @abstractmethod
     def build(self) -> Task:
         pass
 

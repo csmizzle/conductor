@@ -36,15 +36,17 @@ from conductor.flow.flow import (
     run_research_and_search,
     RunResult,
 )
-from conductor.flow.runner import run_search_team
+from conductor.flow.runner import run_search_team, run_team_sequential, run_team
 from conductor.flow.rag import ElasticRMClient
 from conductor.rag.embeddings import BedrockEmbeddings
 from crewai import LLM, Agent, Task
 from crewai.crew import CrewOutput
 from conductor.crews.rag_marketing import tools
 from elasticsearch import Elasticsearch
+import dspy
 import os
 import json
+import agentops
 
 
 def test_research_agent_factory() -> None:
@@ -429,10 +431,19 @@ def test_research_team_specification() -> None:
 
 
 def test_research_flow(elasticsearch_test_agent_index) -> None:
+    session = agentops.init(os.getenv("AGENTOPS_API_KEY"))
     title = "Company Research Team"
     perspective = "Focus on company risks and opportunities for investment"
     website_url = "https://www.trssllc.com"
-    llm = LLM("openai/gpt-4o")
+    llm = dspy.LM(
+        "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
+        # api_base=litellm_proxy_url
+    )
+    dspy.configure(lm=llm)
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
+        # base_url=litellm_proxy_url,
+    )
     elasticsearch = Elasticsearch(
         hosts=[os.getenv("ELASTICSEARCH_URL")],
     )
@@ -476,7 +487,127 @@ def test_research_flow(elasticsearch_test_agent_index) -> None:
         elasticsearch=elasticsearch,
         index_name=elasticsearch_test_agent_index,
     )
-    result = run_flow(flow=flow)
+    result = run_flow(flow=flow, session_id=session)
+    assert isinstance(result, list)
+    assert all([isinstance(output, CrewOutput) for output in result])
+
+
+def test_research_run_async(elasticsearch_test_agent_index) -> None:
+    agentops.init(os.getenv("AGENTOPS_API_KEY"))
+    title = "Company Research Team"
+    perspective = "Focus on company risks and opportunities for investment"
+    llm = dspy.LM(
+        "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
+        # api_base=litellm_proxy_url
+    )
+    dspy.configure(lm=llm)
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
+        # base_url=litellm_proxy_url,
+    )
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    agent_templates = [
+        ResearchAgentTemplate(
+            title="Company Structure Researcher",
+            research_questions=[
+                "Who leads their business divisions?",
+                "What are the company divisions?",
+            ],
+        ),
+        ResearchAgentTemplate(
+            title="Company Social Media Researcher",
+            research_questions=[
+                "What is the company's social media presence?",
+                "What are the company's social media values?",
+            ],
+        ),
+    ]
+    team_template = ResearchTeamTemplate(
+        title=title,
+        agent_templates=agent_templates,
+        perspective=perspective,
+    )
+    research_team = build_team_from_template(
+        team_template=team_template,
+        llm=llm,
+        tools=[
+            tools.SerpSearchEngineIngestTool(
+                elasticsearch=elasticsearch, index_name=elasticsearch_test_agent_index
+            )
+        ],
+        agent_factory=ResearchAgentFactory,
+        task_factory=ResearchQuestionAgentSearchTaskFactory,
+        team_factory=ResearchTeamFactory,
+    )
+    # specify team
+    specification = "The company is Thomson Reuters Special Services LLC."
+    specified_team = specify_research_team(
+        team=research_team,
+        specification=specification,
+    )
+    result = run_team(team=specified_team)
+    assert isinstance(result, list)
+    assert all([isinstance(output, CrewOutput) for output in result])
+
+
+def test_research_flow_sequential(elasticsearch_test_agent_index) -> None:
+    agentops.init(os.getenv("AGENTOPS_API_KEY"))
+    title = "Company Research Team"
+    perspective = "Focus on company risks and opportunities for investment"
+    llm = dspy.LM(
+        "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
+        # api_base=litellm_proxy_url
+    )
+    dspy.configure(lm=llm)
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
+        # base_url=litellm_proxy_url,
+    )
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    agent_templates = [
+        ResearchAgentTemplate(
+            title="Company Structure Researcher",
+            research_questions=[
+                "Who leads their business divisions?",
+                "What are the company divisions?",
+            ],
+        ),
+        ResearchAgentTemplate(
+            title="Company Social Media Researcher",
+            research_questions=[
+                "What is the company's social media presence?",
+                "What are the company's social media values?",
+            ],
+        ),
+    ]
+    team_template = ResearchTeamTemplate(
+        title=title,
+        agent_templates=agent_templates,
+        perspective=perspective,
+    )
+    research_team = build_team_from_template(
+        team_template=team_template,
+        llm=llm,
+        tools=[
+            tools.SerpSearchEngineIngestTool(
+                elasticsearch=elasticsearch, index_name=elasticsearch_test_agent_index
+            )
+        ],
+        agent_factory=ResearchAgentFactory,
+        task_factory=ResearchQuestionAgentSearchTaskFactory,
+        team_factory=ResearchTeamFactory,
+    )
+    # specify team
+    specification = "The company is Thomson Reuters Special Services LLC."
+    specified_team = specify_research_team(
+        team=research_team,
+        specification=specification,
+    )
+    result = run_team_sequential(team=specified_team)
     assert isinstance(result, list)
     assert all([isinstance(output, CrewOutput) for output in result])
 
@@ -559,9 +690,20 @@ def test_search_team() -> None:
         json.dump([answer.model_dump() for answer in answers], f, indent=4)
 
 
-def test_run_research_and_search(elasticsearch_test_agent_index) -> None:
+def test_run_research_and_search(elasticsearch_cloud_test_research_index) -> None:
+    # litellm_proxy_url = "http://0.0.0.0:4000"
+    llm = dspy.LM(
+        "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
+        # api_base=litellm_proxy_url
+    )
+    dspy.configure(lm=llm)
+    mini = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
+        # base_url=litellm_proxy_url,
+    )
     elasticsearch = Elasticsearch(
-        hosts=[os.getenv("ELASTICSEARCH_URL")],
+        hosts=[os.getenv("ELASTICSEARCH_CLOUD_URL")],
+        api_key=os.getenv("ELASTICSEARCH_CLOUD_API_ADMIN_KEY"),
     )
     url = "https://www.trssllc.com"
     title = "Company Research Team"
@@ -587,11 +729,12 @@ def test_run_research_and_search(elasticsearch_test_agent_index) -> None:
     )
     results = run_research_and_search(
         website_url=url,
-        research_llm=LLM("bedrock/anthropic.claude-3-sonnet-20240229-v1:0"),
+        research_llm=mini,
         research_team=team_template,
         elasticsearch=elasticsearch,
-        index_name=elasticsearch_test_agent_index,
+        index_name=elasticsearch_cloud_test_research_index,
         embeddings=BedrockEmbeddings(),
+        parallel=False,
     )
     assert isinstance(results, RunResult)
     with open("./tests/data/test_team_results.json", "w") as f:

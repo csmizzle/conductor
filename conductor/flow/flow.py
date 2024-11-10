@@ -22,6 +22,7 @@ from conductor.flow.utils import build_organization_determination_crew
 from conductor.crews.rag_marketing import tools
 from langchain_core.embeddings import Embeddings
 from langfuse.decorators import observe
+import agentops
 
 
 # configure dspy
@@ -62,6 +63,7 @@ class ResearchFlow(Flow[ResearchFlowState]):
         elasticsearch: Elasticsearch,
         index_name: str,
         llm: LLM,
+        parallel: bool = False,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -73,6 +75,7 @@ class ResearchFlow(Flow[ResearchFlowState]):
             llm=llm,
         )
         self.research_team = research_team
+        self.parallel = parallel
 
     @start()
     def determine_organization(self) -> str:
@@ -98,7 +101,14 @@ class ResearchFlow(Flow[ResearchFlowState]):
     @listen(specify_research_team)
     def run_research_team(self) -> list[CrewOutput]:
         print("Running research team ...")
-        research_team_output = runner.run_team(self.state.specified_research_team)
+        if self.parallel:
+            print("Running research team in parallel ...")
+            research_team_output = runner.run_team(self.state.specified_research_team)
+        else:
+            print("Running research team in sequence ...")
+            research_team_output = runner.run_team_sequential(
+                self.state.specified_research_team
+            )
         self.state.research_team_output = research_team_output
         return research_team_output
 
@@ -137,12 +147,16 @@ class SearchFlow(Flow):
         return search_results
 
 
-async def arun_flow(flow: InstanceOf[Flow]) -> str:
+async def arun_flow(flow: InstanceOf[Flow], session_id=None) -> str:
+    if session_id:
+        agentops.init(inherited_session_id=session_id)
     return await flow.kickoff()
 
 
-def run_flow(flow: InstanceOf[Flow]) -> Union[list[CrewOutput], Any]:
-    return asyncio.run(arun_flow(flow=flow))
+def run_flow(flow: InstanceOf[Flow], session_id=None) -> Union[list[CrewOutput], Any]:
+    if session_id:
+        agentops.init(inherited_session_id=session_id)
+    return asyncio.run(arun_flow(flow=flow, session_id=session_id))
 
 
 async def arun_search_flow(
@@ -169,6 +183,7 @@ def run_research_and_search(
     elasticsearch: Elasticsearch,
     index_name: str,
     embeddings: InstanceOf[Embeddings],
+    parallel: bool = False,
 ) -> RunResult:
     """
     Executes the research and search flow for a given website URL.
@@ -178,6 +193,8 @@ def run_research_and_search(
         research_team (ResearchTeamTemplate): The template for building the research team.
         elasticsearch (Elasticsearch): The Elasticsearch client instance.
         index_name (str): The name of the Elasticsearch index.
+        embeddings (Embeddings): The embeddings instance.
+        parallel (bool): Whether to run the flows in parallel.
     Returns:
         RunResult: An object containing the results of the research and search flows.
     """
@@ -200,6 +217,7 @@ def run_research_and_search(
         elasticsearch=elasticsearch,
         index_name=index_name,
         llm=research_llm,
+        parallel=parallel,
     )
     research_results = run_flow(flow=research_flow)
     # search

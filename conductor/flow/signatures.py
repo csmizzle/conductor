@@ -7,14 +7,41 @@ import dspy
 from conductor.flow.models import CitedAnswer as CitedAnswerModel
 from conductor.flow.models import CitedValue as CitedValueModel
 
-# configure dspy
-llm = dspy.LM("openai/gpt-4o")
-dspy.configure(lm=llm)
+
+class AgentBackstory(dspy.Signature):
+    """
+    A simple backstory for an agent that is a skilled researcher using Google-like search engines
+    Use the name and research questions to add domain specific context to the backstory
+    """
+
+    agent_name: str = dspy.InputField(desc="The name of the agent")
+    research_questions: list[str] = dspy.InputField(
+        desc="The research questions the agent is tasked with answering"
+    )
+    backstory: str = dspy.OutputField(desc="The generated agent backstory")
+
+
+class AgentSearchEngineResearchGoal(dspy.Signature):
+    """
+    The goal of the agent is to collect data from search engines and APIs
+    Use the name and research questions to add domain specific context to the goal
+    """
+
+    agent_name: str = dspy.InputField(desc="The name of the agent")
+    research_questions: list[str] = dspy.InputField(
+        desc="The research questions the agent is tasked with answering"
+    )
+    search_engine_research_goal: str = dspy.OutputField(
+        desc="The generated search engine research goal"
+    )
 
 
 # research
 class ResearchTaskDescription(dspy.Signature):
-    """Generate a search engine research task description that will drive open source data collection"""
+    """
+    The task description should be generated from the agent's role, research question, goal, and backstory to drive the collection of data
+    using Google-like search engine queries.
+    """
 
     agent_role = dspy.InputField(desc="The role of the agent in the research team")
     agent_research_question = dspy.InputField(
@@ -26,22 +53,6 @@ class ResearchTaskDescription(dspy.Signature):
     )
     task_description = dspy.OutputField(
         desc="The generated search engine research task description"
-    )
-
-
-class ResearchTaskExpectedOutput(dspy.Signature):
-    """A confirmation of the different types of data the agent collected"""
-
-    agent_role = dspy.InputField(desc="The role of the agent in the research team")
-    agent_research_question = dspy.InputField(
-        desc="The research question the agent is tasked with collecting data for"
-    )
-    agent_goal = dspy.InputField(desc="The goal of the agent in the research team")
-    agent_backstory = dspy.InputField(
-        desc="The backstory of the agent in the research team"
-    )
-    expected_output = dspy.OutputField(
-        desc="A confirmation of the different types of data the agent collected"
     )
 
 

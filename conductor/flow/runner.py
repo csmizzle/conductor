@@ -7,6 +7,30 @@ from crewai.crew import CrewOutput
 import concurrent.futures
 
 
+class SequentialTeamRunner:
+    """
+    Run team in sequence
+    """
+
+    def __init__(self, team: models.Team) -> None:
+        self.team = team
+        self.crews: list[Crew] = self._assemble_crews()
+
+    def _assemble_crews(self) -> None:
+        crews = []
+        for agent_, task in zip(self.team.agents, self.team.tasks):
+            crews.append(Crew(name="research_crew", agents=[agent_], tasks=[task]))
+        return crews
+
+    def run(self) -> list[CrewOutput]:
+        outputs = []
+        for crew in self.crews:
+            print(f"Running crew {crew.id} ...")
+            result = crew.kickoff()
+            outputs.append(result)
+        return outputs
+
+
 class TeamRunner:
     """
     Run a research team by executing the tasks in parallel
@@ -17,9 +41,10 @@ class TeamRunner:
         self.crews: list[Crew] = self._assemble_crews()
 
     @staticmethod
-    def _run_research_crew(crew: Crew) -> None:
+    def _run_research_crew(crew: Crew) -> CrewOutput:
         print(f"Running crew {crew.id} ...")
-        return crew.kickoff()
+        result = crew.kickoff()
+        return result
 
     def _assemble_crews(self) -> None:
         crews = []
@@ -33,13 +58,14 @@ class TeamRunner:
         Returns:
             outputs: the crew outputs
         """
+        results = []
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = []
             for crew in self.crews:
                 futures.append(executor.submit(self._run_research_crew, crew))
-            return [
-                future.result() for future in concurrent.futures.as_completed(futures)
-            ]
+            for future in concurrent.futures.as_completed(futures):
+                results.append(future.result())
+        return results
 
 
 class SearchTeamAnswers(BaseModel):
@@ -101,3 +127,11 @@ def run_search_team(
     team: models.SearchTeam, retriever: ElasticRMClient
 ) -> list[SearchTeamAnswers]:
     return SearchTeamRunner(team=team, retriever=retriever).run()
+
+
+def run_team_sequential(team: models.Team) -> list[CrewOutput]:
+    """
+    Run a research team by executing the tasks in sequence
+    """
+    output = SequentialTeamRunner(team=team).run()
+    return output

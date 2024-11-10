@@ -1,7 +1,7 @@
-from crewai import Task
 import dspy
 import concurrent.futures
 from conductor.flow import models
+from conductor.flow.research import TrimmedPromptTask
 
 
 class DescriptionSpecification:
@@ -53,7 +53,7 @@ class QuestionSpecification:
 
 
 class TaskSpecification:
-    def __init__(self, task: Task, specification: str) -> None:
+    def __init__(self, task: TrimmedPromptTask, specification: str) -> None:
         self.task = task
         self.specification = specification
 
@@ -65,36 +65,29 @@ class TaskSpecification:
             task_description=self.task.description, specification=self.specification
         ).specified_task_description
 
-    def _specify_expected_output(self) -> str:
-        specifier = dspy.ChainOfThought(
-            "task_description: str, specification: str -> specified_expected_output: str"
-        )
-        return specifier(
-            task_description=self.task.description, specification=self.specification
-        ).specified_expected_output
-
-    def specify(self) -> Task:
+    def specify(self) -> TrimmedPromptTask:
         """
         Specify the task
         """
         specified_description = self._specify_description()
-        specified_expected_output = self._specify_expected_output()
-        return Task(
+        return TrimmedPromptTask(
             description=specified_description,
             agent=self.task.agent,
-            expected_output=specified_expected_output,
             output_pydantic=self.task.output_pydantic,
+            expected_output=self.task.expected_output,
         )
 
 
-def specify_task(task: Task, specification: str) -> Task:
+def specify_task(task: TrimmedPromptTask, specification: str) -> TrimmedPromptTask:
     """
     Specify a task
     """
     return TaskSpecification(task=task, specification=specification).specify()
 
 
-def specify_tasks(tasks: list[Task], specification: str) -> list[Task]:
+def specify_tasks(
+    tasks: list[TrimmedPromptTask], specification: str
+) -> list[TrimmedPromptTask]:
     """
     Specify a list of tasks
     """
@@ -104,7 +97,9 @@ def specify_tasks(tasks: list[Task], specification: str) -> list[Task]:
     return specified_tasks
 
 
-def specify_tasks_parallel(tasks: list[Task], specification: str) -> list[Task]:
+def specify_tasks_parallel(
+    tasks: list[TrimmedPromptTask], specification: str
+) -> list[TrimmedPromptTask]:
     """
     Specify a list of tasks in parallel
     """
