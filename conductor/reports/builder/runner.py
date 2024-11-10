@@ -4,7 +4,10 @@ Runners for report generation pipeline
 import concurrent.futures
 from conductor.flow.retriever import ElasticRMClient
 from conductor.builder.agent import ResearchAgentTemplate, ResearchTeamTemplate
-from conductor.reports.builder.conversations import SimulatedConversation
+from conductor.reports.builder.conversations import (
+    SimulatedConversation,
+    SummarizeConversation,
+)
 from conductor.reports.builder.models import ResearchAgentConversations, Conversation
 
 
@@ -125,3 +128,50 @@ def refine_team_from_conversations(
                     new_questions.append(conversation.question)
                 agent.research_questions = new_questions
     return initial_team
+
+
+def summarize_conversation(
+    conversation: Conversation,
+) -> str:
+    """
+    Summarize conversations
+    """
+    conversation_summarizer = SummarizeConversation()
+    return conversation_summarizer(conversation).summary
+
+
+def summarize_conversations_parallel(
+    conversations: list[Conversation],
+) -> list[str]:
+    """
+    Summarize conversations in parallel
+    """
+    summaries = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+        for conversation in conversations:
+            futures.append(executor.submit(summarize_conversation, conversation))
+        for future in concurrent.futures.as_completed(futures):
+            summaries.append(future.result())
+    return summaries
+
+
+def summarize_team_conversations_parallel(
+    team_conversations: list[ResearchAgentConversations],
+) -> list[str]:
+    """
+    Summarize team conversations in parallel
+    """
+    summaries = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+        for research_agent_conversations in team_conversations:
+            futures.append(
+                executor.submit(
+                    summarize_conversations_parallel,
+                    research_agent_conversations.conversations,
+                )
+            )
+        for future in concurrent.futures.as_completed(futures):
+            summaries.extend(future.result())
+    return summaries

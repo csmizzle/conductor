@@ -59,3 +59,24 @@ class SimulatedConversation(dspy.Module):
             conversation_history=conversation_history,
             refined_question=generated_refined_question,
         )
+
+
+class SummarizeConversation(dspy.Module):
+    def __init__(self) -> None:
+        self.summarize_conversation = dspy.ChainOfThought(
+            signatures.ConversationSummary
+        )
+
+    def forward(self, conversation: models.Conversation) -> dspy.Prediction:
+        # convert the conversation to a format that can be summarized
+        inputs = []
+        responses = []
+        for interaction in conversation.conversation_history:
+            inputs.append(interaction.input)
+            responses.append(interaction.response)
+        conversation_to_summarize = models.SlimConversation(
+            topic=conversation.topic, inputs=inputs, responses=responses
+        )
+        return self.summarize_conversation(
+            conversation_to_summarize=conversation_to_summarize
+        )

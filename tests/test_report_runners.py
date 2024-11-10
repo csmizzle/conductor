@@ -7,6 +7,9 @@ from conductor.reports.builder.runner import (
     ResearchTeamSimulatedConversationRunner,
     run_team_simulated_conversations,
     refine_team_from_conversations,
+    summarize_conversation,
+    summarize_conversations_parallel,
+    summarize_team_conversations_parallel,
 )
 from conductor.reports.builder.models import ResearchAgentConversations
 from conductor.flow.retriever import ElasticRMClient
@@ -65,7 +68,9 @@ def test_research_team_simulated_conversations() -> None:
         ),
     ]
     team = ResearchTeamTemplate(
-        title="Thomson Reuters Research Team", agent_templates=agents
+        perspective="Looking for strategic gaps in the company's operations and what they also do well.",
+        title="Thomson Reuters Research Team",
+        agent_templates=agents,
     )
     elasticsearch = Elasticsearch(
         hosts=[os.getenv("ELASTICSEARCH_URL")],
@@ -83,6 +88,30 @@ def test_research_team_simulated_conversations() -> None:
     team_conversations = runner.run_team_conversations()
     assert isinstance(team_conversations, list)
     save_model_to_test_data(team_conversations, "team_conversations.json")
+
+
+def test_summarize_team_conversations() -> None:
+    team_conversations = load_model_from_test_data(
+        ResearchAgentConversations, "team_conversations.json"
+    )
+    summary = summarize_conversation(team_conversations[0].conversations[0])
+    assert isinstance(summary, str)
+
+
+def test_summarize_conversations_parallel() -> None:
+    team_conversations = load_model_from_test_data(
+        ResearchAgentConversations, "team_conversations.json"
+    )
+    summaries = summarize_conversations_parallel(team_conversations[0].conversations)
+    assert isinstance(summaries, list)
+
+
+def test_summarize_team_conversations_parallel() -> None:
+    team_conversations = load_model_from_test_data(
+        ResearchAgentConversations, "team_conversations.json"
+    )
+    summaries = summarize_team_conversations_parallel(team_conversations)
+    assert isinstance(summaries, list)
 
 
 def test_run_simulated_conversations() -> None:

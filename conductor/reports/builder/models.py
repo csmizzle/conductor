@@ -27,6 +27,12 @@ class ResearchAgentConversations(BaseModel):
     )
 
 
+class SlimConversation(BaseModel):
+    topic: str = Field(description="The conversation topic")
+    inputs: list[str] = Field(description="The researcher's inputs")
+    responses: list[str] = Field(description="The writer's responses")
+
+
 class SectionOutline(BaseModel):
     section_title: str = Field(description="The section title")
     section_content: str = Field(description="The section content")

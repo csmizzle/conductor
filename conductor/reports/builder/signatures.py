@@ -26,6 +26,19 @@ class ConversationTurn(dspy.Signature):
     response: str = dspy.OutputField(prefix="Expert's Response: ")
 
 
+class ConversationSummary(dspy.Signature):
+    """
+    Summarize the conversation between the researcher and the expert.
+    Make sure the summary captures the essence of the conversation and the research gaps and new topics that were discovered.
+    This summary will be used to refine a general outline for a research report.
+    """
+
+    conversation_to_summarize: models.SlimConversation = dspy.InputField(
+        prefix="Conversation: "
+    )
+    summary: str = dspy.OutputField(prefix="Summary: ")
+
+
 class ResearcherResponse(dspy.Signature):
     """
     You are the researcher who is asking the research questions.
