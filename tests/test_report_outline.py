@@ -8,6 +8,7 @@ from conductor.reports.builder import models
 from conductor.builder.agent import ResearchAgentTemplate, ResearchTeamTemplate
 from conductor.reports.builder.runner import (
     run_team_simulated_conversations,
+    summarize_team_conversations_parallel,
 )
 from conductor.reports.builder.models import ReportOutline, SourcedSection
 from conductor.flow.retriever import ElasticRMClient
@@ -100,11 +101,15 @@ def test_build_refined_outline() -> None:
     outline = build_outline(specification=specification, section_titles=section_titles)
     assert isinstance(outline, list)
     assert len(outline) == 7
+    # summarize conversations
+    team_conversation_summaries = summarize_team_conversations_parallel(
+        team_conversations=team_conversations
+    )
     # build refined outline
     refined_outline = build_refined_outline(
         perspective=team.perspective,
         draft_outline=outline,
-        conversations=team_conversations,
+        conversation_summaries=team_conversation_summaries,
     )
     assert isinstance(refined_outline, dspy.Prediction)
     assert isinstance(refined_outline.refined_outline, ReportOutline)

@@ -11,6 +11,7 @@ from conductor.rag.embeddings import BedrockEmbeddings
 from conductor.reports.builder.runner import (
     run_team_simulated_conversations,
     refine_team_from_conversations,
+    summarize_team_conversations_parallel,
 )
 from conductor.reports.builder.outline import (
     build_outline,
@@ -95,11 +96,15 @@ def test_pipeline_v2(elasticsearch_cloud_test_research_index) -> None:
         specification=run.specification, section_titles=section_titles
     )
     # refine outline
+    print("Summarizing conversations ...")
+    team_conversation_summaries = summarize_team_conversations_parallel(
+        team_conversations=team_conversation
+    )
     print("Refining outline ...")
     refined_outline = build_refined_outline(
         perspective=perspective,
         draft_outline=outline,
-        conversations=team_conversation,
+        conversation_summaries=team_conversation_summaries,
     )
     # write report
     print("Writing report ...")

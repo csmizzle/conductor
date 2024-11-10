@@ -47,7 +47,7 @@ class OutlineRefiner(dspy.Module):
 
     def forward(
         self,
-        conversations: list[models.ResearchAgentConversations],
+        conversation_summaries: list[str],
         perspective: str,
         draft_outline: models.ReportOutline,
     ) -> dspy.Prediction:
@@ -57,7 +57,7 @@ class OutlineRefiner(dspy.Module):
         # summarize the team conversations
         refined_outline = self.refine_outline(
             perspective=perspective,
-            conversations=conversations,
+            conversation_summaries=conversation_summaries,
             draft_outline=draft_outline,
         )
         return refined_outline
@@ -80,7 +80,7 @@ def build_outline(
 
 
 def build_refined_outline(
-    conversations: list[models.ResearchAgentConversations],
+    conversation_summaries: list[str],
     perspective: str,
     draft_outline: models.ReportOutline,
 ) -> dspy.Prediction:
@@ -89,7 +89,7 @@ def build_refined_outline(
     """
     outline_refiner = OutlineRefiner()
     refined_outline = outline_refiner(
-        conversations=conversations,
+        conversation_summaries=conversation_summaries,
         perspective=perspective,
         draft_outline=draft_outline,
     )
