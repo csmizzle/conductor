@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import concurrent.futures
 from tqdm import tqdm
 from conductor.builder import signatures
+from langfuse.decorators import observe
 
 claude = dspy.LM("bedrock/anthropic.claude-3-sonnet-20240229-v1:0")
 dspy.configure(lm=claude)
@@ -50,6 +51,7 @@ class AgentBuilderFromReportSection:
         )
 
 
+@observe(as_type="generation")
 def build_from_section(
     team_title: str, section_title: str, perspective: str
 ) -> ResearchAgentTemplate:
@@ -58,6 +60,7 @@ def build_from_section(
     ).build()
 
 
+@observe(as_type="generation")
 def build_from_report_sections(
     team_title: str, section_titles: list[str], perspective: str
 ) -> ResearchTeamTemplate:
@@ -70,6 +73,7 @@ def build_from_report_sections(
     return ResearchTeamTemplate(title=team_title, agents=agents)
 
 
+@observe(as_type="generation")
 def build_from_report_sections_parallel(
     team_title: str,
     section_titles: list[str],
