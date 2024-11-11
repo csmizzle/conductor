@@ -100,9 +100,9 @@ class RefindedOutline(dspy.Signature):
     The refined outline should both branch out to new compelling topics and close existing research gaps discovered during the conversation.
     """
 
-    conversation_summaries: list[str] = dspy.InputField(
-        prefix="Conversation Summaries: "
-    )
+    # conversation_summaries: list[str] = dspy.InputField(
+    #     prefix="Conversation Summaries: "
+    # )
     perspective: str = dspy.InputField(prefix="Perspective: ")
     draft_outline: models.ReportOutline = dspy.InputField(prefix="Draft Outline: ")
     refined_outline: models.ReportOutline = dspy.OutputField(prefix="Refined Outline: ")

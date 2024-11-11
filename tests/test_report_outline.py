@@ -136,7 +136,7 @@ def test_write_section() -> None:
 
 
 def test_write_report_claude() -> None:
-    claude = dspy.LM("bedrock/anthropic.claude-3-sonnet-20240229-v1:0")
+    claude = dspy.LM("bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0")
     dspy.configure(lm=claude)
     outline = load_model_from_test_data(ReportOutline, "refined_outline.json")
     elasticsearch = Elasticsearch(

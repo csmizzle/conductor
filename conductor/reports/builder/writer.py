@@ -58,18 +58,22 @@ class SectionWriter(dspy.Module):
         # # map question sourcing to paragraph sentences
         sourced_paragraphs = []
         for paragraph in generated_section.section.paragraphs:
-            sourced_sentences = []
-            for sentence in paragraph.sentences:
-                for answer in answers:
-                    if sentence.question == answer.question:
-                        sourced_sentence = models.SentenceWithAnswer(
-                            content=sentence.content,
-                            question=sentence.question,
-                            answer=answer,
-                        )
-                        sourced_sentences.append(sourced_sentence)
-            sourced_paragraph = models.SourcedParagraph(sentences=sourced_sentences)
-            sourced_paragraphs.append(sourced_paragraph)
+            if paragraph:
+                if isinstance(paragraph, models.Paragraph):
+                    sourced_sentences = []
+                    for sentence in paragraph.sentences:
+                        for answer in answers:
+                            if sentence.question == answer.question:
+                                sourced_sentence = models.SentenceWithAnswer(
+                                    content=sentence.content,
+                                    question=sentence.question,
+                                    answer=answer,
+                                )
+                                sourced_sentences.append(sourced_sentence)
+                    sourced_paragraph = models.SourcedParagraph(
+                        sentences=sourced_sentences
+                    )
+                    sourced_paragraphs.append(sourced_paragraph)
         sourced_section = models.SourcedSection(
             title=section.section_title,
             paragraphs=sourced_paragraphs,
