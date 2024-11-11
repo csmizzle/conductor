@@ -42,11 +42,16 @@ from conductor.rag.embeddings import BedrockEmbeddings
 from crewai import LLM, Agent, Task
 from crewai.crew import CrewOutput
 from conductor.crews.rag_marketing import tools
+from langtrace_python_sdk import langtrace
+from langtrace_python_sdk import with_langtrace_root_span
 from elasticsearch import Elasticsearch
 import dspy
 import os
 import json
 import agentops
+
+
+langtrace.init()
 
 
 def test_research_agent_factory() -> None:
@@ -430,6 +435,7 @@ def test_research_team_specification() -> None:
     assert all([isinstance(task, Task) for task in specified_team.tasks])
 
 
+@with_langtrace_root_span()
 def test_research_flow(elasticsearch_test_agent_index) -> None:
     session = agentops.init(os.getenv("AGENTOPS_API_KEY"))
     title = "Company Research Team"
@@ -486,14 +492,14 @@ def test_research_flow(elasticsearch_test_agent_index) -> None:
         llm=llm,
         elasticsearch=elasticsearch,
         index_name=elasticsearch_test_agent_index,
+        parallel=True,
     )
     result = run_flow(flow=flow, session_id=session)
     assert isinstance(result, list)
     assert all([isinstance(output, CrewOutput) for output in result])
 
 
-def test_research_run_async(elasticsearch_test_agent_index) -> None:
-    agentops.init(os.getenv("AGENTOPS_API_KEY"))
+def test_research_run_async(elasticsearch_cloud_test_research_index) -> None:
     title = "Company Research Team"
     perspective = "Focus on company risks and opportunities for investment"
     llm = dspy.LM(
@@ -506,7 +512,8 @@ def test_research_run_async(elasticsearch_test_agent_index) -> None:
         # base_url=litellm_proxy_url,
     )
     elasticsearch = Elasticsearch(
-        hosts=[os.getenv("ELASTICSEARCH_URL")],
+        hosts=[os.getenv("ELASTICSEARCH_CLOUD_URL")],
+        api_key=os.getenv("ELASTICSEARCH_CLOUD_API_ADMIN_KEY"),
     )
     agent_templates = [
         ResearchAgentTemplate(
@@ -534,7 +541,8 @@ def test_research_run_async(elasticsearch_test_agent_index) -> None:
         llm=llm,
         tools=[
             tools.SerpSearchEngineIngestTool(
-                elasticsearch=elasticsearch, index_name=elasticsearch_test_agent_index
+                elasticsearch=elasticsearch,
+                index_name=elasticsearch_cloud_test_research_index,
             )
         ],
         agent_factory=ResearchAgentFactory,
@@ -694,11 +702,13 @@ def test_run_research_and_search(elasticsearch_cloud_test_research_index) -> Non
     # litellm_proxy_url = "http://0.0.0.0:4000"
     llm = dspy.LM(
         "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
+        max_tokens=3000,
         # api_base=litellm_proxy_url
     )
     dspy.configure(lm=llm)
     mini = LLM(
         model="bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
+        max_tokens=3000,
         # base_url=litellm_proxy_url,
     )
     elasticsearch = Elasticsearch(

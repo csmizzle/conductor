@@ -37,6 +37,8 @@ def test_outline_builder() -> None:
 
 
 def test_build_outline() -> None:
+    claude = dspy.LM("bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0")
+    dspy.configure(lm=claude)
     section_titles = [
         "Executive Summary",
         "Introduction",

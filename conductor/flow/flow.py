@@ -21,7 +21,7 @@ from conductor.flow import models, specify, runner, retriever, builders, researc
 from conductor.flow.utils import build_organization_determination_crew
 from conductor.crews.rag_marketing import tools
 from langchain_core.embeddings import Embeddings
-from langfuse.decorators import observe
+from langtrace_python_sdk import with_langtrace_root_span
 import agentops
 
 
@@ -175,7 +175,7 @@ class RunResult(BaseModel):
     search: list[runner.SearchTeamAnswers]
 
 
-@observe(name="run_research_and_search", as_type="generation")
+@with_langtrace_root_span()
 def run_research_and_search(
     website_url: str,
     research_llm: LLM,

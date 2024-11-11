@@ -16,19 +16,27 @@ from crewai import LLM
 from elasticsearch import Elasticsearch
 import dspy
 import os
+from langtrace_python_sdk import langtrace
+from langtrace_python_sdk.utils.with_root_span import with_langtrace_root_span
 
 
+langtrace.init()
+
+
+@with_langtrace_root_span(name="test_pipeline_v2")
 def test_pipeline_v2(elasticsearch_cloud_test_research_index) -> None:
     # search and answer research questions
     # set openai to litellm proxy
     # litellm_proxy_url = "http://0.0.0.0:4000"
     llm = dspy.LM(
         "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
+        max_tokens=3000,
         # api_base=litellm_proxy_url
     )
     dspy.configure(lm=llm)
     mini = LLM(
         model="bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
+        max_tokens=3000,
         # base_url=litellm_proxy_url,
     )
     team_title = "Company Due Diligence"

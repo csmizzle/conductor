@@ -1,13 +1,7 @@
-import os
-import langchain
-import langchain.cache
-from langchain_community.cache import RedisCache
-from redis import Redis
+# from langtrace_python_sdk import langtrace
+# import os
 
 
-# if llm cache is set, use it and set up the redis cache
-if os.getenv("LLM_CACHE"):
-    langchain.cache = RedisCache(
-        redis_=Redis.from_url(os.getenv("REDIS_URL")),
-        ttl=os.getenv("LLM_CACHE_TTL", None),
-    )
+# if os.getenv("LANGTRACE_API_KEY"):
+#     print("Setting up Langtrace API ...")
+#     langtrace.init(api_key=os.getenv("LANGTRACE_API_KEY"))
