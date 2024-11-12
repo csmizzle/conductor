@@ -98,7 +98,7 @@ class ResearchAgentFactory(models.AgentFactory):
         research_questions: list[str],
         llm: LLM,
         tools: list[InstanceOf[BaseTool]],
-        max_iter: int = 5,
+        max_iter: int = 1,
     ) -> None:
         self.agent_name = agent_name
         self.research_questions = research_questions

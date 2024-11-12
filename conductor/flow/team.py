@@ -18,6 +18,7 @@ class ResearchTeamFactory(models.TeamFactory):
         task_factory: InstanceOf[models.TaskFactory],
         llm: LLM,
         tools: list[InstanceOf[BaseTool]],
+        max_iter: int = 1,
     ) -> None:
         self.title = title
         self.agent_templates = agent_templates
@@ -25,6 +26,7 @@ class ResearchTeamFactory(models.TeamFactory):
         self.tools = tools
         self.agent_factory = agent_factory
         self.task_factory = task_factory
+        self.max_iter = max_iter
 
     def build(self) -> models.Team:
         """
@@ -35,6 +37,7 @@ class ResearchTeamFactory(models.TeamFactory):
             llm=self.llm,
             tools=self.tools,
             agent_factory=self.agent_factory,
+            max_iter=self.max_iter,
         )
         tasks = builders.build_agents_search_tasks_parallel(
             agent_templates=self.agent_templates,

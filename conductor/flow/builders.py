@@ -43,6 +43,7 @@ def build_agent_from_template(
     llm: LLM,
     tools: list[InstanceOf[BaseTool]],
     agent_factory: InstanceOf[models.AgentFactory],
+    max_iter: int = 1,
 ) -> Agent:
     """
     Builds an agent from a template
@@ -52,6 +53,7 @@ def build_agent_from_template(
         research_questions=template.research_questions,
         llm=llm,
         tools=tools,
+        max_iter=max_iter,
     )
     return factory.build()
 
@@ -80,6 +82,7 @@ def build_agents_from_templates_parallel(
     llm: LLM,
     tools: list[InstanceOf[BaseTool]],
     agent_factory: InstanceOf[models.AgentFactory],
+    max_iter: int = 1,
 ) -> list[Agent]:
     """
     Builds a list of agents from templates in parallel
@@ -95,6 +98,7 @@ def build_agents_from_templates_parallel(
                     llm=llm,
                     tools=tools,
                     agent_factory=agent_factory,
+                    max_iter=max_iter,
                 )
             )
         for future in concurrent.futures.as_completed(futures):
@@ -200,6 +204,7 @@ def build_team(
     agent_factory: InstanceOf[models.AgentFactory],
     task_factory: InstanceOf[models.TaskFactory],
     team_factory: InstanceOf[models.TeamFactory],
+    **kwargs,
 ) -> models.Team:
     """
     Builds a research team from a list of agents
@@ -211,6 +216,7 @@ def build_team(
         tools=tools,
         agent_factory=agent_factory,
         task_factory=task_factory,
+        **kwargs,
     ).build()
 
 
@@ -221,6 +227,7 @@ def build_team_from_template(
     agent_factory: InstanceOf[models.AgentFactory],
     task_factory: InstanceOf[models.TaskFactory],
     team_factory: InstanceOf[models.TeamFactory],
+    **kwargs,
 ) -> models.Team:
     """
     Builds a research team from a template
@@ -233,6 +240,7 @@ def build_team_from_template(
         agent_factory=agent_factory,
         task_factory=task_factory,
         team_factory=team_factory,
+        **kwargs,
     )
 
 
@@ -241,6 +249,7 @@ def build_research_team_from_template(
     research_llm: LLM,
     elasticsearch: Elasticsearch,
     index_name: str,
+    **kwargs,
 ) -> models.Team:
     return build_team_from_template(
         team_template=team_template,
@@ -253,6 +262,7 @@ def build_research_team_from_template(
         agent_factory=ResearchAgentFactory,
         task_factory=ResearchQuestionAgentSearchTaskFactory,
         team_factory=ResearchTeamFactory,
+        **kwargs,
     )
 
 

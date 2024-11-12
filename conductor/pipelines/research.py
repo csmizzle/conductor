@@ -13,6 +13,7 @@ from conductor.reports.models import (
 )
 from conductor.utils.graph import graph_to_networkx, draw_networkx
 from conductor.builder.agent import ResearchTeamTemplate
+from conductor.flow import models as flow_models
 from conductor.reports.builder import models
 from conductor.builder.agent import build_from_report_sections_parallel
 from conductor.flow.flow import (
@@ -30,6 +31,8 @@ from conductor.reports.builder.outline import (
 )
 from conductor.reports.builder.writer import write_report
 from conductor.reports.builder import models as report_models
+from conductor.profiles.generate import generate_profile_parallel
+from pydantic import BaseModel
 from typing import Callable, Optional
 from reportlab.platypus import SimpleDocTemplate
 from tempfile import NamedTemporaryFile
@@ -374,6 +377,9 @@ class ResearchPipeline:
 class ResearchPipelineV2:
     """
     Updated version of the ResearchPipeline class.
+    - Research the entity
+    - Build out entity profile
+    - Search to answer key research questions
     """
 
     def __init__(
@@ -385,6 +391,7 @@ class ResearchPipelineV2:
         elasticsearch: Elasticsearch,
         elasticsearch_index: str,
         embeddings: Embeddings,
+        profile: BaseModel = None,
         cohere_api_key: str = None,
         run_in_parallel: bool = False,
         team_builder_llm: LM = None,
@@ -392,8 +399,9 @@ class ResearchPipelineV2:
         search_llm: LM = None,
         outline_llm: LM = None,
         report_llm: LM = None,
+        profile_llm: LM = None,
         k: int = 3,
-        research_max_iterations: int = 5,
+        research_max_iterations: int = 1,
     ) -> None:
         self.url = url
         self.team_title = team_title
@@ -403,28 +411,31 @@ class ResearchPipelineV2:
         self.elasticsearch_index = elasticsearch_index
         self.embeddings = embeddings
         # optional parameters
+        self.profile = profile
         self.cohere_api_key = cohere_api_key
         self.team_builder_llm = team_builder_llm
         self.research_llm = research_llm
         self.search_llm = search_llm
         self.outline_llm = outline_llm
         self.report_llm = report_llm
+        self.profile_llm = profile_llm
         self.run_in_parallel = run_in_parallel
         self.k = k
         self.research_max_iterations = research_max_iterations
         # pipeline components
         self.team: ResearchTeamTemplate = None
-        self.research_team: models.Team = None
+        self.research_team: flow_models.Team = None
         self.research_results: Optional[list[CrewOutput]] = None
         self.research_flow: ResearchFlow = None
         self.specification: str = None
-        self.search_team: models.SearchTeam = None
+        self.search_team: flow_models.SearchTeam = None
         self.search_flow: SearchFlow = None
         self.search_answers: Optional[list[runner.SearchTeamAnswers]] = None
         self.run_result: RunResult = None
         self.outline: models.ReportOutline = None
         self.refined_outline: models.ReportOutline = None
         self.report: models.Report = None
+        self.generated_profile: BaseModel = None
 
     def build_team_template(self) -> ResearchTeamTemplate:
         """
@@ -443,7 +454,7 @@ class ResearchPipelineV2:
         logger.info("Team template built.")
         return self.team
 
-    def build_research_team(self) -> models.Team:
+    def build_research_team(self) -> flow_models.Team:
         if self.team_builder_llm:
             dspy.configure(lm=self.team_builder_llm)
         if self.team:
@@ -460,6 +471,7 @@ class ResearchPipelineV2:
                 agent_factory=research.ResearchAgentFactory,
                 task_factory=research.ResearchQuestionAgentSearchTaskFactory,
                 team_factory=team.ResearchTeamFactory,
+                max_iter=self.research_max_iterations,
             )
             logger.info("Research team built.")
             return self.research_team
@@ -500,7 +512,7 @@ class ResearchPipelineV2:
                 "Missing research team, try running build_research_team() first."
             )
 
-    def build_search_team(self) -> models.SearchTeam:
+    def build_search_team(self) -> flow_models.SearchTeam:
         """
         Builds the search team.
         Returns:
@@ -526,7 +538,7 @@ class ResearchPipelineV2:
             organization_determination=self.research_flow.state.organization_determination.raw,
             elastic_retriever=retriever.ElasticRMClient(
                 elasticsearch=self.elasticsearch,
-                elasticsearch_index=self.elasticsearch_index,
+                index_name=self.elasticsearch_index,
                 embeddings=self.embeddings,
                 cohere_api_key=self.cohere_api_key,
                 k=self.k,
@@ -534,6 +546,30 @@ class ResearchPipelineV2:
         )
         self.search_answers = run_search_flow(flow=self.search_flow)
         return self.search_answers
+
+    def build_profile(self) -> BaseModel:
+        """
+        Generate a profile for the entity.
+        """
+        if self.specification:
+            if self.profile_llm:
+                dspy.configure(lm=self.profile_llm)
+            logger.info("Generating profile ...")
+            self.generated_profile = generate_profile_parallel(
+                model=self.profile,
+                embeddings=self.embeddings,
+                specification=self.specification,
+                elasticsearch=self.elasticsearch,
+                index_name=self.elasticsearch_index,
+                cohere_api_key=self.cohere_api_key,
+            )
+            logger.info("Profile generated.")
+            return self.generated_profile
+        else:
+            logger.error(
+                "Missing specification to generate profile, try running run_research() first."
+            )
+            raise ValueError("Missing specification to generate profile")
 
     def create_run_result(self) -> RunResult:
         """

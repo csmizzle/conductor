@@ -17,12 +17,9 @@ from conductor.zen import zenrows_client
 from conductor.llms import openai_gpt_4o
 from langchain_core.language_models.chat_models import BaseChatModel
 import requests
-import logging
 from tqdm import tqdm
 from typing import Union
-
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 # text data from websites
@@ -44,13 +41,13 @@ def ingest_webpage(url: str, limit: int = 50000, **kwargs) -> WebPage:
             zen_response = zenrows_client.get(url, params=params, timeout=10)
             # process response and try with requests if not successful
             if not zen_response.ok:
-                print(f"Zenrows Error: {zen_response.status_code}")
-                print(f"Zenrows Error: {zen_response.text}")
-                print("Sending request with requests instead ...")
+                logger.error(f"Zenrows Error: {zen_response.status_code}")
+                logger.error(f"Zenrows Error: {zen_response.text}")
+                logger.error("Sending request with requests instead ...")
                 normal_response = requests.get(url, **kwargs)
                 if not normal_response.ok:
-                    print(f"Requests Error: {zen_response.status_code}")
-                    print(f"Requests Error: {zen_response.text}")
+                    logger.error(f"Requests Error: {zen_response.status_code}")
+                    logger.error(f"Requests Error: {zen_response.text}")
                     normal_response.raise_for_status()
                 else:
                     response = normal_response

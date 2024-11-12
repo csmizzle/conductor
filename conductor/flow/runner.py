@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from crewai import Crew
 from crewai.crew import CrewOutput
 import concurrent.futures
+from loguru import logger
 
 
 class SequentialTeamRunner:
@@ -25,7 +26,7 @@ class SequentialTeamRunner:
     def run(self) -> list[CrewOutput]:
         outputs = []
         for crew in self.crews:
-            print(f"Running crew {crew.id} ...")
+            logger.info(f"Running crew {crew.id} ...")
             result = crew.kickoff()
             outputs.append(result)
         return outputs
@@ -42,7 +43,7 @@ class TeamRunner:
 
     @staticmethod
     def _run_research_crew(crew: Crew) -> CrewOutput:
-        print(f"Running crew {crew.id} ...")
+        logger.info(f"Running crew {crew.id} ...")
         result = crew.kickoff()
         return result
 
@@ -79,6 +80,7 @@ class SearchTeamRunner:
         self.retriever = CitationRAG(elastic_retriever=retriever)
 
     def _run_search_agent_question(self, question: str) -> CitedAnswerWithCredibility:
+        logger.info(f"Running search team to answer question: {question}")
         return self.retriever(question=question)
 
     def _run_search_agent_parallel(

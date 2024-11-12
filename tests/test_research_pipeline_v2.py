@@ -12,6 +12,7 @@ from conductor.reports.builder.outline import (
 from conductor.reports.builder.writer import write_report
 from conductor.reports.builder import models
 from conductor.pipelines.research import ResearchPipelineV2
+from conductor.profiles.models import Company
 from tests.utils import save_model_to_test_data
 from crewai import LLM
 from elasticsearch import Elasticsearch
@@ -35,7 +36,8 @@ perspective = (
 # section titles
 section_titles = [
     "Company Overview",
-    "Products and Services" "Customers Profiles",
+    "Products and Services",
+    "Customers Profiles",
     "Competitors",
 ]
 # elasticsearch
@@ -265,3 +267,107 @@ def test_pipeline_class_v2_research_and_search(
     assert pipeline.search_team is not None
     pipeline.run_search()
     assert pipeline.search_results is not None
+
+
+def test_research_pipeline_max_iter_small(
+    elasticsearch_cloud_test_research_index: str,
+) -> None:
+    pipeline = ResearchPipelineV2(
+        url=url,
+        team_title=team_title,
+        perspective=perspective,
+        section_titles=section_titles,
+        elasticsearch=elasticsearch,
+        elasticsearch_index=elasticsearch_cloud_test_research_index,
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        run_in_parallel=True,
+        team_builder_llm=gpt_4o_mini_dspy,
+        research_llm=gpt_4o_mini,
+        search_llm=bedrock_claude_sonnet,
+        outline_llm=bedrock_claude_sonnet,
+        report_llm=bedrock_claude_sonnet,
+        research_max_iterations=1,
+    )
+    # create search assets and run research and search
+    pipeline.build_team_template()
+    assert pipeline.team is not None
+    pipeline.build_research_team()
+    assert pipeline.research_team is not None
+    assert pipeline.research_team.agents[0].max_iter == 1
+    pipeline.run_research()
+
+
+def test_research_and_search_pipeline_max_iter_small(
+    elasticsearch_cloud_test_research_index: str,
+) -> None:
+    pipeline = ResearchPipelineV2(
+        url=url,
+        team_title=team_title,
+        perspective=perspective,
+        section_titles=section_titles,
+        elasticsearch=elasticsearch,
+        elasticsearch_index=elasticsearch_cloud_test_research_index,
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        run_in_parallel=True,
+        team_builder_llm=gpt_4o_mini_dspy,
+        research_llm=gpt_4o_mini,
+        search_llm=bedrock_claude_sonnet,
+        outline_llm=bedrock_claude_sonnet,
+        report_llm=bedrock_claude_sonnet,
+        research_max_iterations=1,
+    )
+    # create search assets and run research and search
+    pipeline.build_team_template()
+    assert pipeline.team is not None
+    pipeline.build_research_team()
+    assert pipeline.research_team is not None
+    assert pipeline.research_team.agents[0].max_iter == 1
+    pipeline.run_research()
+    assert pipeline.research_results is not None
+    pipeline.build_search_team()
+    assert pipeline.search_team is not None
+    # run search team
+    pipeline.run_search()
+    assert pipeline.search_answers is not None
+
+
+def test_research_and_search_pipeline_profile(
+    elasticsearch_cloud_test_research_index: str,
+) -> None:
+    pipeline = ResearchPipelineV2(
+        url=url,
+        team_title=team_title,
+        perspective=perspective,
+        section_titles=section_titles,
+        elasticsearch=elasticsearch,
+        elasticsearch_index=elasticsearch_cloud_test_research_index,
+        embeddings=BedrockEmbeddings(),
+        profile=Company,
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        run_in_parallel=True,
+        team_builder_llm=gpt_4o_mini_dspy,
+        research_llm=gpt_4o_mini,
+        search_llm=bedrock_claude_sonnet,
+        outline_llm=bedrock_claude_sonnet,
+        report_llm=bedrock_claude_sonnet,
+        profile_llm=bedrock_claude_sonnet,
+        research_max_iterations=1,
+    )
+    # create search assets and run research and search
+    pipeline.build_team_template()
+    assert pipeline.team is not None
+    pipeline.build_research_team()
+    assert pipeline.research_team is not None
+    assert pipeline.research_team.agents[0].max_iter == 1
+    pipeline.run_research()
+    assert pipeline.research_results is not None
+    pipeline.build_search_team()
+    assert pipeline.search_team is not None
+    # run search team
+    pipeline.run_search()
+    assert pipeline.search_answers is not None
+    # create company profile
+    pipeline.build_profile()
+    assert pipeline.profile is not None

@@ -4,6 +4,7 @@ Handle large document ingestion by chunking the documents into smaller pieces an
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from conductor.rag.models import WebPage
+from loguru import logger
 
 
 class WebPageContentSplitter:
@@ -32,7 +33,7 @@ class WebPageContentSplitter:
         Create documents from the split content
         """
         split_content = self.split_content()
-        print("Split content into", len(split_content), "chunks")
+        logger.info("Split content into", len(split_content), "chunks")
         return [
             Document(
                 page_content=chunk,

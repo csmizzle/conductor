@@ -23,6 +23,7 @@ from conductor.crews.rag_marketing import tools
 from langchain_core.embeddings import Embeddings
 from langtrace_python_sdk import with_langtrace_root_span
 import agentops
+from loguru import logger
 
 
 # configure dspy
@@ -84,7 +85,7 @@ class ResearchFlow(Flow[ResearchFlowState]):
         Returns:
             str: organization determination
         """
-        print("Determining organization ...")
+        logger.info("Determining organization ...")
         organization_determination = self.company_determination_crew.kickoff(
             {"website_url": self.url}
         )
@@ -93,19 +94,19 @@ class ResearchFlow(Flow[ResearchFlowState]):
 
     @listen(determine_organization)
     def specify_research_team(self, organization_determination: str):
-        print("Specifying research team ...")
+        logger.info("Specifying research team ...")
         self.state.specified_research_team = specify.specify_research_team(
             team=self.research_team, specification=organization_determination
         )
 
     @listen(specify_research_team)
     def run_research_team(self) -> list[CrewOutput]:
-        print("Running research team ...")
+        logger.info("Running research team ...")
         if self.parallel:
-            print("Running research team in parallel ...")
+            logger.info("Running research team in parallel ...")
             research_team_output = runner.run_team(self.state.specified_research_team)
         else:
-            print("Running research team in sequence ...")
+            logger.info("Running research team in sequence ...")
             research_team_output = runner.run_team_sequential(
                 self.state.specified_research_team
             )
@@ -128,7 +129,7 @@ class SearchFlow(Flow):
 
     @start()
     def specify_search_team(self):
-        print("Specifying search team ...")
+        logger.info("Specifying search team ...")
         specified_search_team = specify.specify_search_team(
             team=self.search_team,
             specification=self.organization_determination,
@@ -140,7 +141,7 @@ class SearchFlow(Flow):
     def run_search_team(
         self, specified_search_team: models.SearchTeam
     ) -> list[runner.SearchTeamAnswers]:
-        print("Running search team ...")
+        logger.info("Running search team ...")
         search_results = runner.run_search_team(
             retriever=self.retriever, team=specified_search_team
         )
