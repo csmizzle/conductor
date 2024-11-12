@@ -1,7 +1,7 @@
 from crewai_tools.tools.base_tool import BaseTool
 from crewai_tools.tools import ScrapeWebsiteTool
 from serpapi import GoogleSearch
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 from typing import Optional, Any, Type
 from textwrap import dedent
 import os

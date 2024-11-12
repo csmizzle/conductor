@@ -106,3 +106,27 @@ def elasticsearch_test_image_index():
     elasticsearch.indices.delete(
         index=test_index_name, ignore=[400, 404]
     )  # ignore errors if index does not exist
+
+
+# @pytest.hookimpl(tryfirst=True, hookwrapper=True)
+# def pytest_sessionfinish(session, exitstatus):
+#     """Hook to run allure upload after pytest finishes."""
+#     yield  # Let pytest finish the session first
+
+#     # Define the upload command
+#     allure_results_dir = "allure-results"
+
+#     if os.path.exists(allure_results_dir):
+#         try:
+#             subprocess.run([
+#                 "allure", "serve",
+#                 "--configDirectory", allure_results_dir,
+#                 allure_results_dir
+#             ], check=True)
+#             print("Allure report created.")
+#         except subprocess.CalledProcessError as e:
+#             print(f"Failed to upload Allure results: {e}")
+#         except FileNotFoundError:
+#             print("Allure CLI not found. Please ensure it's installed and in your PATH.")
+#     else:
+#         print(f"Allure results directory '{allure_results_dir}' not found.")

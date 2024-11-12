@@ -5,7 +5,7 @@ Add two different kinds of tools
 """
 from crewai_tools.tools import ScrapeWebsiteTool
 from crewai_tools.tools.base_tool import BaseTool
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 from typing import Optional, Any, Type
 from conductor.crews.marketing.tools import (
     ScrapeWebsiteToolSchema,
@@ -22,6 +22,11 @@ from conductor.rag.utils import (
 from serpapi import GoogleSearch
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from loguru import logger
+import sys
+
+
+logger.add(sys.stdout, enqueue=True, colorize=True)
 
 
 class FixedVectorSearchToolSchema(BaseModel):
@@ -60,7 +65,7 @@ def ingest(
     headers: dict = None,
     cookies: dict = None,
 ):
-    print(f"Ingesting data for {url} ...")
+    logger.info(f"Ingesting data for {url} ...")
     existing_document = client.find_document_by_url(url=url)
     if existing_document["hits"]["total"]["value"] > 0:
         return "Document already exists in the vector database"
@@ -85,7 +90,7 @@ def parallel_ingest(urls, client, headers=None, cookies=None):
                 results.append(result)
             except Exception as e:
                 results.append(f"Error processing: {url}")
-                print(f"Error: {url} --> {e}")
+                logger.error(f"Error: {url} --> {e}")
     return results
 
 
@@ -196,12 +201,12 @@ class ScrapeWebsiteWithContentIngestTool(ScrapeWebsiteTool):
         )
         if ingested_content:
             try:
-                print("Getting content from the vector database ...")
+                logger.info("Getting content from the vector database ...")
                 data = self._vector_database.find_document_by_url(url=url)
                 # return the text of the first document
                 return get_content_and_source_from_response(data)
             except Exception as e:
-                print(e)
+                logger.exception(e)
 
 
 class VectorSearchTool(BaseTool):

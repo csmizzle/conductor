@@ -12,15 +12,40 @@ from conductor.reports.models import (
     RelationshipType,
 )
 from conductor.utils.graph import graph_to_networkx, draw_networkx
+from conductor.builder.agent import ResearchTeamTemplate
+from conductor.reports.builder import models
+from conductor.builder.agent import build_from_report_sections_parallel
+from conductor.flow.flow import (
+    SearchFlow,
+    ResearchFlow,
+    RunResult,
+    run_flow,
+    run_search_flow,
+)
+from conductor.flow import runner, builders, research, team, retriever
+from conductor.crews.rag_marketing import tools
+from conductor.reports.builder.outline import (
+    build_outline,
+    build_refined_outline,
+)
+from conductor.reports.builder.writer import write_report
+from conductor.reports.builder import models as report_models
 from typing import Callable, Optional
 from reportlab.platypus import SimpleDocTemplate
 from tempfile import NamedTemporaryFile
 from docx import Document
-import logging
 import shutil
+import dspy
+from dspy import LM
+from crewai import LLM
+from crewai.crews.crew_output import CrewOutput
+from elasticsearch import Elasticsearch
+from langchain_core.embeddings import Embeddings
+from loguru import logger
+import sys
 
 
-logger = logging.getLogger(__name__)
+logger.add(sys.stdout, colorize=True, enqueue=True)
 
 
 class ResearchPipeline:
@@ -323,6 +348,16 @@ class ResearchPipeline:
     def run(self) -> None:
         """
         Runs the pipeline.
+
+        Steps:
+        1. Build the research team.
+        2. Run the research flow.
+        3. Build the search team.
+        4. Run the search flow.
+        5. Create the run result.
+        6. Build the report outline.
+        7. Refine the report outline.
+        8. Write the final report.
         """
 
         self.run_crew()
@@ -341,4 +376,245 @@ class ResearchPipelineV2:
     Updated version of the ResearchPipeline class.
     """
 
-    pass
+    def __init__(
+        self,
+        url: str,
+        team_title: str,
+        perspective: str,
+        section_titles: list[str],
+        elasticsearch: Elasticsearch,
+        elasticsearch_index: str,
+        embeddings: Embeddings,
+        cohere_api_key: str = None,
+        run_in_parallel: bool = False,
+        team_builder_llm: LM = None,
+        research_llm: LLM = None,
+        search_llm: LM = None,
+        outline_llm: LM = None,
+        report_llm: LM = None,
+        k: int = 3,
+        research_max_iterations: int = 5,
+    ) -> None:
+        self.url = url
+        self.team_title = team_title
+        self.perspective = perspective
+        self.section_titles = section_titles
+        self.elasticsearch = elasticsearch
+        self.elasticsearch_index = elasticsearch_index
+        self.embeddings = embeddings
+        # optional parameters
+        self.cohere_api_key = cohere_api_key
+        self.team_builder_llm = team_builder_llm
+        self.research_llm = research_llm
+        self.search_llm = search_llm
+        self.outline_llm = outline_llm
+        self.report_llm = report_llm
+        self.run_in_parallel = run_in_parallel
+        self.k = k
+        self.research_max_iterations = research_max_iterations
+        # pipeline components
+        self.team: ResearchTeamTemplate = None
+        self.research_team: models.Team = None
+        self.research_results: Optional[list[CrewOutput]] = None
+        self.research_flow: ResearchFlow = None
+        self.specification: str = None
+        self.search_team: models.SearchTeam = None
+        self.search_flow: SearchFlow = None
+        self.search_answers: Optional[list[runner.SearchTeamAnswers]] = None
+        self.run_result: RunResult = None
+        self.outline: models.ReportOutline = None
+        self.refined_outline: models.ReportOutline = None
+        self.report: models.Report = None
+
+    def build_team_template(self) -> ResearchTeamTemplate:
+        """
+        Builds the research team.
+        Returns:
+            ResearchTeamTemplate: The research team.
+        """
+        logger.info("Building team template ...")
+        if self.team_builder_llm:
+            dspy.configure(lm=self.team_builder_llm)
+        self.team = build_from_report_sections_parallel(
+            team_title=self.team_title,
+            section_titles=self.section_titles,
+            perspective=self.perspective,
+        )
+        logger.info("Team template built.")
+        return self.team
+
+    def build_research_team(self) -> models.Team:
+        if self.team_builder_llm:
+            dspy.configure(lm=self.team_builder_llm)
+        if self.team:
+            logger.info("Building research team ...")
+            self.research_team = builders.build_team_from_template(
+                team_template=self.team,
+                llm=self.research_llm,
+                tools=[
+                    tools.SerpSearchEngineIngestTool(
+                        elasticsearch=self.elasticsearch,
+                        index_name=self.elasticsearch_index,
+                    )
+                ],
+                agent_factory=research.ResearchAgentFactory,
+                task_factory=research.ResearchQuestionAgentSearchTaskFactory,
+                team_factory=team.ResearchTeamFactory,
+            )
+            logger.info("Research team built.")
+            return self.research_team
+        else:
+            logger.error(
+                "Missing team template, try running build_team_template() first."
+            )
+            raise ValueError(
+                "Missing team template, try running build_team_template() first."
+            )
+
+    def run_research(self) -> list[CrewOutput]:
+        """
+        Runs the research and search.
+        Returns:
+            RunResult: The result of the research and search.
+        """
+        if self.research_team:
+            logger.info("Running research ...")
+            self.research_flow = ResearchFlow(
+                research_team=self.research_team,
+                url=self.url,
+                elasticsearch=self.elasticsearch,
+                index_name=self.elasticsearch_index,
+                llm=self.research_llm,
+                parallel=self.run_in_parallel,
+            )
+            self.research_results = run_flow(flow=self.research_flow)
+            # set specification after flow is completed
+            self.specification = self.research_flow.state.organization_determination.raw
+            logger.info("Research completed.")
+            return self.research_results
+        else:
+            logger.error(
+                "Missing research team, try running build_research_team() first."
+            )
+            raise ValueError(
+                "Missing research team, try running build_research_team() first."
+            )
+
+    def build_search_team(self) -> models.SearchTeam:
+        """
+        Builds the search team.
+        Returns:
+            models.SearchTeam: The search team.
+        """
+        if self.team_builder_llm:
+            dspy.configure(lm=self.team_builder_llm)
+        logger.info("Building search team ...")
+        self.search_team = builders.build_search_team_from_template(team=self.team)
+        logger.info("Search team built.")
+        return self.search_team
+
+    def run_search(self) -> list[runner.SearchTeamAnswers]:
+        """
+        Runs the search flow.
+        Returns:
+            list[runner.SearchTeamAnswers]: The search results.
+        """
+        if self.search_llm:
+            dspy.configure(lm=self.search_llm)
+        self.search_flow = SearchFlow(
+            search_team=self.search_team,
+            organization_determination=self.research_flow.state.organization_determination.raw,
+            elastic_retriever=retriever.ElasticRMClient(
+                elasticsearch=self.elasticsearch,
+                elasticsearch_index=self.elasticsearch_index,
+                embeddings=self.embeddings,
+                cohere_api_key=self.cohere_api_key,
+                k=self.k,
+            ),
+        )
+        self.search_answers = run_search_flow(flow=self.search_flow)
+        return self.search_answers
+
+    def create_run_result(self) -> RunResult:
+        """
+        Creates the run result.
+        Returns:
+            RunResult: The run result.
+        """
+        if self.refined_outline and self.search_answers and self.research_flow:
+            self.run_result = RunResult(
+                research=self.research_results,
+                search=self.search_answers,
+                specification=self.research_flow.state.organization_determination.raw,
+            )
+            return self.run_result
+        else:
+            raise ValueError("Missing required components to create run result")
+
+    def build_outline(self) -> report_models.ReportOutline:
+        """
+        Builds the report outline.
+        Returns:
+            models.ReportOutline: The report outline.
+        """
+        if self.outline_llm:
+            dspy.configure(lm=self.outline_llm)
+        self.outline = build_outline(
+            specification=self.specification, section_titles=self.section_titles
+        )
+        return self.outline
+
+    def build_refined_outline(self) -> report_models.ReportOutline:
+        """
+        Builds the refined report outline.
+        Returns:
+            models.ReportOutline: The refined report outline.
+        """
+        self.refined_outline = build_refined_outline(
+            perspective=self.perspective,
+            draft_outline=self.outline,
+        )
+        return self.refined_outline
+
+    def write_report(self) -> report_models.Report:
+        """
+        Writes the report.
+        Returns:
+            models.Report: The generated report.
+        """
+        if self.report_llm:
+            dspy.configure(lm=self.report_llm)
+        self.report = write_report(
+            outline=self.refined_outline,
+            elastic_retriever=retriever.ElasticRMClient(
+                elasticsearch=self.elasticsearch,
+                index_name=self.elasticsearch_index,
+                embeddings=self.embeddings,
+                cohere_api_key=self.cohere_api_key,
+                k=self.k,
+            ),
+        )
+        return self.report
+
+    def build_teams(self) -> None:
+        """
+        Builds the research and search teams.
+        """
+        logger.info("Building teams ...")
+        self.build_team_template()
+        self.build_research_team()
+        self.build_search_team()
+
+    def run(self) -> report_models.Report:
+        """
+        Runs the pipeline.
+        """
+        self.build_team_template()
+        self.build_research_team()
+        self.run_research()
+        self.build_search_team()
+        self.run_search()
+        self.create_run_result()
+        self.build_outline()
+        self.build_refined_outline()
+        self.write_report()

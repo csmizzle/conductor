@@ -59,7 +59,7 @@ class ResearchFlow(Flow[ResearchFlowState]):
     def __init__(
         self,
         research_team: models.Team,
-        website_url: str,
+        url: str,
         elasticsearch: Elasticsearch,
         index_name: str,
         llm: LLM,
@@ -67,9 +67,9 @@ class ResearchFlow(Flow[ResearchFlowState]):
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
-        self.website_url = website_url
+        self.url = url
         self.company_determination_crew = build_organization_determination_crew(
-            website_url=website_url,
+            website_url=url,
             elasticsearch=elasticsearch,
             index_name=index_name,
             llm=llm,
@@ -86,7 +86,7 @@ class ResearchFlow(Flow[ResearchFlowState]):
         """
         print("Determining organization ...")
         organization_determination = self.company_determination_crew.kickoff(
-            {"website_url": self.website_url}
+            {"website_url": self.url}
         )
         self.state.organization_determination = organization_determination
         return organization_determination
@@ -150,7 +150,7 @@ class SearchFlow(Flow):
 async def arun_flow(flow: InstanceOf[Flow], session_id=None) -> str:
     if session_id:
         agentops.init(inherited_session_id=session_id)
-    return await flow.kickoff()
+    return await flow.kickoff_async()
 
 
 def run_flow(flow: InstanceOf[Flow], session_id=None) -> Union[list[CrewOutput], Any]:
@@ -162,7 +162,7 @@ def run_flow(flow: InstanceOf[Flow], session_id=None) -> Union[list[CrewOutput],
 async def arun_search_flow(
     flow: InstanceOf[SearchFlow],
 ) -> list[runner.SearchTeamAnswers]:
-    return await flow.kickoff()
+    return await flow.kickoff_async()
 
 
 def run_search_flow(flow: InstanceOf[SearchFlow]) -> list[runner.SearchTeamAnswers]:

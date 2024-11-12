@@ -15,3 +15,5 @@ tests/*.txt
 /*.html
 lib
 *.log
+*.allure.properties
+allure-results

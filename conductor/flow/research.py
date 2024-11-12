@@ -1,7 +1,7 @@
 from pydantic import BaseModel, InstanceOf
 from typing import Union, Dict
 import dspy
-from crewai_tools import BaseTool
+from crewai_tools.tools.base_tool import BaseTool
 from crewai import LLM, Task
 from crewai import Agent as BaseAgent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
