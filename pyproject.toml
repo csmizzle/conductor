@@ -42,6 +42,7 @@ langfuse = "^2.53.3"
 agentops = "^0.3.17"
 langtrace-python-sdk = "^3.3.2"
 loguru = "^0.7.2"
+polars = "^1.13.0"
 
 
 [tool.poetry.group.dev.dependencies]

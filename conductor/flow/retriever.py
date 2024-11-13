@@ -18,6 +18,7 @@ class ElasticRMClient(dspy.Retrieve):
         index_name: str,
         cohere_api_key: str = None,
         k: int = 3,
+        rerank_top_n: int = 3,
     ) -> None:
         super().__init__(k=k)
         self.client = ElasticsearchRetrieverClient(
@@ -26,13 +27,13 @@ class ElasticRMClient(dspy.Retrieve):
             index_name=index_name,
         )
         self.cohere_api_key = cohere_api_key
+        self.rerank_top_n = rerank_top_n
 
     def _rerank(
         self,
         query: str,
         documents: List[Document],
         model: str = "rerank-english-v3.0",
-        top_n: int = 3,
     ) -> dict:
         """Rerank documents with Cohere API
 
@@ -51,7 +52,7 @@ class ElasticRMClient(dspy.Retrieve):
             query=query,
             model=model,
             documents=content,
-            top_n=top_n,
+            top_n=self.rerank_top_n,
         )
         for result in reranked_indexes.results:
             reranked_documents.append(documents[result.index])
