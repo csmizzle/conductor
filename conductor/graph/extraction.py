@@ -132,6 +132,7 @@ class RelationshipRAGExtractor:
     ) -> list[Relationship]:
         """
         Extract relationships in parallel
+        We use the query maps to execute the correct extraction for each set of documents
         """
         relationships = []
         with concurrent.futures.ThreadPoolExecutor() as executor:
