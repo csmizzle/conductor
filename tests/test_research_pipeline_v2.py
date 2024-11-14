@@ -390,8 +390,8 @@ def test_report_pipeline_max_iter_small(
         team_builder_llm=gpt_4o_mini_dspy,
         research_llm=gpt_4o_mini,
         search_llm=bedrock_claude_sonnet,
-        outline_llm=bedrock_claude_sonnet,
-        report_llm=gpt_4o,
+        outline_llm=gpt_4o,
+        report_llm=bedrock_claude_sonnet,
         research_max_iterations=1,
     )
     # create search assets and run research and search
