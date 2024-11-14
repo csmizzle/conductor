@@ -33,7 +33,7 @@ class WebPageContentSplitter:
         Create documents from the split content
         """
         split_content = self.split_content()
-        logger.info("Split content into", len(split_content), "chunks")
+        logger.info(f"Split content into {len(split_content)} chunks")
         return [
             Document(
                 page_content=chunk,

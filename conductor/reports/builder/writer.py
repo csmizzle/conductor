@@ -10,6 +10,7 @@ from conductor.flow.rag import CitationRAG, CitedAnswerWithCredibility
 from conductor.reports.builder import models
 from conductor.reports.builder import signatures
 import concurrent.futures
+from loguru import logger
 
 
 class SectionWriter(dspy.Module):
@@ -36,6 +37,7 @@ class SectionWriter(dspy.Module):
         section: models.SectionOutline,
     ) -> models.SourcedSection:
         # generate questions from section outline
+        logger.info(f"Generating questions for section: {section.section_title}")
         questions = self.generate_section_questions(
             section_outline_title=section.section_title,
             section_outline_content=section.section_content,
@@ -48,6 +50,7 @@ class SectionWriter(dspy.Module):
                 futures.append(executor.submit(self.rag, question=question))
             for future in concurrent.futures.as_completed(futures):
                 answers.append(future.result())
+        logger.info("Writing section ...")
         # write sections
         generated_section = self.generate_section(
             section_outline_title=section.section_title,
@@ -74,6 +77,7 @@ class SectionWriter(dspy.Module):
                         sentences=sourced_sentences
                     )
                     sourced_paragraphs.append(sourced_paragraph)
+        logger.info(f"Generated section: {section.section_title}")
         sourced_section = models.SourcedSection(
             title=section.section_title,
             paragraphs=sourced_paragraphs,

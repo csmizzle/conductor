@@ -638,11 +638,19 @@ class ResearchPipelineV2:
         Returns:
             models.ReportOutline: The refined report outline.
         """
-        self.refined_outline = build_refined_outline(
-            perspective=self.perspective,
-            draft_outline=self.outline,
-        )
-        return self.refined_outline
+        if self.outline:
+            if self.outline_llm:
+                dspy.configure(lm=self.outline_llm)
+            logger.info("Building refined outline ...")
+            self.refined_outline = build_refined_outline(
+                perspective=self.perspective,
+                draft_outline=self.outline,
+            ).refined_outline
+            logger.info("Refined outline built.")
+            return self.refined_outline
+        else:
+            logger.error("Missing outline to refine")
+            raise ValueError("Missing outline to refine")
 
     def write_report(self) -> report_models.Report:
         """
@@ -650,12 +658,18 @@ class ResearchPipelineV2:
         Returns:
             models.Report: The generated report.
         """
-        if self.report_llm:
-            dspy.configure(lm=self.report_llm)
-        self.report = write_report(
-            outline=self.refined_outline, elastic_retriever=self.research_retriever
-        )
-        return self.report
+        if self.refined_outline:
+            if self.report_llm:
+                dspy.configure(lm=self.report_llm)
+            self.report = write_report(
+                outline=self.refined_outline, elastic_retriever=self.research_retriever
+            )
+            return self.report
+        else:
+            logger.error("Missing refined outline, try running build_refined_outline()")
+            raise ValueError(
+                "Missing refined outline, try running build_refined_outline()"
+            )
 
     def build_teams(self) -> None:
         """
