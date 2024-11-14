@@ -9,6 +9,7 @@ from conductor.reports.models import (
     ImageResult,
 )
 from conductor.chains.tools import ImageProcessor
+from conductor.chains.tools import image_search
 from conductor.chains import relationships_to_image_query, run_create_caption_chain
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -20,6 +21,7 @@ import requests
 from tqdm import tqdm
 from typing import Union
 from loguru import logger
+import concurrent.futures
 
 
 # text data from websites
@@ -239,6 +241,36 @@ def image_from_url_to_db(
         print(e)
 
 
+def process_image_from_query(
+    query: str,
+    api_key: str,
+    n_images: int = 1,
+) -> ImageSearchResult:
+    logger.info(f"Running {query} and getting {n_images} images...")
+    results = image_search(query=query, api_key=api_key)
+    image_result = ImageSearchResult(query=query)  # map raw query to image result
+    # collect n results from results
+    for idx in range(n_images):
+        if "images_results" in results:
+            logger.info("Creating image cation ...")
+            original_url = results["images_results"][idx]["original"]
+            title = results["images_results"][idx]["title"]
+            created_caption = run_create_caption_chain(
+                search_query=results["search_parameters"]["q"],
+                image_title=title,
+            )
+            image_result.results.append(
+                ImageResult(
+                    original_url=original_url,
+                    title=title,
+                    caption=created_caption,
+                )
+            )
+        else:
+            logger.info(f"No image results found for {query["search_parameters"]["q"]}")
+    return image_result
+
+
 def queries_to_image_results(
     search_queries: list[str], n_images: int = 1
 ) -> list[ImageSearchResult]:
@@ -274,6 +306,31 @@ def queries_to_image_results(
                     f"No image results found for {query["search_parameters"]["q"]}"
                 )
     return image_results
+
+
+def queries_to_image_results_parallel(
+    search_queries: list[str],
+    api_key: str,
+    n_images: int = 1,
+) -> list[ImageSearchResult]:
+    """
+    Run process_image_from_query in parallel
+    """
+    images = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+        for query in search_queries:
+            futures.append(
+                executor.submit(
+                    process_image_from_query,
+                    query=query,
+                    api_key=api_key,
+                    n_images=n_images,
+                )
+            )
+        for future in futures:
+            images.append(future.result())
+    return images
 
 
 def insert_image_urls_to_db(

@@ -10,6 +10,7 @@ from conductor.reports.models import (
     ReportTone,
     ReportPointOfView,
     RelationshipType,
+    ImageSearchResult,
 )
 from conductor.utils.graph import graph_to_networkx, draw_networkx
 from conductor.builder.agent import ResearchTeamTemplate
@@ -38,6 +39,10 @@ from conductor.graph.extraction import (
 from conductor.graph.models import (
     TripleType,
     Graph,
+)
+from conductor.images.search import (
+    build_searches_from_graph,
+    collect_images_from_queries,
 )
 from pydantic import BaseModel
 from typing import Callable, Optional
@@ -399,6 +404,7 @@ class ResearchPipelineV2:
         profile: BaseModel = None,
         triple_types: list[TripleType] = None,
         cohere_api_key: str = None,
+        serp_api_key: str = None,
         run_in_parallel: bool = False,
         team_builder_llm: LM = None,
         research_llm: LLM = None,
@@ -407,6 +413,7 @@ class ResearchPipelineV2:
         report_llm: LM = None,
         profile_llm: LM = None,
         graph_llm: LM = None,
+        image_search_llm: LM = None,
         research_max_iterations: int = 1,
     ) -> None:
         self.url = url
@@ -420,6 +427,7 @@ class ResearchPipelineV2:
         self.triple_types = triple_types
         self.profile = profile
         self.cohere_api_key = cohere_api_key
+        self.serp_api_key = serp_api_key
         self.team_builder_llm = team_builder_llm
         self.research_llm = research_llm
         self.search_llm = search_llm
@@ -427,6 +435,7 @@ class ResearchPipelineV2:
         self.report_llm = report_llm
         self.profile_llm = profile_llm
         self.graph_llm = graph_llm
+        self.image_search_llm = image_search_llm
         self.run_in_parallel = run_in_parallel
         self.research_max_iterations = research_max_iterations
         # pipeline components
@@ -444,6 +453,8 @@ class ResearchPipelineV2:
         self.report: models.Report = None
         self.generated_profile: BaseModel = None
         self.generated_graph: Graph = None
+        self.generated_image_search_queries: list[str] = None
+        self.image_search_results: list[ImageSearchResult] = None
         # retriever
         self.research_retriever = research_retriever
         self.graph_retriever = graph_retriever
@@ -584,16 +595,20 @@ class ResearchPipelineV2:
         """
         if self.graph_retriever:
             if self.specification:
-                if self.graph_llm:
-                    dspy.configure(lm=self.graph_llm)
-                logger.info("Building graph ...")
-                self.generated_graph = create_graph(
-                    specification=self.specification,
-                    triple_types=self.triple_types,
-                    retriever=self.graph_retriever,
-                )
-                logger.info("Graph built.")
-                return self.generated_graph
+                if self.triple_types:
+                    if self.graph_llm:
+                        dspy.configure(lm=self.graph_llm)
+                    logger.info("Building graph ...")
+                    self.generated_graph = create_graph(
+                        specification=self.specification,
+                        triple_types=self.triple_types,
+                        retriever=self.graph_retriever,
+                    )
+                    logger.info("Graph built.")
+                    return self.generated_graph
+                else:
+                    logger.error("Missing triple types to build graph")
+                    raise ValueError("Missing triple types to build graph")
             else:
                 logger.error(
                     "Missing specification to build graph, try running run_research() first."
@@ -693,3 +708,31 @@ class ResearchPipelineV2:
         self.build_outline()
         self.build_refined_outline()
         self.write_report()
+
+    def build_image_search_queries(self) -> list[str]:
+        if self.generated_graph:
+            if self.image_search_llm:
+                dspy.configure(lm=self.image_search_llm)
+            logger.info("Building image search queries ...")
+            self.generated_image_search_queries = build_searches_from_graph(
+                graph=self.generated_graph
+            )
+            logger.info("Image search queries built.")
+            return self.generated_image_search_queries
+        else:
+            logger.error("Missing graph to build image search queries")
+            raise ValueError("Missing graph to build image search queries")
+
+    def collect_images(self) -> list[ImageSearchResult]:
+        if self.generated_image_search_queries:
+            if self.image_search_llm:
+                dspy.configure(lm=self.image_search_llm)
+            logger.info("Collecting images ...")
+            self.image_search_results = collect_images_from_queries(
+                queries=self.generated_image_search_queries, api_key=self.serp_api_key
+            )
+            logger.info("Images collected.")
+            return self.image_search_results
+        else:
+            logger.error("Missing search queries to collect images")
+            raise ValueError("Missing search queries to collect images")

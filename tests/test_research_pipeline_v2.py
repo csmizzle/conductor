@@ -4,6 +4,11 @@ from conductor.flow.flow import (
     run_research_and_search,
 )
 from conductor.flow.retriever import ElasticRMClient
+from conductor.graph.models import (
+    TripleType,
+    EntityType,
+    RelationshipType,
+)
 from conductor.rag.embeddings import BedrockEmbeddings
 from conductor.reports.builder.outline import (
     build_outline,
@@ -64,6 +69,28 @@ gpt_4o = dspy.LM(
 gpt_4o_mini = LLM(
     model="gpt-4o-mini",
 )
+triple_types = [
+    TripleType(
+        source=EntityType.COMPANY,
+        relationship_type=RelationshipType.SUBSIDIARY,
+        target=EntityType.COMPANY,
+    ),
+    TripleType(
+        source=EntityType.COMPANY,
+        relationship_type=RelationshipType.PARENT_COMPANY,
+        target=EntityType.COMPANY,
+    ),
+    TripleType(
+        source=EntityType.COMPANY,
+        relationship_type=RelationshipType.ACQUIRED,
+        target=EntityType.COMPANY,
+    ),
+    TripleType(
+        source=EntityType.COMPANY,
+        relationship_type=RelationshipType.EMPLOYEE,
+        target=EntityType.PERSON,
+    ),
+]
 
 
 @with_langtrace_root_span(name="test_pipeline_v2")
@@ -457,3 +484,73 @@ def test_research_and_search_pipeline_profile(
     # create company profile
     pipeline.build_profile()
     assert pipeline.profile is not None
+
+
+def test_image_search_pipeline(
+    elasticsearch_cloud_test_research_index: str,
+) -> None:
+    bedrock_claude_sonnet = dspy.LM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
+        max_tokens=3000,
+    )
+    gpt_4o_mini_dspy = dspy.LM(
+        "gpt-4o-mini",
+    )
+    # gpt_4o = dspy.LM(
+    #     "gpt-4o",
+    #     max_tokens=3000,
+    # )
+    gpt_4o_mini = LLM(
+        model="gpt-4o-mini",
+    )
+    research_retriver = ElasticRMClient(
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_cloud_test_research_index,
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
+    graph_retriever = ElasticRMClient(
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_cloud_test_research_index,
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        k=10,
+        rerank_top_n=5,
+    )
+    pipeline = ResearchPipelineV2(
+        url=url,
+        team_title=team_title,
+        perspective=perspective,
+        section_titles=section_titles,
+        elasticsearch=elasticsearch,
+        elasticsearch_index=elasticsearch_cloud_test_research_index,
+        embeddings=BedrockEmbeddings(),
+        profile=Company,
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        serp_api_key=os.getenv("SERPAPI_API_KEY"),
+        run_in_parallel=True,
+        team_builder_llm=gpt_4o_mini_dspy,
+        research_llm=gpt_4o_mini,
+        search_llm=bedrock_claude_sonnet,
+        outline_llm=bedrock_claude_sonnet,
+        report_llm=bedrock_claude_sonnet,
+        profile_llm=bedrock_claude_sonnet,
+        research_max_iterations=1,
+        triple_types=triple_types,
+        research_retriever=research_retriver,
+        graph_retriever=graph_retriever,
+    )
+    # create search assets and run research and search
+    pipeline.build_team_template()
+    assert pipeline.team is not None
+    pipeline.build_research_team()
+    assert pipeline.research_team is not None
+    assert pipeline.research_team.agents[0].max_iter == 1
+    pipeline.run_research()
+    assert pipeline.research_results is not None
+    pipeline.build_graph()
+    assert pipeline.generated_graph is not None
+    pipeline.build_image_search_queries()
+    assert pipeline.generated_image_search_queries is not None
+    pipeline.collect_images()
+    assert pipeline.image_search_results is not None
