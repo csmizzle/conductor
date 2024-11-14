@@ -4,6 +4,7 @@ from conductor.reports.builder.outline import (
     build_refined_outline,
 )
 from conductor.reports.builder.writer import write_section, write_report
+from conductor.reports.builder.editor import edit_report
 from conductor.reports.builder import models
 from conductor.builder.agent import ResearchAgentTemplate, ResearchTeamTemplate
 from conductor.reports.builder.runner import (
@@ -17,6 +18,7 @@ import os
 from elasticsearch import Elasticsearch
 import dspy
 from tests.utils import save_model_to_test_data, load_model_from_test_data
+import json
 
 
 def test_outline_builder() -> None:
@@ -171,3 +173,22 @@ def test_write_report_gpt4o() -> None:
     report = write_report(outline=outline, elastic_retriever=retriever)
     assert isinstance(report, models.Report)
     save_model_to_test_data(report, "report.json")
+
+
+def test_edit_report() -> None:
+    bedrock_claude_sonnet = dspy.LM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
+        max_tokens=3000,
+    )
+    dspy.configure(lm=bedrock_claude_sonnet)
+    report = load_model_from_test_data(
+        models.Report, "test_full_report_v3_pipeline.json"
+    )
+    edited_report = edit_report(
+        perspective="Looking for strategic gaps in the company's operations and what they also do well.",
+        report=report,
+    )
+    assert isinstance(edited_report, list)
+    assert len(edited_report) == 4
+    with open("./edited_report.json", "w") as f:
+        json.dump(edited_report, f, indent=4)

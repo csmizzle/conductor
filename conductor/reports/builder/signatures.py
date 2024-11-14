@@ -128,12 +128,14 @@ class Section(dspy.Signature):
     The section should be constructed from the section outline title and have a similar structure to the section outline content.
     Paragraphs should be constructed from sentences and not filled with any fluffy content.
     Paragraphs should be at least 3 sentences long but no longer than 5 sentences.
+    Paragraphs never have duplicate content.
     Each sentence of the report is a transformation of a cited answer into a sentence.
     The transformed sentence should be accompanied by its original question and answer.
-    If there are any worthwhile analytical insights, they should be included in the section.
+    Add analytical insights, they should be included in the section.
     Sections should be logically structured and flow from one sentence to the next with a logical progression.
+    Section never have duplicate content.
     Use source credibility to highlight areas where you have high confidence in the answer and low confidence in the answer.
-    When referencing the source credibility, also provide a reason for the credibility score.
+    Use words like "unlikely", "likely", or "highly likely" to indicate the level of confidence in the answer.
     """
 
     section_outline_title: str = dspy.InputField(prefix="Section Outline Title: ")
@@ -141,3 +143,38 @@ class Section(dspy.Signature):
     questions: list[str] = dspy.InputField(prefix="Questions: ")
     answers: list[CitedAnswerWithCredibility] = dspy.InputField(prefix="Answers: ")
     section: models.Section = dspy.OutputField(prefix="Section: ")
+
+
+class ReportForReview(dspy.Signature):
+    """
+    Edit the report to make sure that all sections are not fluffy and have a clear narrative flow.
+    Ensure the perspective is woven into the report.
+    There should be no duplicate content in the report so use the answers for the sentences to ensure this.
+    Duplicate language should be removed and replaced with synonyms.
+    If the section is lacking second level analysis that would generate the reader novel insights, add this analysis.
+    If the section is lacking a clear narrative flow, add this narrative flow.
+    The generated section list is always the same length as the original section list, never add or remove sections.
+    """
+
+    sections: list[list[str]] = dspy.InputField(
+        prefix="Report: ", desc="The report sections"
+    )
+    perspective: str = dspy.InputField(prefix="Perspective: ")
+    edited_report: list[list[str]] = dspy.OutputField(
+        prefix="Edited Report: ", desc="The edited report sections"
+    )
+
+
+class SectionForReview(dspy.Signature):
+    """
+    Edit the report to make sure that all sections are not fluffy and have a clear narrative flow.
+    Ensure the perspective is woven into the report.
+    There should be no duplicate content in the report so use the answers for the sentences to ensure this.
+    If the section is lacking second level analysis that would generate the reader novel insights, add this analysis.
+    If the section is lacking a clear narrative flow, add this narrative flow.
+    The generated section list is always the same length as the original section list.
+    """
+
+    section: list[str] = dspy.InputField(prefix="Section: ")
+    perspective: str = dspy.InputField(prefix="Perspective: ")
+    edited_section: list[str] = dspy.OutputField(prefix="Edited Section: ")

@@ -23,13 +23,11 @@ class SectionWriter(dspy.Module):
         elastic_retriever: ElasticRMClient,
     ) -> None:
         self.rag = CitationRAG(elastic_retriever)
-        self.generate_section_questions = dspy.ReAct(
+        self.generate_section_questions = dspy.ChainOfThought(
             signatures.SectionQuestion,
-            tools=[elastic_retriever],
         )
-        self.generate_section = dspy.ReAct(
+        self.generate_section = dspy.ChainOfThought(
             signatures.Section,
-            tools=[elastic_retriever],
         )
 
     def forward(
