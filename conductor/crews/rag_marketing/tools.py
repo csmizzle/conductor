@@ -23,10 +23,6 @@ from serpapi import GoogleSearch
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from loguru import logger
-import sys
-
-
-logger.add(sys.stdout, enqueue=True, colorize=True)
 
 
 class FixedVectorSearchToolSchema(BaseModel):
@@ -78,7 +74,7 @@ def ingest(
 
 # parallelized ingest function
 def parallel_ingest(urls, client, headers=None, cookies=None):
-    with ThreadPoolExecutor(max_workers=5) as executor:
+    with ThreadPoolExecutor() as executor:
         futures = {
             executor.submit(ingest, client, url, headers, cookies): url for url in urls
         }

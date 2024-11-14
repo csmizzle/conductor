@@ -24,6 +24,7 @@ bedrock_claude_sonnet = dspy.LM(
     max_tokens=3000,
     temperature=0.0,
 )
+mini = dspy.LM("gpt-4o-mini")
 dspy.configure(lm=bedrock_claude_sonnet)
 specification = "The company is Thomson Reuters Special Services"
 triple_types = [
@@ -85,6 +86,15 @@ def test_relationship_extraction_parallel() -> None:
 
 
 def test_create_graph() -> None:
+    graph = create_graph(
+        specification=specification, triple_types=triple_types, retriever=retriever
+    )
+    assert isinstance(graph, Graph)
+    save_model_to_test_data(graph, "graph.json")
+
+
+def test_create_graph_mini() -> None:
+    dspy.configure(lm=mini)
     graph = create_graph(
         specification=specification, triple_types=triple_types, retriever=retriever
     )

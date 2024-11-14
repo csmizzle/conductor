@@ -32,6 +32,13 @@ from conductor.reports.builder.outline import (
 from conductor.reports.builder.writer import write_report
 from conductor.reports.builder import models as report_models
 from conductor.profiles.generate import generate_profile_parallel
+from conductor.graph.extraction import (
+    create_graph,
+)
+from conductor.graph.models import (
+    TripleType,
+    Graph,
+)
 from pydantic import BaseModel
 from typing import Callable, Optional
 from reportlab.platypus import SimpleDocTemplate
@@ -45,10 +52,6 @@ from crewai.crews.crew_output import CrewOutput
 from elasticsearch import Elasticsearch
 from langchain_core.embeddings import Embeddings
 from loguru import logger
-import sys
-
-
-logger.add(sys.stdout, colorize=True, enqueue=True)
 
 
 class ResearchPipeline:
@@ -389,9 +392,12 @@ class ResearchPipelineV2:
         perspective: str,
         section_titles: list[str],
         elasticsearch: Elasticsearch,
+        research_retriever: retriever.ElasticRMClient,
         elasticsearch_index: str,
         embeddings: Embeddings,
+        graph_retriever: retriever.ElasticRMClient = None,
         profile: BaseModel = None,
+        triple_types: list[TripleType] = None,
         cohere_api_key: str = None,
         run_in_parallel: bool = False,
         team_builder_llm: LM = None,
@@ -400,7 +406,7 @@ class ResearchPipelineV2:
         outline_llm: LM = None,
         report_llm: LM = None,
         profile_llm: LM = None,
-        k: int = 3,
+        graph_llm: LM = None,
         research_max_iterations: int = 1,
     ) -> None:
         self.url = url
@@ -411,6 +417,7 @@ class ResearchPipelineV2:
         self.elasticsearch_index = elasticsearch_index
         self.embeddings = embeddings
         # optional parameters
+        self.triple_types = triple_types
         self.profile = profile
         self.cohere_api_key = cohere_api_key
         self.team_builder_llm = team_builder_llm
@@ -419,8 +426,8 @@ class ResearchPipelineV2:
         self.outline_llm = outline_llm
         self.report_llm = report_llm
         self.profile_llm = profile_llm
+        self.graph_llm = graph_llm
         self.run_in_parallel = run_in_parallel
-        self.k = k
         self.research_max_iterations = research_max_iterations
         # pipeline components
         self.team: ResearchTeamTemplate = None
@@ -436,6 +443,10 @@ class ResearchPipelineV2:
         self.refined_outline: models.ReportOutline = None
         self.report: models.Report = None
         self.generated_profile: BaseModel = None
+        self.generated_graph: Graph = None
+        # retriever
+        self.research_retriever = research_retriever
+        self.graph_retriever = graph_retriever
 
     def build_team_template(self) -> ResearchTeamTemplate:
         """
@@ -536,13 +547,7 @@ class ResearchPipelineV2:
         self.search_flow = SearchFlow(
             search_team=self.search_team,
             organization_determination=self.research_flow.state.organization_determination.raw,
-            elastic_retriever=retriever.ElasticRMClient(
-                elasticsearch=self.elasticsearch,
-                index_name=self.elasticsearch_index,
-                embeddings=self.embeddings,
-                cohere_api_key=self.cohere_api_key,
-                k=self.k,
-            ),
+            elastic_retriever=self.research_retriever,
         )
         self.search_answers = run_search_flow(flow=self.search_flow)
         return self.search_answers
@@ -570,6 +575,33 @@ class ResearchPipelineV2:
                 "Missing specification to generate profile, try running run_research() first."
             )
             raise ValueError("Missing specification to generate profile")
+
+    def build_graph(self) -> Graph:
+        """Build a graph using the company specification
+
+        Returns:
+            Graph: The generated graph
+        """
+        if self.graph_retriever:
+            if self.specification:
+                if self.graph_llm:
+                    dspy.configure(lm=self.graph_llm)
+                logger.info("Building graph ...")
+                self.generated_graph = create_graph(
+                    specification=self.specification,
+                    triple_types=self.triple_types,
+                    retriever=self.graph_retriever,
+                )
+                logger.info("Graph built.")
+                return self.generated_graph
+            else:
+                logger.error(
+                    "Missing specification to build graph, try running run_research() first."
+                )
+                raise ValueError("Missing specification to build graph")
+        else:
+            logger.error("Missing graph retriever, try providing a graph_retriever")
+            raise ValueError("Missing graph retriever, try providing a graph_retriever")
 
     def create_run_result(self) -> RunResult:
         """
@@ -621,14 +653,7 @@ class ResearchPipelineV2:
         if self.report_llm:
             dspy.configure(lm=self.report_llm)
         self.report = write_report(
-            outline=self.refined_outline,
-            elastic_retriever=retriever.ElasticRMClient(
-                elasticsearch=self.elasticsearch,
-                index_name=self.elasticsearch_index,
-                embeddings=self.embeddings,
-                cohere_api_key=self.cohere_api_key,
-                k=self.k,
-            ),
+            outline=self.refined_outline, elastic_retriever=self.research_retriever
         )
         return self.report
 

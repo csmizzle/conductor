@@ -152,6 +152,20 @@ def test_pipeline_v2_build_teams(elasticsearch_cloud_test_research_index) -> Non
     gpt_4o_mini = LLM(
         model="gpt-4o-mini",
     )
+    research_retriver = ElasticRMClient(
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_cloud_test_research_index,
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
+    graph_retriever = ElasticRMClient(
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_cloud_test_research_index,
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        k=10,
+        rerank_top_n=5,
+    )
     # run pipeline
     pipeline = ResearchPipelineV2(
         url=url,
@@ -168,6 +182,8 @@ def test_pipeline_v2_build_teams(elasticsearch_cloud_test_research_index) -> Non
         search_llm=bedrock_claude_sonnet,
         outline_llm=bedrock_claude_sonnet,
         report_llm=bedrock_claude_sonnet,
+        research_retriever=research_retriver,
+        graph_retriever=graph_retriever,
     )
     pipeline.build_teams()
     assert pipeline.team is not None
@@ -177,6 +193,12 @@ def test_pipeline_v2_build_teams(elasticsearch_cloud_test_research_index) -> Non
 
 def test_pipeline_class_v2_research(elasticsearch_cloud_test_research_index) -> None:
     # run pipeline
+    research_retriever = ElasticRMClient(
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_cloud_test_research_index,
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
     pipeline = ResearchPipelineV2(
         url=url,
         team_title=team_title,
@@ -185,6 +207,7 @@ def test_pipeline_class_v2_research(elasticsearch_cloud_test_research_index) -> 
         elasticsearch=elasticsearch,
         elasticsearch_index=elasticsearch_cloud_test_research_index,
         embeddings=BedrockEmbeddings(),
+        research_retriever=research_retriever,
         cohere_api_key=os.getenv("COHERE_API_KEY"),
         team_builder_llm=gpt_4o_mini_dspy,
         research_llm=gpt_4o_mini,
@@ -207,6 +230,12 @@ def test_pipeline_class_v2_research_parallel(
     elasticsearch_cloud_test_research_index,
 ) -> None:
     # run pipeline
+    research_retriever = ElasticRMClient(
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_cloud_test_research_index,
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
     pipeline = ResearchPipelineV2(
         url=url,
         team_title=team_title,
@@ -217,6 +246,7 @@ def test_pipeline_class_v2_research_parallel(
         embeddings=BedrockEmbeddings(),
         cohere_api_key=os.getenv("COHERE_API_KEY"),
         run_in_parallel=True,
+        research_retriever=research_retriever,
         team_builder_llm=gpt_4o_mini_dspy,
         research_llm=gpt_4o_mini,
         search_llm=bedrock_claude_sonnet,
