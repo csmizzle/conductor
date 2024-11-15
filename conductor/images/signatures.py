@@ -8,6 +8,7 @@ from conductor.graph.models import Relationship
 class RelationshipImageSearch(dspy.Signature):
     """
     Transform a source, relationship, and target into an keyword image search for a search engine like Google
+    Do not wrap the query in quotes or add any trailing whitespace
     """
 
     relationship: Relationship = dspy.InputField(

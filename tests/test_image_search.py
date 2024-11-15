@@ -2,12 +2,15 @@
 Test image search
 """
 from conductor.images.signatures import RelationshipImageSearch
+from conductor.chains.tools import image_search
+from conductor.rag.ingest import process_image_from_query
 from conductor.images.search import (
     build_searches_from_graph,
     collect_images_from_graph,
     collect_images_from_queries,
 )
 from conductor.graph.models import Graph
+from conductor.reports.models import ImageSearchResult
 import dspy
 from tests.utils import load_model_from_test_data
 from langtrace_python_sdk import with_langtrace_root_span
@@ -58,3 +61,17 @@ def test_collect_images_from_graph() -> None:
         graph=graph, api_key=os.getenv("SERPAPI_API_KEY")
     )
     assert isinstance(images, list)
+
+
+def test_image_search() -> None:
+    query = '"Yisroel Brumer employee at Red Cell Partners"'
+    api_key = os.getenv("SERPAPI_API_KEY")
+    results = image_search(query=query, api_key=api_key)
+    assert "images_results" in results
+
+
+def test_process_image_from_query() -> None:
+    query = "Yisroel Brumer employee at Red Cell Partners"
+    api_key = os.getenv("SERPAPI_API_KEY")
+    image = process_image_from_query(query=query, api_key=api_key)
+    assert isinstance(image, ImageSearchResult)
