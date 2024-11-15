@@ -90,6 +90,7 @@ class ResearchFlow(Flow[ResearchFlowState]):
             {"website_url": self.url}
         )
         self.state.organization_determination = organization_determination
+        logger.info(f"Organization determination: {organization_determination}")
         return organization_determination
 
     @listen(determine_organization)
