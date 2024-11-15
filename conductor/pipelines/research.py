@@ -32,6 +32,7 @@ from conductor.reports.builder.outline import (
 )
 from conductor.reports.builder.writer import write_report
 from conductor.reports.builder import models as report_models
+from conductor.graph.models import Relationship
 from conductor.profiles.generate import generate_profile_parallel
 from conductor.graph.extraction import (
     create_graph,
@@ -57,6 +58,18 @@ from crewai.crews.crew_output import CrewOutput
 from elasticsearch import Elasticsearch
 from langchain_core.embeddings import Embeddings
 from loguru import logger
+
+
+def log_exceptions(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logger.exception(f"An error occurred in {func.__name__}: {e}")
+            # Optionally, re-raise the exception if you want it to propagate
+            raise
+
+    return wrapper
 
 
 class ResearchPipeline:
@@ -459,6 +472,7 @@ class ResearchPipelineV2:
         self.research_retriever = research_retriever
         self.graph_retriever = graph_retriever
 
+    @log_exceptions
     def build_team_template(self) -> ResearchTeamTemplate:
         """
         Builds the research team.
@@ -476,6 +490,7 @@ class ResearchPipelineV2:
         logger.info("Team template built.")
         return self.team
 
+    @log_exceptions
     def build_research_team(self) -> flow_models.Team:
         if self.team_builder_llm:
             dspy.configure(lm=self.team_builder_llm)
@@ -505,6 +520,7 @@ class ResearchPipelineV2:
                 "Missing team template, try running build_team_template() first."
             )
 
+    @log_exceptions
     def run_research(self) -> list[CrewOutput]:
         """
         Runs the research and search.
@@ -534,6 +550,7 @@ class ResearchPipelineV2:
                 "Missing research team, try running build_research_team() first."
             )
 
+    @log_exceptions
     def build_search_team(self) -> flow_models.SearchTeam:
         """
         Builds the search team.
@@ -547,6 +564,7 @@ class ResearchPipelineV2:
         logger.info("Search team built.")
         return self.search_team
 
+    @log_exceptions
     def run_search(self) -> list[runner.SearchTeamAnswers]:
         """
         Runs the search flow.
@@ -563,6 +581,7 @@ class ResearchPipelineV2:
         self.search_answers = run_search_flow(flow=self.search_flow)
         return self.search_answers
 
+    @log_exceptions
     def build_profile(self) -> BaseModel:
         """
         Generate a profile for the entity.
@@ -587,6 +606,7 @@ class ResearchPipelineV2:
             )
             raise ValueError("Missing specification to generate profile")
 
+    @log_exceptions
     def build_graph(self) -> Graph:
         """Build a graph using the company specification
 
@@ -618,6 +638,7 @@ class ResearchPipelineV2:
             logger.error("Missing graph retriever, try providing a graph_retriever")
             raise ValueError("Missing graph retriever, try providing a graph_retriever")
 
+    @log_exceptions
     def create_run_result(self) -> RunResult:
         """
         Creates the run result.
@@ -647,6 +668,7 @@ class ResearchPipelineV2:
         )
         return self.outline
 
+    @log_exceptions
     def build_refined_outline(self) -> report_models.ReportOutline:
         """
         Builds the refined report outline.
@@ -667,6 +689,7 @@ class ResearchPipelineV2:
             logger.error("Missing outline to refine")
             raise ValueError("Missing outline to refine")
 
+    @log_exceptions
     def write_report(self) -> report_models.Report:
         """
         Writes the report.
@@ -686,6 +709,7 @@ class ResearchPipelineV2:
                 "Missing refined outline, try running build_refined_outline()"
             )
 
+    @log_exceptions
     def build_teams(self) -> None:
         """
         Builds the research and search teams.
@@ -695,6 +719,7 @@ class ResearchPipelineV2:
         self.build_research_team()
         self.build_search_team()
 
+    @log_exceptions
     def run(self) -> report_models.Report:
         """
         Runs the pipeline.
@@ -709,7 +734,8 @@ class ResearchPipelineV2:
         self.build_refined_outline()
         self.write_report()
 
-    def build_image_search_queries(self) -> list[str]:
+    @log_exceptions
+    def build_image_search_queries(self) -> dict[str, Relationship]:
         if self.generated_graph:
             if self.image_search_llm:
                 dspy.configure(lm=self.image_search_llm)
@@ -723,6 +749,7 @@ class ResearchPipelineV2:
             logger.error("Missing graph to build image search queries")
             raise ValueError("Missing graph to build image search queries")
 
+    @log_exceptions
     def collect_images(self) -> list[ImageSearchResult]:
         if self.generated_image_search_queries:
             if self.image_search_llm:
