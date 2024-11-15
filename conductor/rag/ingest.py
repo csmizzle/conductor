@@ -267,7 +267,7 @@ def process_image_from_query(
                 )
             )
         else:
-            logger.info(f"No image results found for {query["search_parameters"]["q"]}")
+            logger.info(f"No image results found for {query}")
     return image_result
 
 
