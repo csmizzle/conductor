@@ -17,8 +17,9 @@ from conductor.reports.builder.outline import (
 from conductor.reports.builder.writer import write_report
 from conductor.reports.builder import models
 from conductor.pipelines.research import ResearchPipelineV2
+from conductor.pipelines.models import ResearchPipelineState
 from conductor.profiles.models import Company
-from tests.utils import save_model_to_test_data
+from tests.utils import save_model_to_test_data, load_model_from_test_data
 from crewai import LLM
 from elasticsearch import Elasticsearch
 import dspy
@@ -493,6 +494,57 @@ def test_research_and_search_pipeline_profile(
     assert pipeline.profile is not None
     state = pipeline.serialize()
     save_model_to_test_data(state, "test_pipeline_v2_profile.json")
+
+
+def test_load_pipeline_v2_report_state(
+    elasticsearch_cloud_test_research_index: str,
+) -> None:
+    """
+    Write report after loading state
+    """
+    state = load_model_from_test_data(
+        filename="test_pipeline_v2_profile.json",
+        model=ResearchPipelineState,
+    )
+    research_retriever = ElasticRMClient(
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_cloud_test_research_index,
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
+    pipeline = ResearchPipelineV2.deserialize(
+        state=state,
+        url=url,
+        team_title=team_title,
+        perspective=perspective,
+        section_titles=section_titles,
+        elasticsearch=elasticsearch,
+        elasticsearch_index=elasticsearch_cloud_test_research_index,
+        embeddings=BedrockEmbeddings(),
+        profile=Company,
+        research_retriever=research_retriever,
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        run_in_parallel=True,
+        team_builder_llm=gpt_4o_mini_dspy,
+        research_llm=gpt_4o_mini,
+        search_llm=bedrock_claude_sonnet,
+        outline_llm=bedrock_claude_sonnet,
+        report_llm=bedrock_claude_sonnet,
+        profile_llm=bedrock_claude_sonnet,
+        research_max_iterations=1,
+    )
+    # build outline
+    pipeline.build_outline()
+    assert pipeline.outline is not None
+    # refine outline
+    pipeline.build_refined_outline()
+    assert pipeline.refined_outline is not None
+    # write report
+    pipeline.write_report()
+    assert pipeline.report is not None
+    save_model_to_test_data(
+        pipeline.report, "test_full_report_v3__loaded_state_pipeline.json"
+    )
 
 
 def test_image_search_pipeline(
