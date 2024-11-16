@@ -1,5 +1,6 @@
 import dspy
 import concurrent.futures
+from conductor.flow import signatures
 from conductor.flow import models
 from conductor.flow.research import TrimmedPromptTask
 
@@ -18,9 +19,7 @@ class DescriptionSpecification:
         """
         Specify the description
         """
-        specifier = dspy.ChainOfThought(
-            "value_name:str, description: str, specification: str -> specified_retrieval_question: str"
-        )
+        specifier = dspy.ChainOfThought(signatures.DescriptionSpecification)
         return specifier(
             value_name=self.name,
             description=self.description,

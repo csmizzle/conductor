@@ -45,6 +45,7 @@ from conductor.images.search import (
     build_searches_from_graph,
     collect_images_from_queries,
 )
+from conductor.pipelines.models import ResearchPipelineState
 from pydantic import BaseModel
 from typing import Callable, Optional
 from reportlab.platypus import SimpleDocTemplate
@@ -451,14 +452,15 @@ class ResearchPipelineV2:
         self.image_search_llm = image_search_llm
         self.run_in_parallel = run_in_parallel
         self.research_max_iterations = research_max_iterations
+        # flows
+        self.search_flow: SearchFlow = None
+        self.research_flow: ResearchFlow = None
         # pipeline components
         self.team: ResearchTeamTemplate = None
         self.research_team: flow_models.Team = None
         self.research_results: Optional[list[CrewOutput]] = None
-        self.research_flow: ResearchFlow = None
         self.specification: str = None
         self.search_team: flow_models.SearchTeam = None
-        self.search_flow: SearchFlow = None
         self.search_answers: Optional[list[runner.SearchTeamAnswers]] = None
         self.run_result: RunResult = None
         self.outline: models.ReportOutline = None
@@ -466,7 +468,7 @@ class ResearchPipelineV2:
         self.report: models.Report = None
         self.generated_profile: BaseModel = None
         self.generated_graph: Graph = None
-        self.generated_image_search_queries: list[str] = None
+        self.generated_image_search_queries: dict[str, Relationship] = None
         self.image_search_results: list[ImageSearchResult] = None
         # retriever
         self.research_retriever = research_retriever
@@ -763,3 +765,89 @@ class ResearchPipelineV2:
         else:
             logger.error("Missing search queries to collect images")
             raise ValueError("Missing search queries to collect images")
+
+    def serialize(self) -> dict:
+        """
+        Deserialize the pipeline state to a ResearchPipelineState object
+        """
+        return ResearchPipelineState(
+            team=self.team,
+            research_team_output=self.research_results,
+            specification=self.specification,
+            search_results=self.search_answers,
+            outline=self.outline,
+            profile=self.generated_profile,
+            report=self.report,
+            graph=self.generated_graph,
+            image_search_queries=self.generated_image_search_queries,
+            image_search_results=self.image_search_results,
+        )
+
+    @classmethod
+    def deserialize(
+        cls,
+        state: ResearchPipelineState,
+        url: str,
+        team_title: str,
+        perspective: str,
+        section_titles: list[str],
+        elasticsearch: Elasticsearch,
+        research_retriever: retriever.ElasticRMClient,
+        elasticsearch_index: str,
+        embeddings: Embeddings,
+        graph_retriever: retriever.ElasticRMClient = None,
+        profile: BaseModel = None,
+        triple_types: list[TripleType] = None,
+        cohere_api_key: str = None,
+        serp_api_key: str = None,
+        run_in_parallel: bool = False,
+        team_builder_llm: LM = None,
+        research_llm: LLM = None,
+        search_llm: LM = None,
+        outline_llm: LM = None,
+        report_llm: LM = None,
+        profile_llm: LM = None,
+        graph_llm: LM = None,
+        image_search_llm: LM = None,
+        research_max_iterations: int = 1,
+    ) -> "ResearchPipelineV2":
+        """
+        Deserialize the pipeline state from a dictionary along with the required parameters
+        """
+        klass = cls(
+            url=url,
+            team_title=team_title,
+            perspective=perspective,
+            section_titles=section_titles,
+            elasticsearch=elasticsearch,
+            research_retriever=research_retriever,
+            elasticsearch_index=elasticsearch_index,
+            embeddings=embeddings,
+            graph_retriever=graph_retriever,
+            profile=profile,
+            triple_types=triple_types,
+            cohere_api_key=cohere_api_key,
+            serp_api_key=serp_api_key,
+            run_in_parallel=run_in_parallel,
+            team_builder_llm=team_builder_llm,
+            research_llm=research_llm,
+            search_llm=search_llm,
+            outline_llm=outline_llm,
+            report_llm=report_llm,
+            profile_llm=profile_llm,
+            graph_llm=graph_llm,
+            image_search_llm=image_search_llm,
+            research_max_iterations=research_max_iterations,
+        )
+        # set the state
+        klass.team = state.team
+        klass.research_results = state.research_team_output
+        klass.specification = state.specification
+        klass.search_answers = state.search_results
+        klass.outline = state.outline
+        klass.report = state.report
+        klass.generated_profile = state.profile
+        klass.generated_graph = state.graph
+        klass.generated_image_search_queries = state.image_search_queries
+        klass.image_search_results = state.image_search_results
+        return klass

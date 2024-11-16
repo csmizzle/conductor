@@ -449,6 +449,12 @@ def test_report_pipeline_max_iter_small(
 def test_research_and_search_pipeline_profile(
     elasticsearch_cloud_test_research_index: str,
 ) -> None:
+    research_retriever = ElasticRMClient(
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_cloud_test_research_index,
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
     pipeline = ResearchPipelineV2(
         url=url,
         team_title=team_title,
@@ -458,6 +464,7 @@ def test_research_and_search_pipeline_profile(
         elasticsearch_index=elasticsearch_cloud_test_research_index,
         embeddings=BedrockEmbeddings(),
         profile=Company,
+        research_retriever=research_retriever,
         cohere_api_key=os.getenv("COHERE_API_KEY"),
         run_in_parallel=True,
         team_builder_llm=gpt_4o_mini_dspy,
@@ -484,6 +491,8 @@ def test_research_and_search_pipeline_profile(
     # create company profile
     pipeline.build_profile()
     assert pipeline.profile is not None
+    state = pipeline.serialize()
+    save_model_to_test_data(state, "test_pipeline_v2_profile.json")
 
 
 def test_image_search_pipeline(
