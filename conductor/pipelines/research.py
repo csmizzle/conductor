@@ -766,7 +766,7 @@ class ResearchPipelineV2:
             logger.error("Missing search queries to collect images")
             raise ValueError("Missing search queries to collect images")
 
-    def serialize(self) -> dict:
+    def serialize(self) -> ResearchPipelineState:
         """
         Deserialize the pipeline state to a ResearchPipelineState object
         """
