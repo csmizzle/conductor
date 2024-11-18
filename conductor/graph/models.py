@@ -64,6 +64,9 @@ class Graph(BaseModel):
     entities: List[Entity] = Field(description="List of entities")
     relationships: List[Relationship] = Field(description="List of relationships")
 
+    class Config:
+        use_enum_values = True
+
 
 class TripleType(BaseModel):
     """

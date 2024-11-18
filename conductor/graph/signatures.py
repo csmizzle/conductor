@@ -27,6 +27,7 @@ class ExtractedRelationships(dspy.Signature):
     The triple serves are your grounding to extract the correct kinds of entities and relationships.
     Only extract the entities and relationships that are relevant to the triple and ignore the rest.
     The entity type, relationship type, and target type will only be one of the types in the triple_type.
+    Only return the relationship if the source name and target name are filled out, never return a relationship with an empty string source or target.
     """
 
     query: str = dspy.InputField(
