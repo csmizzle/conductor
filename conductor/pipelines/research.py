@@ -577,7 +577,7 @@ class ResearchPipelineV2:
             dspy.configure(lm=self.search_llm)
         self.search_flow = SearchFlow(
             search_team=self.search_team,
-            organization_determination=self.research_flow.state.organization_determination.raw,
+            organization_determination=self.specification,
             elastic_retriever=self.research_retriever,
         )
         self.search_answers = run_search_flow(flow=self.search_flow)
