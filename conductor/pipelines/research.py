@@ -34,6 +34,7 @@ from conductor.reports.builder.writer import write_report
 from conductor.reports.builder import models as report_models
 from conductor.graph.models import Relationship
 from conductor.profiles.generate import generate_profile_parallel
+from conductor.profiles.models import Company
 from conductor.graph.extraction import (
     create_graph,
 )
@@ -415,7 +416,7 @@ class ResearchPipelineV2:
         elasticsearch_index: str,
         embeddings: Embeddings,
         graph_retriever: retriever.ElasticRMClient = None,
-        profile: BaseModel = None,
+        # profile: BaseModel = None,
         triple_types: list[TripleType] = None,
         cohere_api_key: str = None,
         serp_api_key: str = None,
@@ -439,7 +440,7 @@ class ResearchPipelineV2:
         self.embeddings = embeddings
         # optional parameters
         self.triple_types = triple_types
-        self.profile = profile
+        # self.profile = profile
         self.cohere_api_key = cohere_api_key
         self.serp_api_key = serp_api_key
         self.team_builder_llm = team_builder_llm
@@ -593,7 +594,7 @@ class ResearchPipelineV2:
                 dspy.configure(lm=self.profile_llm)
             logger.info("Generating profile ...")
             self.generated_profile = generate_profile_parallel(
-                model=self.profile,
+                model=Company,
                 embeddings=self.embeddings,
                 specification=self.specification,
                 elasticsearch=self.elasticsearch,
@@ -824,7 +825,6 @@ class ResearchPipelineV2:
             elasticsearch_index=elasticsearch_index,
             embeddings=embeddings,
             graph_retriever=graph_retriever,
-            profile=profile,
             triple_types=triple_types,
             cohere_api_key=cohere_api_key,
             serp_api_key=serp_api_key,
