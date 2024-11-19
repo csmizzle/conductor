@@ -125,15 +125,15 @@ class SectionQuestion(dspy.Signature):
 
 class Section(dspy.Signature):
     """
-    You are generating a section of the report.
+    You are generating a narrative section of the report.
     The section should be constructed from the section outline title and have a similar structure to the section outline content.
+    If you cannot find the correct information from supporting documents, you should use the perspective and specification to generate your best analysis and insight.
     Paragraphs should be constructed from sentences and not filled with any fluffy content.
     Paragraphs should be at least 3 sentences long but no longer than 5 sentences.
     Paragraphs never have duplicate content.
     Each sentence of the report is a transformation of a cited answer into a sentence.
     The transformed sentence should be accompanied by its original question and answer.
     Add analytical insights, they should be included in the section.
-    Sections should be logically structured and flow from one sentence to the next with a logical progression.
     Section never have duplicate content.
     Use source credibility to highlight areas where you have high confidence in the answer and low confidence in the answer.
     Use words like "unlikely", "likely", or "highly likely" to indicate the level of confidence in the answer.
