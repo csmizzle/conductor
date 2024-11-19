@@ -18,6 +18,7 @@ def build_organization_determination_crew(
         ],
         allow_delegation=False,
         llm=llm,
+        max_iter=2,
     )
     organization_determination_task = Task(
         description=f"Determine the organization from the website {website_url}",
