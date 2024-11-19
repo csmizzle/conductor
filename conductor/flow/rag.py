@@ -103,6 +103,20 @@ class CitationRAG(dspy.Module):
         return answer_with_credibility
 
 
+class AgenticCitationRAG(dspy.Module):
+    """
+    Add an agentic tool use loop to find the answer if it's not available in initial search
+    """
+
+    def __init__(
+        self,
+        elastic_retriever: ElasticRMClient,
+    ) -> None:
+        super().__init__()
+        self.retriever = elastic_retriever
+        self.generate_answer = dspy.ChainOfThought(CitedAnswer)
+
+
 class CitationValueRAG(dspy.Module):
     def __init__(
         self,

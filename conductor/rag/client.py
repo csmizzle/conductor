@@ -106,7 +106,7 @@ class ElasticsearchRetrieverClient:
         """
         return self.store.similarity_search(query=query, **kwargs)
 
-    def find_document_by_url(self, url: str) -> dict:
+    def find_document_by_url(self, url: str, min_score_threshold: float = 0.97) -> dict:
         """
         Find document by URL
         """
@@ -116,5 +116,6 @@ class ElasticsearchRetrieverClient:
             body={
                 "query": {"match": {"metadata.url": url}},
                 "size": 1,
+                "min_score": min_score_threshold,
             },
         )
