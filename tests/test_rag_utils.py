@@ -31,7 +31,8 @@ def test_get_page_content_with_source_url():
 
 def test_get_content_and_source_from_response(elasticsearch_test_index) -> None:
     elasticsearch = Elasticsearch(
-        hosts=[os.getenv("ELASTICSEARCH_URL")],
+        hosts=[os.getenv("ELASTICSEARCH_CLOUD_URL")],
+        api_key=os.getenv("ELASTICSEARCH_CLOUD_API_ADMIN_KEY"),
     )
     client = ElasticsearchRetrieverClient(
         elasticsearch=elasticsearch,
@@ -49,6 +50,22 @@ def test_get_content_and_source_from_response(elasticsearch_test_index) -> None:
     }
     url = "https://trssllc.com"
     url_to_db(url, client, headers=headers)
+    result = client.find_document_by_url(url=url)
+    data_with_source = get_content_and_source_from_response(result)
+    assert isinstance(data_with_source, str)
+
+
+def test_get_content_and_source_from_response_cloud_dev_index() -> None:
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_CLOUD_URL")],
+        api_key=os.getenv("ELASTICSEARCH_CLOUD_API_ADMIN_KEY"),
+    )
+    client = ElasticsearchRetrieverClient(
+        elasticsearch=elasticsearch,
+        embeddings=BedrockEmbeddings(),
+        index_name="evrim-dev-index",
+    )
+    url = "https://trssllc.com"
     result = client.find_document_by_url(url=url)
     data_with_source = get_content_and_source_from_response(result)
     assert isinstance(data_with_source, str)

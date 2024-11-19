@@ -16,6 +16,8 @@ def get_content_and_source_from_response(response: ObjectApiResponse) -> str:
     """
     Get content and source from response
     """
+    if len(response["hits"]["hits"]) == 0:
+        return "No content found, use your own judgment to determine the organization."
     source_document = response["hits"]["hits"][0]["_source"]
     text = source_document["text"]
     source_url = source_document["metadata"]["url"]

@@ -113,5 +113,8 @@ class ElasticsearchRetrieverClient:
         # elasticsearch query looking at metadata field url for exact match
         return self.elasticsearch.search(
             index=self.index_name,
-            body={"query": {"term": {"metadata.url.keyword": {"value": url}}}},
+            body={
+                "query": {"match": {"metadata.url": url}},
+                "size": 1,
+            },
         )
