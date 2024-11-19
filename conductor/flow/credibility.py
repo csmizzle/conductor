@@ -34,7 +34,7 @@ class SourceCredibilityAnalysisSignature(dspy.Signature):
     credibility: SourceCredibility = dspy.OutputField()
 
 
-source_analysis = dspy.TypedChainOfThought(SourceCredibilityAnalysisSignature)
+source_analysis = dspy.ChainOfThought(SourceCredibilityAnalysisSignature)
 
 
 def get_source_credibility(source: str) -> dspy.Prediction:
