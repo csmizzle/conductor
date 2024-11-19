@@ -33,12 +33,16 @@ class SectionWriter(dspy.Module):
     def forward(
         self,
         section: models.SectionOutline,
+        specification: str,
+        perspective: str,
     ) -> models.SourcedSection:
         # generate questions from section outline
         logger.info(f"Generating questions for section: {section.section_title}")
         questions = self.generate_section_questions(
             section_outline_title=section.section_title,
             section_outline_content=section.section_content,
+            specification=specification,
+            perspective=perspective,
         )
         # collect answers for each question in parallel
         answers: list[CitedAnswerWithCredibility] = []
@@ -95,17 +99,26 @@ class ReportWriter:
         self.elastic_retriever = elastic_retriever
 
     def write_section(
-        self, section_outline: models.SectionOutline
+        self,
+        section_outline: models.SectionOutline,
+        specification: str,
+        perspective: str,
     ) -> models.SourcedSection:
         """
         Write a section from a report outline
         """
         writer = SectionWriter(self.elastic_retriever)
-        return writer(section=section_outline)
+        return writer(
+            section=section_outline,
+            specification=specification,
+            perspective=perspective,
+        )
 
     def write(
         self,
         outline: models.ReportOutline,
+        specification: str,
+        perspective: str,
     ) -> models.Report:
         # write sections in parallel
         sections = []
@@ -113,7 +126,12 @@ class ReportWriter:
             futures = []
             for section in outline.report_sections:
                 futures.append(
-                    executor.submit(self.write_section, section_outline=section)
+                    executor.submit(
+                        self.write_section,
+                        section_outline=section,
+                        specification=specification,
+                        perspective=perspective,
+                    )
                 )
             for future in concurrent.futures.as_completed(futures):
                 sections.append(future.result())
@@ -123,21 +141,33 @@ class ReportWriter:
 
 def write_section(
     section: models.SectionOutline,
+    specification: str,
+    perspective: str,
     elastic_retriever: ElasticRMClient,
 ) -> dspy.Prediction:
     """
     Write a section from a report outline
     """
     writer = SectionWriter(elastic_retriever)
-    return writer(section=section)
+    return writer(
+        section=section,
+        specification=specification,
+        perspective=perspective,
+    )
 
 
 def write_report(
     outline: models.ReportOutline,
+    specification: str,
+    perspective: str,
     elastic_retriever: ElasticRMClient,
 ) -> dspy.Prediction:
     """
     Write a report from an outline
     """
     writer = ReportWriter(elastic_retriever)
-    return writer.write(outline=outline)
+    return writer.write(
+        outline=outline,
+        specification=specification,
+        perspective=perspective,
+    )

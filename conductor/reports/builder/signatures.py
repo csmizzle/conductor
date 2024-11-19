@@ -90,20 +90,18 @@ class SectionOutline(dspy.Signature):
     section_outline: models.SectionOutline = dspy.OutputField()
 
 
-class RefindedOutline(dspy.Signature):
+class RefinedOutline(dspy.Signature):
     """
     You are refining the outline based on the conversation summaries and the new topics, research gaps, and insights discovered.
     Use the draft outline to as the structure of the refined outline.
     Maintain the headers and sub headers from the draft outline.
-    Creatively blend the perspective into of the outline content.
+    Creatively blend the perspective and specification into of the outline content.
     Use the topics and content of the conversations to drive the refinement of the outline content.
     The refined outline should both branch out to new compelling topics and close existing research gaps discovered during the conversation.
     """
 
-    # conversation_summaries: list[str] = dspy.InputField(
-    #     prefix="Conversation Summaries: "
-    # )
     perspective: str = dspy.InputField(prefix="Perspective: ")
+    specification: str = dspy.InputField(prefix="Specification: ")
     draft_outline: models.ReportOutline = dspy.InputField(prefix="Draft Outline: ")
     refined_outline: models.ReportOutline = dspy.OutputField(prefix="Refined Outline: ")
 
@@ -115,8 +113,11 @@ class SectionQuestion(dspy.Signature):
     Use the section outline content to tailor the questions to ensure that the answers will be relevant to the section.
     The answers of the questions will be transformed into sentences for the section.
     The question should lend themselves to being transformed into sentences that will create a coherent section with a narrative flow.
+    The questions should only be tailored to the specification and perspective of the section.
     """
 
+    perspective: str = dspy.InputField(prefix="Perspective: ")
+    specification: str = dspy.InputField(prefix="Specification: ")
     section_outline_title: str = dspy.InputField(prefix="Section Outline Title: ")
     section_outline_content: str = dspy.InputField(prefix="Section Outline Content: ")
     questions: list[str] = dspy.OutputField(prefix="Questions: ")

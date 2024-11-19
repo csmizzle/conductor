@@ -684,6 +684,7 @@ class ResearchPipelineV2:
             logger.info("Building refined outline ...")
             self.refined_outline = build_refined_outline(
                 perspective=self.perspective,
+                specification=self.specification,
                 draft_outline=self.outline,
             ).refined_outline
             logger.info("Refined outline built.")
@@ -703,7 +704,10 @@ class ResearchPipelineV2:
             if self.report_llm:
                 dspy.configure(lm=self.report_llm)
             self.report = write_report(
-                outline=self.refined_outline, elastic_retriever=self.research_retriever
+                outline=self.refined_outline,
+                elastic_retriever=self.research_retriever,
+                specification=self.specification,
+                perspective=self.perspective,
             )
             return self.report
         else:

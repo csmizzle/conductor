@@ -43,12 +43,12 @@ class OutlineRefiner(dspy.Module):
     """
 
     def __init__(self) -> None:
-        self.refine_outline = dspy.ChainOfThought(signatures.RefindedOutline)
+        self.refine_outline = dspy.ChainOfThought(signatures.RefinedOutline)
 
     def forward(
         self,
-        # conversation_summaries: list[str],
         perspective: str,
+        specification: str,
         draft_outline: models.ReportOutline,
     ) -> dspy.Prediction:
         """
@@ -57,8 +57,8 @@ class OutlineRefiner(dspy.Module):
         # summarize the team conversations
         refined_outline = self.refine_outline(
             perspective=perspective,
-            # conversation_summaries=conversation_summaries,
             draft_outline=draft_outline,
+            specification=specification,
         )
         return refined_outline
 
@@ -81,6 +81,7 @@ def build_outline(
 
 def build_refined_outline(
     perspective: str,
+    specification: str,
     draft_outline: models.ReportOutline,
 ) -> dspy.Prediction:
     """
@@ -89,6 +90,7 @@ def build_refined_outline(
     outline_refiner = OutlineRefiner()
     refined_outline = outline_refiner(
         perspective=perspective,
+        specification=specification,
         draft_outline=draft_outline,
     )
     return refined_outline
