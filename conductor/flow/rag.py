@@ -4,11 +4,17 @@ Answer generation using DSPy
 """
 import dspy
 from conductor.flow.retriever import ElasticRMClient
-from conductor.flow.signatures import CitedAnswer, CitedValue
+from conductor.flow.signatures import CitedAnswer, CitedValue, QuestionHyde
+from conductor.flow.models import CitedAnswer as CitedAnswerModel
 from conductor.flow.credibility import SourceCredibility, get_source_credibility
 from conductor.flow.models import NotAvailable
+from conductor.rag.ingest import url_to_db
+from conductor.crews.rag_marketing.tools import parallel_ingest
+from serpapi import GoogleSearch
 from pydantic import BaseModel, Field
-from typing import Union
+from typing import Union, Tuple, Optional
+from loguru import logger
+import os
 
 
 class CitedAnswerWithCredibility(BaseModel):
@@ -17,7 +23,9 @@ class CitedAnswerWithCredibility(BaseModel):
     documents: list[str] = Field(
         description="The documents used to generate the answer"
     )
-    answer_reasoning: str = Field(description="The reasoning behind the answer")
+    answer_reasoning: Union[str, None] = Field(
+        description="The reasoning behind the answer"
+    )
     citations: list[str] = Field(description="The URLs used in the answer")
     faithfulness: int = Field(ge=1, le=5, description="The faithfulness of the answer")
     factual_correctness: int = Field(
@@ -27,7 +35,7 @@ class CitedAnswerWithCredibility(BaseModel):
     source_credibility: list[SourceCredibility] = Field(
         description="The credibility of the sources"
     )
-    source_credibility_reasoning: list[str] = Field(
+    source_credibility_reasoning: Optional[list[str]] = Field(
         description="The reasoning behind the source credibility"
     )
 
@@ -104,17 +112,129 @@ class CitationRAG(dspy.Module):
 
 
 class AgenticCitationRAG(dspy.Module):
-    """
-    Add an agentic tool use loop to find the answer if it's not available in initial search
-    """
-
     def __init__(
         self,
         elastic_retriever: ElasticRMClient,
+        max_iterations: int = 3,
     ) -> None:
         super().__init__()
         self.retriever = elastic_retriever
+        self.max_iterations = max_iterations
         self.generate_answer = dspy.ChainOfThought(CitedAnswer)
+        self.hyde_question = dspy.Predict(QuestionHyde)
+
+    def _retrieve_answer_from_internet(
+        self, question: str, results: int = 5
+    ) -> Tuple[CitedAnswerModel, list[str]]:
+        """
+        Retrieve the answer from the internet and index document in ElasticSearch
+        """
+        # first check the answer box of serp for the answer
+        logger.info(f"Searching the internet for the answer to question: {question}")
+        retrieved_documents = []
+        search = GoogleSearch(
+            {
+                "q": question,
+                "hl": "en",
+                "gl": "us",
+                "api_key": os.getenv("SERPAPI_API_KEY"),
+            }
+        )
+        google_results_dict = search.get_dict()
+        if "answer_box" in google_results_dict:
+            logger.info(f"Answer found in the answer box for question: {question}")
+            logger.info(
+                f"Ingesting answer link {google_results_dict['answer_box']['link']}"
+            )
+            url_to_db(
+                url=google_results_dict["answer_box"]["link"],
+                client=self.retriever.client,
+            )
+            answer = google_results_dict["answer_box"]["snippet"]
+            url = google_results_dict["answer_box"]["link"]
+            answer = dspy.Prediction(
+                answer=CitedAnswerModel(
+                    answer=answer,
+                    citations=[url],
+                    faithfulness=5,
+                    factual_correctness=5,
+                    confidence=5,
+                )
+            )
+            retrieved_documents = dspy.Prediction(documents=retrieved_documents)
+        elif "organic_results" in google_results_dict:
+            urls_to_ingest = []
+            for idx in range(min(results, len(google_results_dict["organic_results"]))):
+                logger.info(f"Ingesting additional information for query {question}")
+                urls_to_ingest.append(
+                    google_results_dict["organic_results"][idx]["link"]
+                )
+            parallel_ingest(urls=urls_to_ingest, client=self.retriever.client)
+            # search again to get the answer with the indexed documents
+            retrieved_documents = self.retriever(query=question)
+            answer = self.generate_answer(
+                question=question, documents=retrieved_documents
+            )
+        return answer, retrieved_documents
+
+    def forward(
+        self,
+        question: str,
+    ) -> CitedAnswerWithCredibility:
+        retrieved_documents = self.retriever(query=question)
+        answer: CitedAnswerModel = self.generate_answer(
+            question=question, documents=retrieved_documents
+        )
+        # agentic loop to find the answer within max_iterations
+        if answer.answer.answer == NotAvailable.NOT_AVAILABLE.value:
+            logger.info(f"Answer not available for question: {question}")
+            for _ in range(self.max_iterations):
+                # on first iteration, try to retrieve the answer from the internet
+                if _ == 0:
+                    answer, retrieved_documents = self._retrieve_answer_from_internet(
+                        question
+                    )
+                    if answer.answer.answer != NotAvailable.NOT_AVAILABLE.value:
+                        break
+                # in subsequent iterations, use HyDE to modify the question and look against vector database with larger vector
+                else:
+                    logger.info(
+                        f"Looking for answer using HyDE for question: {question}"
+                    )
+                    retrieved_documents = self.retriever(query=question)
+                    answer = self.generate_answer(
+                        question=question, documents=retrieved_documents
+                    )
+                    if answer.answer.answer != NotAvailable.NOT_AVAILABLE.value:
+                        break
+                    else:
+                        logger.info(
+                            f"Answer not available for question: {question}, modifying query with HyDE ..."
+                        )
+                        question = self.hyde_question(question=question).document
+        source_confidences = [
+            get_source_credibility(source=source) for source in answer.answer.citations
+        ]
+        answer_with_credibility = CitedAnswerWithCredibility(
+            question=question,
+            answer=answer.answer.answer,
+            documents=retrieved_documents.documents,
+            citations=answer.answer.citations,
+            faithfulness=answer.answer.faithfulness,
+            factual_correctness=answer.answer.factual_correctness,
+            confidence=answer.answer.confidence,
+            answer_reasoning=getattr(
+                answer, "reasoning", None
+            ),  # since not alwsys chain of thought
+            source_credibility=[
+                source_confidence.credibility
+                for source_confidence in source_confidences
+            ],
+            source_credibility_reasoning=[
+                source_confidence.reasoning for source_confidence in source_confidences
+            ],
+        )
+        return answer_with_credibility
 
 
 class CitationValueRAG(dspy.Module):

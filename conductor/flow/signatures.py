@@ -121,3 +121,15 @@ class DescriptionSpecification(dspy.Signature):
     specified_retrieval_question: str = dspy.OutputField(
         desc="The specified retrieval question"
     )
+
+
+class QuestionHyde(dspy.Signature):
+    """
+    Take a question and create a hypothetical document that would answer the question.
+    Only use the elements of the question to create the document.
+    """
+
+    question: str = dspy.InputField(desc="The question to be answered")
+    document: str = dspy.OutputField(
+        desc="The hypothetical document that would answer the question"
+    )
