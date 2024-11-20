@@ -420,7 +420,11 @@ def test_research_team_specification() -> None:
     )
     research_team = build_team_from_template(
         team_template=team_template,
-        llm=LLM("openai/gpt-4o"),
+        llm=LLM(
+            model="openai/claude-3-5-sonnet",
+            api_base=os.getenv("LITELLM_HOST"),
+            api_key=os.getenv("LITELLM_API_KEY"),
+        ),
         tools=[],
         agent_factory=ResearchAgentFactory,
         task_factory=ResearchQuestionAgentSearchTaskFactory,
@@ -560,14 +564,19 @@ def test_research_flow_sequential(elasticsearch_test_agent_index) -> None:
     agentops.init(os.getenv("AGENTOPS_API_KEY"))
     title = "Company Research Team"
     perspective = "Focus on company risks and opportunities for investment"
-    llm = dspy.LM(
-        "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
-        # api_base=litellm_proxy_url
+    lm = dspy.LM(
+        "openai/claude-3-5-sonnet",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        cache=False,
     )
-    dspy.configure(lm=llm)
-    llm = LLM(
-        model="bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
-        # base_url=litellm_proxy_url,
+    dspy.configure(lm=lm)
+    llm = (
+        LLM(
+            model="claude-3-5-sonnet",
+            base_url=os.getenv("LITELLM_HOST"),
+            api_key=os.getenv("LITELLM_API_KEY"),
+        ),
     )
     elasticsearch = Elasticsearch(
         hosts=[os.getenv("ELASTICSEARCH_URL")],
