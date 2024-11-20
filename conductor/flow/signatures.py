@@ -133,3 +133,14 @@ class QuestionHyde(dspy.Signature):
     document: str = dspy.OutputField(
         desc="The hypothetical document that would answer the question"
     )
+
+
+class ExtractValue(dspy.Signature):
+    """
+    Distill an answer to an answer into a value that would fit into a database.
+    Use the question to help understand which value to extract.
+    """
+
+    question: str = dspy.InputField(desc="The question to be answered")
+    answer: str = dspy.InputField(desc="The answer to the question")
+    value: str = dspy.OutputField(desc="The extracted value")

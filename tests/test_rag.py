@@ -1,7 +1,9 @@
 from conductor.flow.rag import (
     CitationRAG,
     CitedAnswerWithCredibility,
+    CitedValueWithCredibility,
     AgenticCitationRAG,
+    AgenticCitationValueRAG,
 )
 from conductor.flow.retriever import ElasticRMClient
 import os
@@ -41,3 +43,18 @@ def test_agentic_rag() -> None:
     rag = AgenticCitationRAG(elastic_retriever=retriever)
     answer = rag(question="Who is the CFO of TRSS?")
     assert isinstance(answer, CitedAnswerWithCredibility)
+
+
+def test_agentic_rag_value() -> None:
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    elasticsearch_test_index = os.getenv("ELASTICSEARCH_TEST_RAG_INDEX")
+    retriever = ElasticRMClient(
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_test_index,
+        embeddings=BedrockEmbeddings(),
+    )
+    rag = AgenticCitationValueRAG(elastic_retriever=retriever)
+    value = rag(question="Who is the Chief Technology Officer of TRSS?")
+    assert isinstance(value, CitedValueWithCredibility)

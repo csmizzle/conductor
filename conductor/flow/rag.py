@@ -4,12 +4,16 @@ Answer generation using DSPy
 """
 import dspy
 from conductor.flow.retriever import ElasticRMClient
-from conductor.flow.signatures import CitedAnswer, CitedValue, QuestionHyde
+from conductor.flow.signatures import (
+    CitedAnswer,
+    CitedValue,
+    QuestionHyde,
+    ExtractValue,
+)
 from conductor.flow.models import CitedAnswer as CitedAnswerModel
 from conductor.flow.credibility import SourceCredibility, get_source_credibility
 from conductor.flow.models import NotAvailable
-from conductor.rag.ingest import url_to_db
-from conductor.crews.rag_marketing.tools import parallel_ingest
+from conductor.crews.rag_marketing.tools import parallel_ingest, ingest
 from serpapi import GoogleSearch
 from pydantic import BaseModel, Field
 from typing import Union, Tuple, Optional
@@ -51,7 +55,9 @@ class CitedValueWithCredibility(BaseModel):
         description="The value for the question"
     )
     documents: list[str] = Field(description="The documents used to generate the value")
-    value_reasoning: str = Field(description="The reasoning behind the value")
+    value_reasoning: Union[str, None] = Field(
+        description="The reasoning behind the value"
+    )
     citations: list[str] = Field(description="The URLs used in the value")
     faithfulness: int = Field(ge=1, le=5, description="The faithfulness of the value")
     factual_correctness: int = Field(
@@ -146,7 +152,7 @@ class AgenticCitationRAG(dspy.Module):
             logger.info(
                 f"Ingesting answer link {google_results_dict['answer_box']['link']}"
             )
-            url_to_db(
+            ingest(
                 url=google_results_dict["answer_box"]["link"],
                 client=self.retriever.client,
             )
@@ -235,6 +241,36 @@ class AgenticCitationRAG(dspy.Module):
             ],
         )
         return answer_with_credibility
+
+
+class AgenticCitationValueRAG(AgenticCitationRAG):
+    """
+    Convert the AgenticCitationRAG to transform sentences to values
+    """
+
+    def __init__(self, elastic_retriever, max_iterations=3):
+        super().__init__(
+            elastic_retriever=elastic_retriever, max_iterations=max_iterations
+        )
+        self.generate_value = dspy.Predict(ExtractValue)
+
+    def forward(self, question: str) -> CitedValueWithCredibility:
+        # run the forward method of the parent class
+        cited_answer = super().forward(question=question)
+        # convert the answer to a value
+        value = self.generate_value(question=question, answer=cited_answer.answer)
+        return CitedValueWithCredibility(
+            question=question,
+            value=value.value,
+            documents=cited_answer.documents,
+            citations=cited_answer.citations,
+            faithfulness=cited_answer.faithfulness,
+            factual_correctness=cited_answer.factual_correctness,
+            confidence=cited_answer.confidence,
+            value_reasoning=cited_answer.answer_reasoning,
+            source_credibility=cited_answer.source_credibility,
+            source_credibility_reasoning=cited_answer.source_credibility_reasoning,
+        )
 
 
 class CitationValueRAG(dspy.Module):
