@@ -431,6 +431,33 @@ class ResearchPipelineV2:
         image_search_llm: LM = None,
         research_max_iterations: int = 1,
     ) -> None:
+        """Parameters for Evrim research pipeline
+
+        Args:
+            url (str): _description_
+            team_title (str): _description_
+            perspective (str): _description_
+            section_titles (list[str]): _description_
+            elasticsearch (Elasticsearch): _description_
+            research_retriever (retriever.ElasticRMClient): _description_
+            elasticsearch_index (str): _description_
+            embeddings (Embeddings): _description_
+            graph_retriever (retriever.ElasticRMClient, optional): _description_. Defaults to None.
+            triple_types (list[TripleType], optional): _description_. Defaults to None.
+            cohere_api_key (str, optional): _description_. Defaults to None.
+            serp_api_key (str, optional): _description_. Defaults to None.
+            run_in_parallel (bool, optional): _description_. Defaults to False.
+            team_builder_llm (LM, optional): _description_. Defaults to None.
+            research_llm (LLM, optional): _description_. Defaults to None.
+            search_llm (LM, optional): _description_. Defaults to None.
+            outline_llm (LM, optional): _description_. Defaults to None.
+            report_llm (LM, optional): _description_. Defaults to None.
+            profile_llm (LM, optional): _description_. Defaults to None.
+            graph_llm (LM, optional): _description_. Defaults to None.
+            image_search_llm (LM, optional): _description_. Defaults to None.
+            api_base_url (str, optional): _description_. Defaults to None.
+            research_max_iterations (int, optional): _description_. Defaults to 1.
+        """
         self.url = url
         self.team_title = team_title
         self.perspective = perspective

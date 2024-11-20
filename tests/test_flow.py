@@ -446,10 +446,6 @@ def test_research_flow(elasticsearch_test_agent_index) -> None:
         # api_base=litellm_proxy_url
     )
     dspy.configure(lm=llm)
-    llm = LLM(
-        model="bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
-        # base_url=litellm_proxy_url,
-    )
     elasticsearch = Elasticsearch(
         hosts=[os.getenv("ELASTICSEARCH_URL")],
     )
