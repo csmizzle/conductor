@@ -1,6 +1,7 @@
 from conductor.profiles.utils import specify_model
 from conductor.profiles.generate import generate_profile, generate_profile_parallel
 from conductor.profiles.models import Company
+from conductor.flow.rag import WebSearchValueRAG
 from conductor.rag.embeddings import BedrockEmbeddings
 from elasticsearch import Elasticsearch
 import dspy
@@ -26,17 +27,21 @@ def test_generate_profile():
     elasticsearch = Elasticsearch(
         hosts=[os.getenv("ELASTICSEARCH_URL")],
     )
-    profile = generate_profile(
-        model=Company,
-        specification=specification,
+    rag = WebSearchValueRAG.with_elasticsearch_id_retriever(
         elasticsearch=elasticsearch,
         index_name=elasticsearch_test_index,
         embeddings=BedrockEmbeddings(),
         cohere_api_key=os.getenv("COHERE_API_KEY"),
     )
-    assert isinstance(profile, Company)
+    profile = generate_profile(
+        model_schema=Company.model_json_schema(), specification=specification, rag=rag
+    )
+    assert isinstance(profile, dict)
+    new_profile = {}
+    for key, value in profile.items():
+        new_profile[key] = value.model_dump()
     with open("tests/data/company_profile.json", "w") as f:
-        json.dump(profile.model_dump(), f, indent=4)
+        json.dump(new_profile, f, indent=4)
 
 
 @with_langtrace_root_span(name="test_generate_profile_parallel")
@@ -46,14 +51,18 @@ def test_generate_profile_parallel():
     elasticsearch = Elasticsearch(
         hosts=[os.getenv("ELASTICSEARCH_URL")],
     )
-    profile = generate_profile_parallel(
-        model=Company,
-        specification=specification,
+    rag = WebSearchValueRAG.with_elasticsearch_id_retriever(
         elasticsearch=elasticsearch,
         index_name=elasticsearch_test_index,
         embeddings=BedrockEmbeddings(),
         cohere_api_key=os.getenv("COHERE_API_KEY"),
     )
-    assert isinstance(profile, Company)
+    profile = generate_profile_parallel(
+        model_schema=Company.model_json_schema(), specification=specification, rag=rag
+    )
+    assert isinstance(profile, dict)
+    new_profile = {}
+    for key, value in profile.items():
+        new_profile[key] = value.model_dump()
     with open("tests/data/company_profile_parallel.json", "w") as f:
-        json.dump(profile.model_dump(), f, indent=4)
+        json.dump(new_profile, f, indent=4)

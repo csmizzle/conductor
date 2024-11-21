@@ -331,6 +331,7 @@ class WebSearchRAG(dspy.Module):
         Retrieve the answer from the internet and index document in ElasticSearch
         """
         # first check the answer box of serp for the answer
+        answer = None
         logger.info(f"Searching the internet for the answer to question: {question}")
         retrieved_documents = []
         search = GoogleSearch(
@@ -343,7 +344,6 @@ class WebSearchRAG(dspy.Module):
         )
         google_results_dict = search.get_dict()
         if "answer_box" in google_results_dict:
-            logger.info(f"Answer found in the answer box for question: {question}")
             logger.info(
                 f"Ingesting answer link {google_results_dict['answer_box']['link']}"
             )
@@ -351,19 +351,23 @@ class WebSearchRAG(dspy.Module):
                 url=google_results_dict["answer_box"]["link"],
                 client=self.retriever.client,
             )
-            answer = google_results_dict["answer_box"]["snippet"]
-            url = google_results_dict["answer_box"]["link"]
-            answer = dspy.Prediction(
-                answer=CitedAnswerModel(
-                    answer=answer,
-                    citations=[url],
-                    faithfulness=5,
-                    factual_correctness=5,
-                    confidence=5,
+            if "snippet" in google_results_dict["answer_box"]:
+                logger.info("Answer found in the snippet")
+                answer = google_results_dict["answer_box"]["snippet"]
+                url = google_results_dict["answer_box"]["link"]
+                answer = dspy.Prediction(
+                    answer=CitedAnswerModel(
+                        answer=answer,
+                        citations=[url],
+                        faithfulness=5,
+                        factual_correctness=5,
+                        confidence=5,
+                    )
                 )
-            )
-            retrieved_documents = dspy.Prediction(documents=retrieved_documents)
-        elif "organic_results" in google_results_dict:
+                retrieved_documents = dspy.Prediction(documents=retrieved_documents)
+            else:
+                logger.info("No answer found in the snippet, ingesting more data ...")
+        if not answer and "organic_results" in google_results_dict:
             urls_to_ingest = []
             logger.info(f"Ingesting additional information for query {question}")
             for idx in range(min(results, len(google_results_dict["organic_results"]))):

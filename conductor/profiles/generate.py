@@ -1,60 +1,39 @@
 """
 Generate RAG based profile building
 """
-from elasticsearch import Elasticsearch
-from pydantic import BaseModel, InstanceOf
-from langchain_core.embeddings import Embeddings
-from conductor.flow.rag import CitationValueRAG
-from conductor.flow.retriever import ElasticRMClient
+from pydantic import InstanceOf
 from conductor.profiles.utils import specify_model
+from conductor.flow.rag import CitedValueWithCredibility
 import concurrent.futures
+import dspy
+from loguru import logger
 
 
 def generate_profile(
-    model: InstanceOf[BaseModel],
-    embeddings: InstanceOf[Embeddings],
-    specification: str,
-    elasticsearch: Elasticsearch,
-    index_name: str,
-    cohere_api_key: str = None,
-) -> BaseModel:
+    model_schema: dict, specification: str, rag: InstanceOf[dspy.Module]
+) -> dict[str, CitedValueWithCredibility]:
     """
     Generate a profile based on a model and a specification
     """
-    specified_fields = specify_model(model=model, specification=specification)
-    retriever = ElasticRMClient(
-        elasticsearch=elasticsearch,
-        index_name=index_name,
-        embeddings=embeddings,
-        cohere_api_key=cohere_api_key,
+    specified_fields = specify_model(
+        model_schema=model_schema, specification=specification
     )
-    rag = CitationValueRAG(elastic_retriever=retriever)
     profile = {}
     for field in specified_fields:
+        logger.info(f"Gathering information for field question: {field}")
         profile[field] = rag(question=specified_fields[field])
-    created_profile = model(**profile)
-    return created_profile
+    return profile
 
 
 def generate_profile_parallel(
-    model: InstanceOf[BaseModel],
-    embeddings: InstanceOf[Embeddings],
-    specification: str,
-    elasticsearch: Elasticsearch,
-    index_name: str,
-    cohere_api_key: str = None,
-) -> BaseModel:
+    model_schema: dict, specification: str, rag: InstanceOf[dspy.Module]
+) -> dict[str, CitedValueWithCredibility]:
     """
     Generate a profile based on a model and a specification
     """
-    specified_fields = specify_model(model=model, specification=specification)
-    retriever = ElasticRMClient(
-        elasticsearch=elasticsearch,
-        index_name=index_name,
-        embeddings=embeddings,
-        cohere_api_key=cohere_api_key,
+    specified_fields = specify_model(
+        model_schema=model_schema, specification=specification
     )
-    rag = CitationValueRAG(elastic_retriever=retriever)
     profile = {}
     # Use concurrent futures to parallelize the profile generation
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -65,5 +44,4 @@ def generate_profile_parallel(
         for future in concurrent.futures.as_completed(futures):
             field = futures[future]
             profile[field] = future.result()
-    created_profile = model(**profile)
-    return created_profile
+    return profile
