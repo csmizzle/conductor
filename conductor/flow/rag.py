@@ -3,7 +3,7 @@ Answer generation using DSPy
 - Each answer should have citations, faithfulness, and factual correctness
 """
 import dspy
-from conductor.flow.retriever import ElasticRMClient
+from conductor.flow.retriever import ElasticRMClient, ElasticDocumentIdRMClient
 from conductor.flow.signatures import (
     CitedAnswer,
     CitedValue,
@@ -14,6 +14,7 @@ from conductor.flow.models import CitedAnswer as CitedAnswerModel
 from conductor.flow.credibility import SourceCredibility, get_source_credibility
 from conductor.flow.models import NotAvailable
 from conductor.crews.rag_marketing.tools import parallel_ingest, ingest
+from conductor.rag.ingest import parallel_ingest_with_ids
 from serpapi import GoogleSearch
 from pydantic import BaseModel, Field
 from typing import Union, Tuple, Optional
@@ -309,3 +310,129 @@ class CitationValueRAG(dspy.Module):
             ],
         )
         return value_with_credibility
+
+
+class WebSearchRAG(dspy.Module):
+    def __init__(
+        self,
+        elastic_id_retriever: ElasticDocumentIdRMClient,
+    ) -> None:
+        super().__init__()
+        self.retriever = elastic_id_retriever
+        self.generate_answer = dspy.ChainOfThought(CitedAnswer)
+
+    def _retrieve_answer_from_internet(
+        self, question: str, results: int = 5
+    ) -> Tuple[CitedAnswerModel, list[str]]:
+        """
+        Retrieve the answer from the internet and index document in ElasticSearch
+        """
+        # first check the answer box of serp for the answer
+        logger.info(f"Searching the internet for the answer to question: {question}")
+        retrieved_documents = []
+        search = GoogleSearch(
+            {
+                "q": question,
+                "hl": "en",
+                "gl": "us",
+                "api_key": os.getenv("SERPAPI_API_KEY"),
+            }
+        )
+        google_results_dict = search.get_dict()
+        if "answer_box" in google_results_dict:
+            logger.info(f"Answer found in the answer box for question: {question}")
+            logger.info(
+                f"Ingesting answer link {google_results_dict['answer_box']['link']}"
+            )
+            ingest(
+                url=google_results_dict["answer_box"]["link"],
+                client=self.retriever.client,
+            )
+            answer = google_results_dict["answer_box"]["snippet"]
+            url = google_results_dict["answer_box"]["link"]
+            answer = dspy.Prediction(
+                answer=CitedAnswerModel(
+                    answer=answer,
+                    citations=[url],
+                    faithfulness=5,
+                    factual_correctness=5,
+                    confidence=5,
+                )
+            )
+            retrieved_documents = dspy.Prediction(documents=retrieved_documents)
+        elif "organic_results" in google_results_dict:
+            urls_to_ingest = []
+            for idx in range(min(results, len(google_results_dict["organic_results"]))):
+                logger.info(f"Ingesting additional information for query {question}")
+                urls_to_ingest.append(
+                    google_results_dict["organic_results"][idx]["link"]
+                )
+            documents = parallel_ingest_with_ids(
+                urls=urls_to_ingest, client=self.retriever.client
+            )
+            # get the document ids
+            document_ids = []
+            for urls in documents.values():
+                document_ids.extend(urls)
+            # search again to get the answer with the indexed documents
+            retrieved_documents = self.retriever(
+                query=question, document_ids=document_ids
+            )
+            answer = self.generate_answer(
+                question=question, documents=retrieved_documents
+            )
+        return answer, retrieved_documents
+
+    def forward(self, question: str) -> CitedAnswerWithCredibility:
+        answer, retrieved_documents = self._retrieve_answer_from_internet(question)
+        source_confidences = [
+            get_source_credibility(source=source) for source in answer.answer.citations
+        ]
+        answer_with_credibility = CitedAnswerWithCredibility(
+            question=question,
+            answer=answer.answer.answer,
+            documents=retrieved_documents.documents,
+            citations=answer.answer.citations,
+            faithfulness=answer.answer.faithfulness,
+            factual_correctness=answer.answer.factual_correctness,
+            confidence=answer.answer.confidence,
+            answer_reasoning=getattr(
+                answer, "reasoning", None
+            ),  # since not always chain of thought
+            source_credibility=[
+                source_confidence.credibility
+                for source_confidence in source_confidences
+            ],
+            source_credibility_reasoning=[
+                source_confidence.reasoning for source_confidence in source_confidences
+            ],
+        )
+        return answer_with_credibility
+
+
+class WebSearchValueRAG(WebSearchRAG):
+    """
+    Convert the AgenticCitationRAG to transform sentences to values
+    """
+
+    def __init__(self, elastic_id_retriever):
+        super().__init__(elastic_id_retriever=elastic_id_retriever)
+        self.generate_value = dspy.Predict(ExtractValue)
+
+    def forward(self, question: str) -> CitedValueWithCredibility:
+        # run the forward method of the parent class
+        cited_answer = super().forward(question=question)
+        # convert the answer to a value
+        value = self.generate_value(question=question, answer=cited_answer.answer)
+        return CitedValueWithCredibility(
+            question=question,
+            value=value.value,
+            documents=cited_answer.documents,
+            citations=cited_answer.citations,
+            faithfulness=cited_answer.faithfulness,
+            factual_correctness=cited_answer.factual_correctness,
+            confidence=cited_answer.confidence,
+            value_reasoning=cited_answer.answer_reasoning,
+            source_credibility=cited_answer.source_credibility,
+            source_credibility_reasoning=cited_answer.source_credibility_reasoning,
+        )

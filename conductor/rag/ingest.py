@@ -40,7 +40,7 @@ def ingest_webpage(url: str, limit: int = 50000, **kwargs) -> WebPage:
                 js_render="true",
                 premium_proxy="true",
             )
-            zen_response = zenrows_client.get(url, params=params, timeout=10)
+            zen_response = zenrows_client.get(url, params=params, timeout=20)
             # process response and try with requests if not successful
             if not zen_response.ok:
                 logger.error(f"Zenrows Error: {zen_response.status_code}")
@@ -97,13 +97,18 @@ def ingest_with_ids(
         document_ids = [doc["_id"] for doc in existing_document["hits"]["hits"]]
         return {url: document_ids}
     else:
-        webpage = url_to_db(
-            url=url, client=client, headers=headers, cookies=cookies, timeout=10
-        )
-        return {url: webpage}
+        try:
+            webpage = url_to_db(
+                url=url, client=client, headers=headers, cookies=cookies, timeout=10
+            )
+            return {url: webpage}
+        except Exception:
+            logger.error(f"Error uploading {url} to db")
 
 
-def parallel_ingest_with_ids(urls, client, headers=None, cookies=None, size=None):
+def parallel_ingest_with_ids(
+    urls, client, headers=None, cookies=None, size=None
+) -> dict[str, list[str]]:
     """
     Run ingest_with_ids in parallel
     """
@@ -122,7 +127,9 @@ def parallel_ingest_with_ids(urls, client, headers=None, cookies=None, size=None
                 )
             )
         for future in futures:
-            results.update(future.result())
+            result = future.result()
+            if result:
+                results.update(result)
     return results
 
 

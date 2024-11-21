@@ -114,8 +114,7 @@ class ElasticsearchRetrieverClient:
         """
         # elasticsearch query looking at metadata field url for exact match
         body = {
-            "query": {"match": {"metadata.url": url}},
-            "min_score": min_score_threshold,
+            "query": {"term": {"metadata.url.keyword": url}},
         }
         if size:
             body["size"] = size
