@@ -16,10 +16,11 @@ from conductor.flow.models import NotAvailable
 from conductor.crews.rag_marketing.tools import parallel_ingest, ingest
 from conductor.rag.ingest import parallel_ingest_with_ids
 from serpapi import GoogleSearch
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, InstanceOf
 from typing import Union, Tuple, Optional
 from loguru import logger
 import os
+import concurrent.futures
 
 
 class CitedAnswerWithCredibility(BaseModel):
@@ -362,8 +363,8 @@ class WebSearchRAG(dspy.Module):
             retrieved_documents = dspy.Prediction(documents=retrieved_documents)
         elif "organic_results" in google_results_dict:
             urls_to_ingest = []
+            logger.info(f"Ingesting additional information for query {question}")
             for idx in range(min(results, len(google_results_dict["organic_results"]))):
-                logger.info(f"Ingesting additional information for query {question}")
                 urls_to_ingest.append(
                     google_results_dict["organic_results"][idx]["link"]
                 )
@@ -436,3 +437,45 @@ class WebSearchValueRAG(WebSearchRAG):
             source_credibility=cited_answer.source_credibility,
             source_credibility_reasoning=cited_answer.source_credibility_reasoning,
         )
+
+
+def get_answer(
+    question: str, rag: InstanceOf[dspy.Module]
+) -> CitedAnswerWithCredibility:
+    return rag(question=question)
+
+
+def get_answers(
+    questions: list[str], rag: InstanceOf[dspy.Module]
+) -> list[CitedAnswerWithCredibility]:
+    """
+    Run get answers in parallel
+    """
+    results = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        futures = []
+        for question in questions:
+            futures.append(executor.submit(get_answer, question, rag))
+        for future in concurrent.futures.as_completed(futures):
+            results.append(future.result())
+    return results
+
+
+def get_value(question: str, rag: InstanceOf[dspy.Module]) -> CitedValueWithCredibility:
+    return rag(question=question)
+
+
+def get_values(
+    questions: list[str], rag: InstanceOf[dspy.Module]
+) -> list[CitedValueWithCredibility]:
+    """
+    Run get values in parallel
+    """
+    results = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+        for question in questions:
+            futures.append(executor.submit(get_value, question, rag))
+        for future in concurrent.futures.as_completed(futures):
+            results.append(future.result())
+    return results

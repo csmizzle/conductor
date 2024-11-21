@@ -3,7 +3,8 @@ from conductor.flow.flow import (
     RunResult,
     run_research_and_search,
 )
-from conductor.flow.retriever import ElasticRMClient
+from conductor.flow.retriever import ElasticRMClient, ElasticDocumentIdRMClient
+from conductor.flow.rag import WebSearchRAG
 from conductor.graph.models import (
     TripleType,
     EntityType,
@@ -16,7 +17,7 @@ from conductor.reports.builder.outline import (
 )
 from conductor.reports.builder.writer import write_report
 from conductor.reports.builder import models
-from conductor.pipelines.research import ResearchPipelineV2
+from conductor.pipelines.research import ResearchPipelineV2, SearchPipeline
 from conductor.pipelines.models import ResearchPipelineState
 from conductor.profiles.models import Company
 from tests.utils import save_model_to_test_data, load_model_from_test_data
@@ -27,6 +28,7 @@ import os
 from langtrace_python_sdk import langtrace
 from langtrace_python_sdk.utils.with_root_span import with_langtrace_root_span
 import pytest
+import sentry_sdk
 
 
 langtrace.init()
@@ -615,3 +617,86 @@ def test_image_search_pipeline(
     assert pipeline.generated_image_search_queries is not None
     pipeline.collect_images()
     assert pipeline.image_search_results is not None
+
+
+def test_search_pipeline_without_questions(
+    elasticsearch_cloud_test_research_index: str,
+) -> None:
+    sentry_sdk.profiler.start_profiler()
+    company = "Thomson Reuters Special Services"
+    perspective = "Looking for strategic gaps in the company's operations and what they also do well."
+    search_lm = dspy.LM(
+        "openai/claude-3-5-sonnet",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        # cache=False,
+    )
+    cloud_elastic = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_CLOUD_URL")],
+        api_key=os.getenv("ELASTICSEARCH_CLOUD_API_ADMIN_KEY"),
+    )
+    retriever = ElasticDocumentIdRMClient(
+        elasticsearch=cloud_elastic,
+        index_name=elasticsearch_cloud_test_research_index,
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        k=10,
+        rerank_top_n=5,
+    )
+    rag = WebSearchRAG(
+        elastic_id_retriever=retriever,
+    )
+    pipeline = SearchPipeline(
+        company=company,
+        perspective=perspective,
+        rag=rag,
+        search_lm=search_lm,
+        question_lm=search_lm,
+    )
+    pipeline.generate_research_questions()
+    assert pipeline.research_questions is not None
+    assert len(pipeline.research_questions) > 0
+    answers = pipeline.run_search()
+    save_model_to_test_data(answers, "test_search_pipeline_without_questions.json")
+    sentry_sdk.profiler.stop_profiler()
+
+
+def test_search_pipeline_with_questions(
+    elasticsearch_cloud_test_research_index: str,
+) -> None:
+    company = "Thomson Reuters Special Services"
+    perspective = "Looking for strategic gaps in the company's operations and what they also do well."
+    search_lm = dspy.LM(
+        "openai/claude-3-5-sonnet",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        # cache=False,
+    )
+    cloud_elastic = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_CLOUD_URL")],
+        api_key=os.getenv("ELASTICSEARCH_CLOUD_API_ADMIN_KEY"),
+    )
+    retriever = ElasticDocumentIdRMClient(
+        elasticsearch=cloud_elastic,
+        index_name=elasticsearch_cloud_test_research_index,
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        k=10,
+        rerank_top_n=5,
+    )
+    rag = WebSearchRAG(
+        elastic_id_retriever=retriever,
+    )
+    pipeline = SearchPipeline(
+        company=company,
+        perspective=perspective,
+        rag=rag,
+        search_lm=search_lm,
+        question_lm=search_lm,
+        research_questions=[
+            "Who the head of R&D and Data Science at TRSS?",
+            "What is the revenue of TRSS?",
+        ],
+    )
+    answers = pipeline.run_search()
+    save_model_to_test_data(answers, "test_search_pipeline_with_questions.json")

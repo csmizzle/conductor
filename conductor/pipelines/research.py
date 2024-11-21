@@ -47,7 +47,9 @@ from conductor.images.search import (
     collect_images_from_queries,
 )
 from conductor.pipelines.models import ResearchPipelineState
-from pydantic import BaseModel
+from conductor.flow.rag import CitedAnswerWithCredibility, get_answers
+from conductor.flow.signatures import CompanySearchQuestions
+from pydantic import BaseModel, InstanceOf
 from typing import Callable, Optional
 from reportlab.platypus import SimpleDocTemplate
 from tempfile import NamedTemporaryFile
@@ -894,43 +896,57 @@ class SearchPipeline:
 
     def __init__(
         self,
-        company_name: str,
-        research_questions: list[str],
-        triple_types: list[TripleType],
-        elasticsearch: Elasticsearch,
+        company: str,
+        perspective: str,
+        # triple_types: list[TripleType],
+        rag: InstanceOf[dspy.Module],
+        research_questions: list[str] = None,
+        n_research_questions: int = 5,
+        question_lm: LM = None,
+        search_lm: LM = None,
     ) -> None:
-        self.company_name = company_name
+        self.company = company
         self.research_questions = research_questions
-        self.triple_types = triple_types
-        self.elasticsearch = elasticsearch
+        # self.triple_types = triple_types
+        self.perspective = perspective
+        self.rag = rag
+        self.question_lm = question_lm
+        self.search_lm = search_lm
+        self.search_results: list[CitedAnswerWithCredibility]
+        self.generate_questions = dspy.ChainOfThought(
+            CompanySearchQuestions, n=n_research_questions
+        )
 
-    @log_exceptions
-    def build_search_team(self) -> flow_models.SearchTeam:
+    def generate_research_questions(self) -> list[str]:
         """
-        Builds the search team.
+        Generate research questions for the company.
         Returns:
-            models.SearchTeam: The search team.
+            list[str]: The generated research questions.
         """
-        if self.team_builder_llm:
-            dspy.configure(lm=self.team_builder_llm)
-        logger.info("Building search team ...")
-        self.search_team = builders.build_search_team_from_template(team=self.team)
-        logger.info("Search team built.")
-        return self.search_team
+        if self.question_lm:
+            dspy.configure(lm=self.question_lm)
+        logger.info("Generating research questions ...")
+        self.research_questions = self.generate_questions(
+            company_name=self.company,
+            perspective=self.perspective,
+        ).search_queries
+        logger.info("Research questions generated.")
+        return self.research_questions
 
-    @log_exceptions
     def run_search(self) -> list[runner.SearchTeamAnswers]:
         """
         Runs the search flow.
         Returns:
             list[runner.SearchTeamAnswers]: The search results.
         """
-        if self.search_llm:
-            dspy.configure(lm=self.search_llm)
-        self.search_flow = SearchFlow(
-            search_team=self.search_team,
-            organization_determination=self.specification,
-            elastic_retriever=self.research_retriever,
-        )
-        self.search_answers = run_search_flow(flow=self.search_flow)
-        return self.search_answers
+        if self.research_questions:
+            if self.search_lm:
+                dspy.configure(lm=self.search_lm)
+            self.search_results = get_answers(
+                questions=self.research_questions,
+                rag=self.rag,
+            )
+            return self.search_results
+        else:
+            logger.error("Missing research questions to run search")
+            raise ValueError("Missing research questions to run search")

@@ -55,7 +55,7 @@ class ElasticRMClient(dspy.Retrieve):
             documents=content,
             top_n=self.rerank_top_n,
         )
-        if reranked_documents:
+        if return_documents:
             for result in reranked_indexes.results:
                 reranked_documents.append(documents[result.index])
             return reranked_documents
