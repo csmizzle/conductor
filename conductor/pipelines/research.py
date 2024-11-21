@@ -881,3 +881,56 @@ class ResearchPipelineV2:
         klass.generated_image_search_queries = state.image_search_queries
         klass.image_search_results = state.image_search_results
         return klass
+
+
+class SearchPipeline:
+    """
+    Search pipeline that runs a search for a company and builds out the Evrim entity
+    - Search for the company
+    - Build out entity profile
+    - Search to answer key research questions
+    - Extract relationships
+    """
+
+    def __init__(
+        self,
+        company_name: str,
+        research_questions: list[str],
+        triple_types: list[TripleType],
+        elasticsearch: Elasticsearch,
+    ) -> None:
+        self.company_name = company_name
+        self.research_questions = research_questions
+        self.triple_types = triple_types
+        self.elasticsearch = elasticsearch
+
+    @log_exceptions
+    def build_search_team(self) -> flow_models.SearchTeam:
+        """
+        Builds the search team.
+        Returns:
+            models.SearchTeam: The search team.
+        """
+        if self.team_builder_llm:
+            dspy.configure(lm=self.team_builder_llm)
+        logger.info("Building search team ...")
+        self.search_team = builders.build_search_team_from_template(team=self.team)
+        logger.info("Search team built.")
+        return self.search_team
+
+    @log_exceptions
+    def run_search(self) -> list[runner.SearchTeamAnswers]:
+        """
+        Runs the search flow.
+        Returns:
+            list[runner.SearchTeamAnswers]: The search results.
+        """
+        if self.search_llm:
+            dspy.configure(lm=self.search_llm)
+        self.search_flow = SearchFlow(
+            search_team=self.search_team,
+            organization_determination=self.specification,
+            elastic_retriever=self.research_retriever,
+        )
+        self.search_answers = run_search_flow(flow=self.search_flow)
+        return self.search_answers
