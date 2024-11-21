@@ -114,6 +114,7 @@ class SectionQuestion(dspy.Signature):
     The answers of the questions will be transformed into sentences for the section.
     The question should lend themselves to being transformed into sentences that will create a coherent section with a narrative flow.
     The questions should only be tailored to the specification and perspective of the section.
+    Questions that general and do not include to the section, perspective, or specification should be avoided.
     """
 
     perspective: str = dspy.InputField(prefix="Perspective: ")

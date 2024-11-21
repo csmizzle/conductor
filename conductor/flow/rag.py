@@ -14,11 +14,13 @@ from conductor.flow.models import CitedAnswer as CitedAnswerModel
 from conductor.flow.credibility import SourceCredibility, get_source_credibility
 from conductor.flow.models import NotAvailable
 from conductor.crews.rag_marketing.tools import parallel_ingest, ingest
-from conductor.rag.ingest import parallel_ingest_with_ids
+from conductor.rag.ingest import parallel_ingest_with_ids, ingest_with_ids
 from serpapi import GoogleSearch
 from pydantic import BaseModel, Field, InstanceOf
 from typing import Union, Tuple, Optional
 from loguru import logger
+from langchain_core.embeddings import Embeddings
+from elasticsearch import Elasticsearch
 import os
 import concurrent.futures
 
@@ -329,6 +331,7 @@ class WebSearchRAG(dspy.Module):
         Retrieve the answer from the internet and index document in ElasticSearch
         """
         # first check the answer box of serp for the answer
+        answer = None
         logger.info(f"Searching the internet for the answer to question: {question}")
         retrieved_documents = []
         search = GoogleSearch(
@@ -341,27 +344,30 @@ class WebSearchRAG(dspy.Module):
         )
         google_results_dict = search.get_dict()
         if "answer_box" in google_results_dict:
-            logger.info(f"Answer found in the answer box for question: {question}")
             logger.info(
                 f"Ingesting answer link {google_results_dict['answer_box']['link']}"
             )
-            ingest(
+            ingest_with_ids(
                 url=google_results_dict["answer_box"]["link"],
                 client=self.retriever.client,
             )
-            answer = google_results_dict["answer_box"]["snippet"]
-            url = google_results_dict["answer_box"]["link"]
-            answer = dspy.Prediction(
-                answer=CitedAnswerModel(
-                    answer=answer,
-                    citations=[url],
-                    faithfulness=5,
-                    factual_correctness=5,
-                    confidence=5,
+            if "snippet" in google_results_dict["answer_box"]:
+                logger.info("Answer found in the snippet")
+                answer = google_results_dict["answer_box"]["snippet"]
+                url = google_results_dict["answer_box"]["link"]
+                answer = dspy.Prediction(
+                    answer=CitedAnswerModel(
+                        answer=answer,
+                        citations=[url],
+                        faithfulness=5,
+                        factual_correctness=5,
+                        confidence=5,
+                    )
                 )
-            )
-            retrieved_documents = dspy.Prediction(documents=retrieved_documents)
-        elif "organic_results" in google_results_dict:
+                retrieved_documents = dspy.Prediction(documents=retrieved_documents)
+            else:
+                logger.info("No answer found in the snippet, ingesting more data ...")
+        if not answer and "organic_results" in google_results_dict:
             urls_to_ingest = []
             logger.info(f"Ingesting additional information for query {question}")
             for idx in range(min(results, len(google_results_dict["organic_results"]))):
@@ -409,6 +415,26 @@ class WebSearchRAG(dspy.Module):
             ],
         )
         return answer_with_credibility
+
+    @classmethod
+    def with_elasticsearch_id_retriever(
+        cls,
+        embeddings: InstanceOf[Embeddings],
+        elasticsearch: InstanceOf[Elasticsearch],
+        index_name: str,
+        cohere_api_key: str = None,
+        k: int = 10,
+        rerank_top_n: int = 5,
+    ) -> "WebSearchRAG":
+        retriever = ElasticDocumentIdRMClient(
+            elasticsearch=elasticsearch,
+            index_name=index_name,
+            embeddings=embeddings,
+            cohere_api_key=cohere_api_key,
+            k=k,
+            rerank_top_n=rerank_top_n,
+        )
+        return cls(elastic_id_retriever=retriever)
 
 
 class WebSearchValueRAG(WebSearchRAG):
