@@ -626,10 +626,10 @@ def test_search_pipeline_without_questions(
     company = "Thomson Reuters Special Services"
     perspective = "Looking for strategic gaps in the company's operations and what they also do well."
     search_lm = dspy.LM(
-        "openai/claude-3-5-sonnet",
+        "openai/gpt-4o",
         api_base=os.getenv("LITELLM_HOST"),
         api_key=os.getenv("LITELLM_API_KEY"),
-        # cache=False,
+        cache=False,
     )
     cloud_elastic = Elasticsearch(
         hosts=[os.getenv("ELASTICSEARCH_CLOUD_URL")],
@@ -667,7 +667,7 @@ def test_search_pipeline_with_questions(
     company = "Thomson Reuters Special Services"
     perspective = "Looking for strategic gaps in the company's operations and what they also do well."
     search_lm = dspy.LM(
-        "openai/claude-3-5-sonnet",
+        "openai/gpt-4o",
         api_base=os.getenv("LITELLM_HOST"),
         api_key=os.getenv("LITELLM_API_KEY"),
         # cache=False,
