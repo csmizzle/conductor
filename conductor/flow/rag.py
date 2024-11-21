@@ -14,11 +14,13 @@ from conductor.flow.models import CitedAnswer as CitedAnswerModel
 from conductor.flow.credibility import SourceCredibility, get_source_credibility
 from conductor.flow.models import NotAvailable
 from conductor.crews.rag_marketing.tools import parallel_ingest, ingest
-from conductor.rag.ingest import parallel_ingest_with_ids
+from conductor.rag.ingest import parallel_ingest_with_ids, ingest_with_ids
 from serpapi import GoogleSearch
 from pydantic import BaseModel, Field, InstanceOf
 from typing import Union, Tuple, Optional
 from loguru import logger
+from langchain_core.embeddings import Embeddings
+from elasticsearch import Elasticsearch
 import os
 import concurrent.futures
 
@@ -345,7 +347,7 @@ class WebSearchRAG(dspy.Module):
             logger.info(
                 f"Ingesting answer link {google_results_dict['answer_box']['link']}"
             )
-            ingest(
+            ingest_with_ids(
                 url=google_results_dict["answer_box"]["link"],
                 client=self.retriever.client,
             )
@@ -409,6 +411,26 @@ class WebSearchRAG(dspy.Module):
             ],
         )
         return answer_with_credibility
+
+    @classmethod
+    def with_elasticsearch_id_retriever(
+        cls,
+        embeddings: InstanceOf[Embeddings],
+        elasticsearch: InstanceOf[Elasticsearch],
+        index_name: str,
+        cohere_api_key: str = None,
+        k: int = 10,
+        rerank_top_n: int = 5,
+    ) -> "WebSearchRAG":
+        retriever = ElasticDocumentIdRMClient(
+            elasticsearch=elasticsearch,
+            index_name=index_name,
+            embeddings=embeddings,
+            cohere_api_key=cohere_api_key,
+            k=k,
+            rerank_top_n=rerank_top_n,
+        )
+        return cls(elastic_id_retriever=retriever)
 
 
 class WebSearchValueRAG(WebSearchRAG):
