@@ -34,6 +34,7 @@ class ElasticRMClient(dspy.Retrieve):
         query: str,
         documents: List[Document],
         model: str = "rerank-english-v3.0",
+        return_documents: bool = True,
     ) -> dict:
         """Rerank documents with Cohere API
 
@@ -54,9 +55,12 @@ class ElasticRMClient(dspy.Retrieve):
             documents=content,
             top_n=self.rerank_top_n,
         )
-        for result in reranked_indexes.results:
-            reranked_documents.append(documents[result.index])
-        return reranked_documents
+        if reranked_documents:
+            for result in reranked_indexes.results:
+                reranked_documents.append(documents[result.index])
+            return reranked_documents
+        # use the integers returned by cohere to reorder the documents
+        return reranked_indexes.results
 
     def _format_documents(self, documents: List[Document]) -> List[dict]:
         transformed_documents = []
@@ -78,5 +82,18 @@ class ElasticRMClient(dspy.Retrieve):
             documents = self._rerank_documents(query, k=k)
         else:
             documents = self.client.similarity_search(query=query, k=k)
+        transformed_documents = self._format_documents(documents)
+        return dspy.Prediction(documents=transformed_documents)
+
+
+class ElasticDocumentIdRMClient(ElasticRMClient):
+    """
+    Document ID retriever for
+    """
+
+    def forward(self, query: str, document_ids: List[str], **kwargs) -> dspy.Prediction:
+        documents = self.client.mget_documents(document_ids)
+        if self.cohere_api_key:
+            documents = self._rerank(query=query, documents=documents)
         transformed_documents = self._format_documents(documents)
         return dspy.Prediction(documents=transformed_documents)
