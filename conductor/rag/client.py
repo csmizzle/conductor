@@ -5,7 +5,7 @@ Ingestion logic for RAG data
 - Vectorize data
 - Store data
 """
-from typing import List
+from typing import List, Union
 from elasticsearch import Elasticsearch
 from langchain_core.embeddings import Embeddings
 from langchain_elasticsearch import ElasticsearchStore
@@ -106,16 +106,47 @@ class ElasticsearchRetrieverClient:
         """
         return self.store.similarity_search(query=query, **kwargs)
 
-    def find_document_by_url(self, url: str, min_score_threshold: float = 0.97) -> dict:
+    def find_document_by_url(
+        self, url: str, min_score_threshold: float = 0.97, size: Union[int, None] = 1
+    ) -> dict:
         """
         Find document by URL
         """
         # elasticsearch query looking at metadata field url for exact match
+        body = {
+            "query": {"term": {"metadata.url.keyword": url}},
+        }
+        if size:
+            body["size"] = size
         return self.elasticsearch.search(
             index=self.index_name,
-            body={
-                "query": {"match": {"metadata.url": url}},
-                "size": 1,
-                "min_score": min_score_threshold,
-            },
+            body=body,
         )
+
+    def mget_documents(self, document_ids: list[str]) -> list[Document]:
+        """
+        Get multiple documents by ID
+        """
+        raw_documents = self.elasticsearch.mget(ids=document_ids, index=self.index_name)
+        # create the langchain document objects
+        return [
+            Document(
+                page_content=raw_document["_source"]["text"],
+                metadata=raw_document["_source"]["metadata"],
+            )
+            for raw_document in raw_documents["docs"]
+        ]
+
+    def mget_raw(self, document_ids: list[str]) -> list[dict]:
+        """
+        Get multiple raw documents by ID
+        """
+        documents = self.mget_documents(ids=document_ids, index=self.index_name)
+        return [
+            "Source URL: "
+            + document.metadata["url"]
+            + "\n"
+            + "Source Content: "
+            + document.page_content
+            for document in documents
+        ]

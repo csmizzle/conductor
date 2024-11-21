@@ -144,3 +144,15 @@ class ExtractValue(dspy.Signature):
     question: str = dspy.InputField(desc="The question to be answered")
     answer: str = dspy.InputField(desc="The answer to the question")
     value: str = dspy.OutputField(desc="The extracted value")
+
+
+class CompanySearchQuestions(dspy.Signature):
+    """
+    Generate analytical research questions for company research
+    Use the perspective of the analyst to generate the queries
+    The questions should help a novice analyst understand the company like a subject matter expert
+    """
+
+    company_name: str = dspy.InputField(desc="The name of the company")
+    perspective: str = dspy.InputField(desc="The perspective of the analyst")
+    search_queries: list[str] = dspy.OutputField(desc="The generated search queries")

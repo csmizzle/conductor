@@ -21,7 +21,7 @@ import requests
 from tqdm import tqdm
 from typing import Union
 from loguru import logger
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 
 
 # text data from websites
@@ -40,7 +40,7 @@ def ingest_webpage(url: str, limit: int = 50000, **kwargs) -> WebPage:
                 js_render="true",
                 premium_proxy="true",
             )
-            zen_response = zenrows_client.get(url, params=params, timeout=10)
+            zen_response = zenrows_client.get(url, params=params, timeout=20)
             # process response and try with requests if not successful
             if not zen_response.ok:
                 logger.error(f"Zenrows Error: {zen_response.status_code}")
@@ -81,6 +81,56 @@ def url_to_db(url: str, client: ElasticsearchRetrieverClient, **kwargs) -> list[
     webpage = ingest_webpage(url, **kwargs)
     # insert document
     return client.create_insert_webpage_document(webpage)
+
+
+def ingest_with_ids(
+    client: ElasticsearchRetrieverClient,
+    url: str,
+    size: Union[int, None] = 1,
+    headers: dict = None,
+    cookies: dict = None,
+) -> dict[str, list[str]]:
+    logger.info(f"Ingesting data for {url} ...")
+    existing_document = client.find_document_by_url(url=url, size=size)
+    if existing_document["hits"]["total"]["value"] > 0:
+        logger.info(f"Document already exists for {url}, returning document ids")
+        document_ids = [doc["_id"] for doc in existing_document["hits"]["hits"]]
+        return {url: document_ids}
+    else:
+        try:
+            webpage = url_to_db(
+                url=url, client=client, headers=headers, cookies=cookies, timeout=10
+            )
+            return {url: webpage}
+        except Exception:
+            logger.error(f"Error uploading {url} to db")
+
+
+def parallel_ingest_with_ids(
+    urls, client, headers=None, cookies=None, size=None
+) -> dict[str, list[str]]:
+    """
+    Run ingest_with_ids in parallel
+    """
+    results = {}
+    with ThreadPoolExecutor() as executor:
+        futures = []
+        for url in urls:
+            futures.append(
+                executor.submit(
+                    ingest_with_ids,
+                    client=client,
+                    url=url,
+                    size=size,
+                    headers=headers,
+                    cookies=cookies,
+                )
+            )
+        for future in futures:
+            result = future.result()
+            if result:
+                results.update(result)
+    return results
 
 
 # image data from urls
@@ -317,7 +367,7 @@ def queries_to_image_results_parallel(
     Run process_image_from_query in parallel
     """
     images = []
-    with concurrent.futures.ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor() as executor:
         futures = []
         for query in search_queries:
             futures.append(
