@@ -10,14 +10,71 @@ Build out relationship and graph extraction utilities here
         - Extract relationships
 - Return graph
 """
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Union
 from conductor.graph.models import TripleType, Entity, Relationship, Graph
-from conductor.flow.retriever import ElasticRMClient
 from conductor.graph import signatures
+from conductor.flow.credibility import SourceCredibility
+from conductor.flow.rag import CitedAnswerWithCredibility
 import concurrent.futures
 import dspy
+from pydantic import InstanceOf, BaseModel, Field
 from loguru import logger
 import polars as pl
+
+
+class CitedRelationshipWithCredibility(BaseModel):
+    """
+    Cited relationship model
+    """
+
+    source: Entity = Field(description="Source entity")
+    target: Entity = Field(description="Target entity")
+    relationship_type: str = Field(description="Relationship type")
+    # individual relationship metadata
+    relationship_reasoning: str = Field(
+        description="The reasoning behind the relationship"
+    )
+    relationship_faithfulness: int = Field(
+        ge=1, le=5, description="The faithfulness of the relationship"
+    )
+    relationship_factual_correctness: int = Field(
+        ge=1, le=5, description="The factual correctness of the relationship"
+    )
+    relationship_confidence: int = Field(
+        ge=1, le=5, description="The confidence of the relationship"
+    )
+    # relationship extraction metadata
+    document: str = Field(description="The document used to generate the relationship")
+    relationships_query: str = Field(
+        description="The query used to generate the relationship"
+    )
+    relationships_reasoning: str = Field(
+        description="The reasoning behind the relationship"
+    )
+    # document collection metadata
+    question: str = Field(description="The question")
+    answer: str = Field(description="The answer for the question")
+    documents: list[str] = Field(
+        description="The documents used to generate the answer"
+    )
+    answer_reasoning: Union[str, None] = Field(
+        description="The reasoning behind the answer"
+    )
+    citations: list[str] = Field(description="The URLs used in the answer")
+    faithfulness: int = Field(ge=1, le=5, description="The faithfulness of the answer")
+    factual_correctness: int = Field(
+        ge=1, le=5, description="The factual correctness of the answer"
+    )
+    confidence: int = Field(ge=1, le=5, description="The confidence of the answer")
+    source_credibility: list[SourceCredibility] = Field(
+        description="The credibility of the sources"
+    )
+    source_credibility_reasoning: Optional[list[str]] = Field(
+        description="The reasoning behind the source credibility"
+    )
+
+    class Config:
+        use_enum_values = True
 
 
 class RelationshipRAGExtractor:
@@ -29,19 +86,22 @@ class RelationshipRAGExtractor:
         self,
         specification: str,
         triple_types: List[TripleType],
-        retriever: ElasticRMClient,
+        rag: InstanceOf[dspy.Module],
     ) -> None:
         self.specification = specification
         self.triple_types = triple_types
-        self.retriever = retriever
+        self.rag = rag
         self.create_relationship_query = dspy.ChainOfThought(
             signatures.RelationshipQuery
         )
         self.extract_relationships = dspy.ChainOfThought(
             signatures.ExtractedRelationships
         )
+        self.create_relationship_reasoning = dspy.ChainOfThought(
+            signatures.RelationshipReasoning
+        )
 
-    def extract(self) -> list[Relationship]:
+    def extract(self) -> list[CitedRelationshipWithCredibility]:
         """
         Extract graph
         """
@@ -52,16 +112,48 @@ class RelationshipRAGExtractor:
                 triple_type=triple_type,
             )
             logger.info(f"Query: {query.query}")
-            documents = self.retriever(query=query.query)
-            logger.info(f"Retrieved {len(documents.documents)} documents")
-            for document in documents.documents:
+            answer: CitedAnswerWithCredibility = self.rag(question=query.query)
+            logger.info(f"Retrieved {len(answer.documents)} documents")
+            for document in answer.documents:
                 extracted_relationships = self.extract_relationships(
-                    query=query.query, document=document, triple_type=triple_type
+                    query=answer.question, document=document, triple_type=triple_type
                 )
                 logger.info(
                     f"Extracted {len(extracted_relationships.relationships)} relationships"
                 )
-                relationships.extend(extracted_relationships.relationships)
+                # map to cited relationship schema
+                for relationship in extracted_relationships.relationships:
+                    # create relationship reasoning from query, relationship, and document
+                    logger.info("Creating relationship reasoning ...")
+                    relationship_reasoning = self.create_relationship_reasoning(
+                        query=answer.question,
+                        relationship=relationship,
+                        document=document,
+                    )
+                    relationships.append(
+                        CitedRelationshipWithCredibility(
+                            source=relationship.source,
+                            target=relationship.target,
+                            relationship_reasoning=relationship_reasoning.relationship_reasoning,
+                            relationship_type=relationship.relationship_type,
+                            relationship_faithfulness=relationship.faithfulness,
+                            relationship_factual_correctness=relationship.factual_correctness,
+                            relationship_confidence=relationship.confidence,
+                            document=document,
+                            relationships_query=answer.question,
+                            relationships_reasoning=extracted_relationships.reasoning,
+                            question=answer.question,
+                            answer=answer.answer,
+                            documents=answer.documents,
+                            answer_reasoning=answer.answer_reasoning,
+                            citations=answer.citations,
+                            faithfulness=answer.faithfulness,
+                            factual_correctness=answer.factual_correctness,
+                            confidence=answer.confidence,
+                            source_credibility=answer.source_credibility,
+                            source_credibility_reasoning=answer.source_credibility_reasoning,
+                        )
+                    )
         return relationships
 
     def _create_relationship_query(
@@ -165,13 +257,13 @@ class RelationshipRAGExtractor:
 def create_graph(
     specification: str,
     triple_types: List[TripleType],
-    retriever: ElasticRMClient,
+    rag: InstanceOf[dspy.Module],
 ) -> dict:
     """
     Create graph
     """
     extractor = RelationshipRAGExtractor(
-        specification=specification, triple_types=triple_types, retriever=retriever
+        specification=specification, triple_types=triple_types, rag=rag
     )
     relationships = extractor.extract_parallel()
     # deduplicate relationships through normalization and dedup with polars

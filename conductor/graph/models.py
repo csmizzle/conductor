@@ -51,6 +51,15 @@ class Relationship(BaseModel):
     source: Entity = Field(description="Source entity")
     target: Entity = Field(description="Target entity")
     relationship_type: RelationshipType = Field(description="Relationship type")
+    faithfulness: int = Field(
+        ge=1, le=5, description="The faithfulness of the relationship"
+    )
+    factual_correctness: int = Field(
+        ge=1, le=5, description="The factual correctness of the relationship"
+    )
+    confidence: int = Field(
+        ge=1, le=5, description="The confidence of the relationship"
+    )
 
     class Config:
         use_enum_values = True

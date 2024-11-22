@@ -9,6 +9,7 @@ from conductor.flow.signatures import (
     CitedValue,
     QuestionHyde,
     ExtractValue,
+    AnswerReasoning,
 )
 from conductor.flow.models import CitedAnswer as CitedAnswerModel
 from conductor.flow.credibility import SourceCredibility, get_source_credibility
@@ -323,10 +324,11 @@ class WebSearchRAG(dspy.Module):
         super().__init__()
         self.retriever = elastic_id_retriever
         self.generate_answer = dspy.ChainOfThought(CitedAnswer)
+        self.generate_answer_reasoning = dspy.ChainOfThought(AnswerReasoning)
 
     def _retrieve_answer_from_internet(
         self, question: str, results: int = 5
-    ) -> Tuple[CitedAnswerModel, list[str]]:
+    ) -> Tuple[dspy.Prediction, list[str]]:
         """
         Retrieve the answer from the internet and index document in ElasticSearch
         """
@@ -347,7 +349,7 @@ class WebSearchRAG(dspy.Module):
             logger.info(
                 f"Ingesting answer link {google_results_dict['answer_box']['link']}"
             )
-            ingest_with_ids(
+            documents = ingest_with_ids(
                 url=google_results_dict["answer_box"]["link"],
                 client=self.retriever.client,
             )
@@ -364,7 +366,13 @@ class WebSearchRAG(dspy.Module):
                         confidence=5,
                     )
                 )
-                retrieved_documents = dspy.Prediction(documents=retrieved_documents)
+                # get source documents
+                document_ids = []
+                for urls in documents.values():
+                    document_ids.extend(urls)
+                retrieved_documents = self.retriever(
+                    query=question, document_ids=document_ids
+                )
             else:
                 logger.info("No answer found in the snippet, ingesting more data ...")
         if not answer and "organic_results" in google_results_dict:
@@ -390,8 +398,31 @@ class WebSearchRAG(dspy.Module):
             )
         return answer, retrieved_documents
 
+    def _get_answer_reasoning(
+        self,
+        answer: CitedAnswerModel,
+        question: str,
+        retrieved_documents: dspy.Prediction,
+    ) -> None:
+        # generate answer reasoning if not available
+        if not hasattr(answer, "reasoning"):
+            logger.info(f"Generating reasoning for answer: {answer.answer.answer}")
+            reasoning = self.generate_answer_reasoning(
+                answer=answer.answer.answer,
+                citations=answer.answer.citations,
+                question=question,
+                documents=retrieved_documents.documents,
+                faithfulness=answer.answer.faithfulness,
+                factual_correctness=answer.answer.factual_correctness,
+                confidence=answer.answer.confidence,
+            )
+            return reasoning.reasoning
+        else:
+            return answer.reasoning
+
     def forward(self, question: str) -> CitedAnswerWithCredibility:
         answer, retrieved_documents = self._retrieve_answer_from_internet(question)
+        # assign source credibility
         source_confidences = [
             get_source_credibility(source=source) for source in answer.answer.citations
         ]
@@ -403,9 +434,10 @@ class WebSearchRAG(dspy.Module):
             faithfulness=answer.answer.faithfulness,
             factual_correctness=answer.answer.factual_correctness,
             confidence=answer.answer.confidence,
-            answer_reasoning=getattr(
-                answer, "reasoning", None
-            ),  # since not always chain of thought
+            # get answer reasoning if not there
+            answer_reasoning=self._get_answer_reasoning(
+                answer, question, retrieved_documents
+            ),
             source_credibility=[
                 source_confidence.credibility
                 for source_confidence in source_confidences
