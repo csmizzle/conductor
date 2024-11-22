@@ -97,3 +97,9 @@ class ElasticDocumentIdRMClient(ElasticRMClient):
             documents = self._rerank(query=query, documents=documents)
         transformed_documents = self._format_documents(documents)
         return dspy.Prediction(documents=transformed_documents)
+
+    def get_documents(self, query: str, document_ids: List[str]) -> List[Document]:
+        documents = self.client.mget_documents(document_ids)
+        if self.cohere_api_key:
+            documents = self._rerank(query=query, documents=documents)
+        return self.client.mget_documents(document_ids)
