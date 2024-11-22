@@ -8,7 +8,6 @@ from conductor.graph.extraction import (
 )
 from conductor.graph.models import (
     TripleType,
-    Relationship,
     EntityType,
     RelationshipType,
     Graph,
@@ -110,13 +109,17 @@ def test_relationship_extraction_parallel() -> None:
     extractor = RelationshipRAGExtractor(
         specification=specification,
         triple_types=[
-            triple_types[3]
+            triple_types[1]
         ],  # just extract employee relationships for speed of testing ... and cost
         rag=rag,
     )
     relationships = extractor.extract_parallel()
     assert isinstance(relationships, list)
-    assert all(isinstance(relationship, Relationship) for relationship in relationships)
+    assert all(
+        isinstance(relationship, CitedRelationshipWithCredibility)
+        for relationship in relationships
+    )
+    save_model_to_test_data(relationships, "test_relationship_extraction_parallel.json")
 
 
 def test_create_graph() -> None:

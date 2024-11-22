@@ -9,6 +9,7 @@ Build out relationship and graph extraction utilities here
         - Extract entities
         - Extract relationships
 - Return graph
+.. with some optimizations
 """
 from typing import List, Tuple, Optional, Union
 from conductor.graph.models import TripleType, Entity, Relationship, Graph
@@ -168,17 +169,17 @@ class RelationshipRAGExtractor:
         logger.info(f"Query: {query.query}")
         return query.query
 
-    def _execute_query(self, query: str) -> list[str]:
+    def _execute_query(self, query: str) -> CitedAnswerWithCredibility:
         """
         Light wrapper around retriever to add logging
         """
-        documents = self.retriever(query=query)
-        logger.info(f"Retrieved {len(documents.documents)} documents")
-        return documents.documents
+        answer = self.rag(question=query)
+        logger.info(f"Retrieved {len(answer.documents)} documents")
+        return answer
 
     def _execute_queries_parallel(
         self,
-    ) -> Tuple[dict[str, TripleType], dict[str, list[str]]]:
+    ) -> Tuple[dict[str, TripleType], dict[str, CitedAnswerWithCredibility]]:
         """
         Execute query generation and execution in parallel
         Returns queries and documents for extraction algorithm
@@ -196,20 +197,21 @@ class RelationshipRAGExtractor:
             for triple_type_idx, future in futures.items():
                 queries[future.result()] = self.triple_types[triple_type_idx]
         # execute all queries
-        documents: dict[str, list[str]] = {}  # map query to documents
+        answers: dict[str, CitedAnswerWithCredibility] = {}  # map query to documents
+        # same idea here, map result to query for downstream operations
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = {}
             for query in queries:
                 futures[query] = executor.submit(self._execute_query, query)
             for query, future in futures.items():
-                documents[query] = future.result()
-        return queries, documents
+                answers[query] = future.result()
+        return queries, answers
 
     def _extract_relationships(
         self, query: str, document: str, triple_type: TripleType
-    ) -> list[Relationship]:
+    ) -> Tuple[str, list[Relationship]]:
         """
-        Light wrapper around extract_relationships to add logging
+        Light wrapper around extract_relationships to add logging also return document for downstream reasoning
         """
         extracted_relationships = self.extract_relationships(
             query=query, document=document, triple_type=triple_type
@@ -217,38 +219,137 @@ class RelationshipRAGExtractor:
         logger.info(
             f"Extracted {len(extracted_relationships.relationships)} relationships"
         )
-        return extracted_relationships.relationships
+        return document, extracted_relationships.relationships
 
     def _extract_relationships_parallel(
-        self, queries: dict[str, TripleType], documents: dict[str, list[str]]
-    ) -> list[Relationship]:
+        self,
+        queries: dict[str, TripleType],
+        answers: dict[str, CitedAnswerWithCredibility],
+    ) -> dict[str, list[Tuple[str, list[Relationship]]]]:
         """
         Extract relationships in parallel
         We use the query maps to execute the correct extraction for each set of documents
         """
-        relationships = []
+        relationships: dict[
+            str, list[Tuple[str, list[Relationship]]]
+        ] = {}  # map query to document and relationships
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = []
-            for query in documents:
-                for document in documents[query]:
-                    futures.append(
-                        executor.submit(
-                            self._extract_relationships,
-                            query=query,
-                            document=document,
-                            triple_type=queries[query],
+            futures: dict[str, list] = {}
+            for query in answers:
+                for document in answers[query].documents:
+                    if query not in futures:
+                        futures[query] = [
+                            executor.submit(
+                                self._extract_relationships,
+                                query=query,
+                                document=document,
+                                triple_type=queries[query],
+                            )
+                        ]
+                    else:
+                        futures[query].append(
+                            executor.submit(
+                                self._extract_relationships,
+                                query=query,
+                                document=document,
+                                triple_type=queries[query],
+                            )
                         )
-                    )
-            for future in concurrent.futures.as_completed(futures):
-                relationships.extend(future.result())
+            for query in futures:
+                # get document and relationships from future
+                for future in futures[query]:
+                    document, extracted_relationships = future.result()
+                    if query not in relationships:
+                        relationships[query] = [(document, extracted_relationships)]
+                    else:
+                        relationships[query].append((document, extracted_relationships))
         return relationships
 
-    def extract_parallel(self) -> list[Relationship]:
+    def _create_relationship_reasoning(
+        self, relationship: Relationship, query: str, document: str
+    ) -> Tuple[str, str, Relationship, str]:
+        """
+        Light wrapper around create_relationship_reasoning to add logging
+        """
+        reasoning = self.create_relationship_reasoning(
+            query=query, relationship=relationship, document=document
+        )
+        logger.info(f"Reasoning: {reasoning.relationship_reasoning}")
+        return query, document, relationship, reasoning.relationship_reasoning
+
+    def _create_relationships_parallel(
+        self,
+        answers: dict[str, CitedAnswerWithCredibility],
+        relationships: dict[str, list[Tuple[str, list[Relationship]]]],
+    ) -> list[CitedRelationshipWithCredibility]:
+        """
+        Create relationship reasoning in parallel and then map to cited relationship schema from answers
+        """
+        extracted_relationships = []
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures: dict[str, list] = {}
+            for query in relationships:
+                for entry in relationships[query]:
+                    for relationship in entry[1]:
+                        if query not in futures:
+                            futures[query] = [
+                                executor.submit(
+                                    self._create_relationship_reasoning,
+                                    relationship=relationship,
+                                    query=query,
+                                    document=entry[0],
+                                )
+                            ]
+                        else:
+                            futures[query].append(
+                                executor.submit(
+                                    self._create_relationship_reasoning,
+                                    relationship=relationship,
+                                    query=query,
+                                    document=entry[0],
+                                )
+                            )
+            for query in futures:
+                for future in futures[query]:
+                    query, document, relationship, reasoning = future.result()
+                    extracted_relationships.append(
+                        CitedRelationshipWithCredibility(
+                            source=relationship.source,
+                            target=relationship.target,
+                            relationship_reasoning=reasoning,
+                            relationship_type=relationship.relationship_type,
+                            relationship_faithfulness=relationship.faithfulness,
+                            relationship_factual_correctness=relationship.factual_correctness,
+                            relationship_confidence=relationship.confidence,
+                            document=document,
+                            relationships_query=query,
+                            relationships_reasoning=answers[query].reasoning,
+                            question=answers[query].question,
+                            answer=answers[query].answer,
+                            documents=answers[query].documents,
+                            answer_reasoning=answers[query].answer_reasoning,
+                            citations=answers[query].citations,
+                            faithfulness=answers[query].faithfulness,
+                            factual_correctness=answers[query].factual_correctness,
+                            confidence=answers[query].confidence,
+                            source_credibility=answers[query].source_credibility,
+                            source_credibility_reasoning=answers[
+                                query
+                            ].source_credibility_reasoning,
+                        )
+                    )
+        return extracted_relationships
+
+    def extract_parallel(self) -> list[CitedRelationshipWithCredibility]:
         # first execute all queries in parallel
-        queries, documents = self._execute_queries_parallel()
+        queries, answers = self._execute_queries_parallel()
         # then extract relationships in parallel
         extracted_relationships = self._extract_relationships_parallel(
-            queries=queries, documents=documents
+            queries=queries, answers=answers
+        )
+        # reason and map to cited relationship schema
+        extracted_relationships = self._create_relationships_parallel(
+            answers=answers, relationships=extracted_relationships
         )
         logger.info(f"Extracted {len(extracted_relationships)} relationships")
         return extracted_relationships
