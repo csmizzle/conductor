@@ -109,7 +109,7 @@ def test_relationship_extraction_parallel() -> None:
     extractor = RelationshipRAGExtractor(
         specification=specification,
         triple_types=[
-            triple_types[1]
+            triple_types[3]
         ],  # just extract employee relationships for speed of testing ... and cost
         rag=rag,
     )

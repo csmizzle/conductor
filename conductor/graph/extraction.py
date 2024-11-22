@@ -49,8 +49,9 @@ class CitedRelationshipWithCredibility(BaseModel):
     relationships_query: str = Field(
         description="The query used to generate the relationship"
     )
-    relationships_reasoning: str = Field(
-        description="The reasoning behind the relationship"
+    relationships_reasoning: Optional[str] = Field(
+        description="The reasoning behind the relationship",
+        default=None,
     )
     # document collection metadata
     question: str = Field(description="The question")
@@ -323,7 +324,7 @@ class RelationshipRAGExtractor:
                             relationship_confidence=relationship.confidence,
                             document=document,
                             relationships_query=query,
-                            relationships_reasoning=answers[query].reasoning,
+                            # relationships_reasoning=answers[query].reasoning,  this would be more work than needed for now
                             question=answers[query].question,
                             answer=answers[query].answer,
                             documents=answers[query].documents,
