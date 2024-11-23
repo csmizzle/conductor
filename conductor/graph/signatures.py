@@ -3,6 +3,7 @@ DSPY signatures for the conductor graph.
 """
 import dspy
 from conductor.graph import models
+from conductor.flow.rag import DocumentWithCredibility
 
 
 class RelationshipQuery(dspy.Signature):
@@ -41,7 +42,7 @@ class ExtractedRelationships(dspy.Signature):
         description="Triple containing source_type, relationship_type, and target_type",
         prefix="Triple: ",
     )
-    document: str = dspy.InputField(
+    document: DocumentWithCredibility = dspy.InputField(
         description="Document to extract relationships from", prefix="Documents: "
     )
     relationships: list[models.Relationship] = dspy.OutputField(

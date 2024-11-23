@@ -12,7 +12,7 @@ from conductor.graph.models import (
     RelationshipType,
     Graph,
 )
-from conductor.flow.rag import WebSearchRAG
+from conductor.flow.rag import WebDocumentRetriever
 from conductor.flow.retriever import ElasticDocumentIdRMClient
 from conductor.rag.embeddings import BedrockEmbeddings
 from elasticsearch import Elasticsearch
@@ -70,7 +70,7 @@ def test_relationship_extraction() -> None:
         index_name=elasticsearch_test_index,
         embeddings=BedrockEmbeddings(),
     )
-    rag = WebSearchRAG(elastic_id_retriever=retriever)
+    rag = WebDocumentRetriever(elastic_id_retriever=retriever)
     extractor = RelationshipRAGExtractor(
         specification=specification,
         triple_types=[
@@ -89,7 +89,7 @@ def test_relationship_extraction() -> None:
 
 def test_relationship_extraction_parallel() -> None:
     search_lm = dspy.LM(
-        "openai/gpt-4o",
+        "openai/gpt-4o-mini",
         api_base=os.getenv("LITELLM_HOST"),
         api_key=os.getenv("LITELLM_API_KEY"),
         cache=False,
@@ -105,7 +105,7 @@ def test_relationship_extraction_parallel() -> None:
         index_name=elasticsearch_test_index,
         embeddings=BedrockEmbeddings(),
     )
-    rag = WebSearchRAG(elastic_id_retriever=retriever)
+    rag = WebDocumentRetriever(elastic_id_retriever=retriever)
     extractor = RelationshipRAGExtractor(
         specification=specification,
         triple_types=[
@@ -171,7 +171,7 @@ def test_create_graph_mini() -> None:
         index_name=elasticsearch_test_index,
         embeddings=BedrockEmbeddings(),
     )
-    rag = WebSearchRAG(elastic_id_retriever=retriever)
+    rag = WebDocumentRetriever(elastic_id_retriever=retriever)
     graph = create_graph(
         specification=specification, triple_types=triple_types, rag=rag
     )
