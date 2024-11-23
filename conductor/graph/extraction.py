@@ -11,11 +11,11 @@ Build out relationship and graph extraction utilities here
 - Return graph
 .. with some optimizations
 """
-from typing import List, Tuple, Optional, Union
+from typing import List, Tuple
 from conductor.graph.models import TripleType, Entity, Relationship, Graph
 from conductor.graph import signatures
 from conductor.flow.credibility import SourceCredibility
-from conductor.flow.rag import CitedAnswerWithCredibility
+from conductor.flow.rag import DocumentWithCredibility
 import concurrent.futures
 import dspy
 from pydantic import InstanceOf, BaseModel, Field
@@ -45,33 +45,18 @@ class CitedRelationshipWithCredibility(BaseModel):
         ge=1, le=5, description="The confidence of the relationship"
     )
     # relationship extraction metadata
-    document: str = Field(description="The document used to generate the relationship")
     relationships_query: str = Field(
         description="The query used to generate the relationship"
     )
-    relationships_reasoning: Optional[str] = Field(
-        description="The reasoning behind the relationship",
-        default=None,
-    )
     # document collection metadata
-    question: str = Field(description="The question")
-    answer: str = Field(description="The answer for the question")
-    documents: list[str] = Field(
-        description="The documents used to generate the answer"
+    document_content: str = Field(
+        description="The document used to generate the relationship"
     )
-    answer_reasoning: Union[str, None] = Field(
-        description="The reasoning behind the answer"
-    )
-    citations: list[str] = Field(description="The URLs used in the answer")
-    faithfulness: int = Field(ge=1, le=5, description="The faithfulness of the answer")
-    factual_correctness: int = Field(
-        ge=1, le=5, description="The factual correctness of the answer"
-    )
-    confidence: int = Field(ge=1, le=5, description="The confidence of the answer")
-    source_credibility: list[SourceCredibility] = Field(
+    document_source: str = Field(description="The source of the document")
+    document_source_credibility: SourceCredibility = Field(
         description="The credibility of the sources"
     )
-    source_credibility_reasoning: Optional[list[str]] = Field(
+    document_source_credibility_reasoning: str = Field(
         description="The reasoning behind the source credibility"
     )
 
@@ -114,11 +99,11 @@ class RelationshipRAGExtractor:
                 triple_type=triple_type,
             )
             logger.info(f"Query: {query.query}")
-            answer: CitedAnswerWithCredibility = self.rag(question=query.query)
-            logger.info(f"Retrieved {len(answer.documents)} documents")
-            for document in answer.documents:
+            documents: list[DocumentWithCredibility] = self.rag(question=query.query)
+            logger.info(f"Retrieved {len(documents)} documents")
+            for document in documents:
                 extracted_relationships = self.extract_relationships(
-                    query=answer.question, document=document, triple_type=triple_type
+                    query=query.query, document=document, triple_type=triple_type
                 )
                 logger.info(
                     f"Extracted {len(extracted_relationships.relationships)} relationships"
@@ -128,7 +113,7 @@ class RelationshipRAGExtractor:
                     # create relationship reasoning from query, relationship, and document
                     logger.info("Creating relationship reasoning ...")
                     relationship_reasoning = self.create_relationship_reasoning(
-                        query=answer.question,
+                        query=query.query,
                         relationship=relationship,
                         document=document,
                     )
@@ -136,24 +121,16 @@ class RelationshipRAGExtractor:
                         CitedRelationshipWithCredibility(
                             source=relationship.source,
                             target=relationship.target,
-                            relationship_reasoning=relationship_reasoning.relationship_reasoning,
                             relationship_type=relationship.relationship_type,
+                            relationship_reasoning=relationship_reasoning.relationship_reasoning,
                             relationship_faithfulness=relationship.faithfulness,
                             relationship_factual_correctness=relationship.factual_correctness,
                             relationship_confidence=relationship.confidence,
-                            document=document,
-                            relationships_query=answer.question,
-                            relationships_reasoning=extracted_relationships.reasoning,
-                            question=answer.question,
-                            answer=answer.answer,
-                            documents=answer.documents,
-                            answer_reasoning=answer.answer_reasoning,
-                            citations=answer.citations,
-                            faithfulness=answer.faithfulness,
-                            factual_correctness=answer.factual_correctness,
-                            confidence=answer.confidence,
-                            source_credibility=answer.source_credibility,
-                            source_credibility_reasoning=answer.source_credibility_reasoning,
+                            relationships_query=query.query,
+                            document_content=document.content,
+                            document_source=document.source,
+                            document_source_credibility=document.source_credibility,
+                            document_source_credibility_reasoning=document.source_credibility_reasoning,
                         )
                     )
         return relationships
@@ -170,17 +147,17 @@ class RelationshipRAGExtractor:
         logger.info(f"Query: {query.query}")
         return query.query
 
-    def _execute_query(self, query: str) -> CitedAnswerWithCredibility:
+    def _execute_query(self, query: str) -> list[DocumentWithCredibility]:
         """
         Light wrapper around retriever to add logging
         """
-        answer = self.rag(question=query)
-        logger.info(f"Retrieved {len(answer.documents)} documents")
-        return answer
+        documents = self.rag(question=query)
+        logger.info(f"Retrieved {len(documents)} documents")
+        return documents
 
     def _execute_queries_parallel(
         self,
-    ) -> Tuple[dict[str, TripleType], dict[str, CitedAnswerWithCredibility]]:
+    ) -> Tuple[dict[str, TripleType], dict[str, list[DocumentWithCredibility]]]:
         """
         Execute query generation and execution in parallel
         Returns queries and documents for extraction algorithm
@@ -198,18 +175,20 @@ class RelationshipRAGExtractor:
             for triple_type_idx, future in futures.items():
                 queries[future.result()] = self.triple_types[triple_type_idx]
         # execute all queries
-        answers: dict[str, CitedAnswerWithCredibility] = {}  # map query to documents
+        documents: dict[
+            str, list[DocumentWithCredibility]
+        ] = {}  # map query to documents
         # same idea here, map result to query for downstream operations
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = {}
             for query in queries:
                 futures[query] = executor.submit(self._execute_query, query)
             for query, future in futures.items():
-                answers[query] = future.result()
-        return queries, answers
+                documents[query] = future.result()
+        return queries, documents
 
     def _extract_relationships(
-        self, query: str, document: str, triple_type: TripleType
+        self, query: str, document: DocumentWithCredibility, triple_type: TripleType
     ) -> Tuple[str, list[Relationship]]:
         """
         Light wrapper around extract_relationships to add logging also return document for downstream reasoning
@@ -225,19 +204,19 @@ class RelationshipRAGExtractor:
     def _extract_relationships_parallel(
         self,
         queries: dict[str, TripleType],
-        answers: dict[str, CitedAnswerWithCredibility],
-    ) -> dict[str, list[Tuple[str, list[Relationship]]]]:
+        documents: dict[str, list[DocumentWithCredibility]],
+    ) -> dict[str, list[Tuple[DocumentWithCredibility, list[Relationship]]]]:
         """
         Extract relationships in parallel
         We use the query maps to execute the correct extraction for each set of documents
         """
         relationships: dict[
-            str, list[Tuple[str, list[Relationship]]]
+            str, list[Tuple[DocumentWithCredibility, list[Relationship]]]
         ] = {}  # map query to document and relationships
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures: dict[str, list] = {}
-            for query in answers:
-                for document in answers[query].documents:
+            for query in documents:
+                for document in documents[query]:
                     if query not in futures:
                         futures[query] = [
                             executor.submit(
@@ -267,8 +246,10 @@ class RelationshipRAGExtractor:
         return relationships
 
     def _create_relationship_reasoning(
-        self, relationship: Relationship, query: str, document: str
-    ) -> Tuple[str, str, Relationship, str]:
+        self, relationship: Relationship, query: str, document: DocumentWithCredibility
+    ) -> Tuple[
+        str, DocumentWithCredibility, Relationship, str
+    ]:  # query, document, relationship, reasoning
         """
         Light wrapper around create_relationship_reasoning to add logging
         """
@@ -280,8 +261,9 @@ class RelationshipRAGExtractor:
 
     def _create_relationships_parallel(
         self,
-        answers: dict[str, CitedAnswerWithCredibility],
-        relationships: dict[str, list[Tuple[str, list[Relationship]]]],
+        relationships: dict[
+            str, list[Tuple[DocumentWithCredibility, list[Relationship]]]
+        ],
     ) -> list[CitedRelationshipWithCredibility]:
         """
         Create relationship reasoning in parallel and then map to cited relationship schema from answers
@@ -317,40 +299,30 @@ class RelationshipRAGExtractor:
                         CitedRelationshipWithCredibility(
                             source=relationship.source,
                             target=relationship.target,
-                            relationship_reasoning=reasoning,
                             relationship_type=relationship.relationship_type,
+                            relationship_reasoning=reasoning,
                             relationship_faithfulness=relationship.faithfulness,
                             relationship_factual_correctness=relationship.factual_correctness,
                             relationship_confidence=relationship.confidence,
-                            document=document,
                             relationships_query=query,
-                            # relationships_reasoning=answers[query].reasoning,  this would be more work than needed for now
-                            question=answers[query].question,
-                            answer=answers[query].answer,
-                            documents=answers[query].documents,
-                            answer_reasoning=answers[query].answer_reasoning,
-                            citations=answers[query].citations,
-                            faithfulness=answers[query].faithfulness,
-                            factual_correctness=answers[query].factual_correctness,
-                            confidence=answers[query].confidence,
-                            source_credibility=answers[query].source_credibility,
-                            source_credibility_reasoning=answers[
-                                query
-                            ].source_credibility_reasoning,
+                            document_content=document.content,
+                            document_source=document.source,
+                            document_source_credibility=document.source_credibility,
+                            document_source_credibility_reasoning=document.source_credibility_reasoning,
                         )
                     )
         return extracted_relationships
 
     def extract_parallel(self) -> list[CitedRelationshipWithCredibility]:
         # first execute all queries in parallel
-        queries, answers = self._execute_queries_parallel()
+        queries, documents = self._execute_queries_parallel()
         # then extract relationships in parallel
         extracted_relationships = self._extract_relationships_parallel(
-            queries=queries, answers=answers
+            queries=queries, documents=documents
         )
         # reason and map to cited relationship schema
         extracted_relationships = self._create_relationships_parallel(
-            answers=answers, relationships=extracted_relationships
+            relationships=extracted_relationships
         )
         logger.info(f"Extracted {len(extracted_relationships)} relationships")
         return extracted_relationships
