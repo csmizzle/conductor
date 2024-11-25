@@ -109,7 +109,8 @@ def test_relationship_extraction_parallel() -> None:
     extractor = RelationshipRAGExtractor(
         specification=specification,
         triple_types=[
-            triple_types[3]
+            triple_types[3],
+            triple_types[2],
         ],  # just extract employee relationships for speed of testing ... and cost
         rag=rag,
     )
@@ -125,7 +126,7 @@ def test_relationship_extraction_parallel() -> None:
 def test_create_graph() -> None:
     graph = create_deduplicated_graph(
         relationships=load_model_from_test_data(
-            filename="test_relationship_extraction.json",
+            filename="test_relationship_extraction_parallel.json",
             model=CitedRelationshipWithCredibility,
         )
     )
