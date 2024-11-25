@@ -370,12 +370,15 @@ class WebDocumentRetriever(dspy.Module):
             if "snippet" in google_results_dict["answer_box"]:
                 logger.info("Answer found in the snippet")
                 # get source documents
-                document_ids = []
-                for urls in documents.values():
-                    document_ids.extend(urls)
-                retrieved_documents = self.retriever.get_documents(
-                    query=question, document_ids=document_ids
-                )
+                if documents:
+                    document_ids = []
+                    for urls in documents.values():
+                        document_ids.extend(urls)
+                    retrieved_documents = self.retriever.get_documents(
+                        query=question, document_ids=document_ids
+                    )
+                else:
+                    logger.info("No documents were ingested ...")
             else:
                 logger.info("No answer found in the snippet, ingesting more data ...")
         if not retrieved_documents and "organic_results" in google_results_dict:
@@ -389,13 +392,16 @@ class WebDocumentRetriever(dspy.Module):
                 urls=urls_to_ingest, client=self.retriever.client
             )
             # get the document ids
-            document_ids = []
-            for urls in documents.values():
-                document_ids.extend(urls)
-            # search again to get the answer with the indexed documents
-            retrieved_documents = self.retriever.get_documents(
-                query=question, document_ids=document_ids
-            )
+            if documents:
+                document_ids = []
+                for urls in documents.values():
+                    document_ids.extend(urls)
+                # search again to get the answer with the indexed documents
+                retrieved_documents = self.retriever.get_documents(
+                    query=question, document_ids=document_ids
+                )
+            else:
+                logger.info("No documents were ingested ...")
         return retrieved_documents
 
     def forward(self, question: str) -> list[DocumentWithCredibility]:
@@ -465,12 +471,15 @@ class WebSearchRAG(dspy.Module):
                     )
                 )
                 # get source documents
-                document_ids = []
-                for urls in documents.values():
-                    document_ids.extend(urls)
-                retrieved_documents = self.retriever(
-                    query=question, document_ids=document_ids
-                )
+                if documents:
+                    document_ids = []
+                    for urls in documents.values():
+                        document_ids.extend(urls)
+                    retrieved_documents = self.retriever(
+                        query=question, document_ids=document_ids
+                    )
+                else:
+                    logger.info("No documents were ingested ...")
             else:
                 logger.info("No answer found in the snippet, ingesting more data ...")
         if not answer and "organic_results" in google_results_dict:
@@ -483,17 +492,20 @@ class WebSearchRAG(dspy.Module):
             documents = parallel_ingest_with_ids(
                 urls=urls_to_ingest, client=self.retriever.client
             )
-            # get the document ids
-            document_ids = []
-            for urls in documents.values():
-                document_ids.extend(urls)
-            # search again to get the answer with the indexed documents
-            retrieved_documents = self.retriever(
-                query=question, document_ids=document_ids
-            )
-            answer = self.generate_answer(
-                question=question, documents=retrieved_documents
-            )
+            if documents:
+                # get the document ids
+                document_ids = []
+                for urls in documents.values():
+                    document_ids.extend(urls)
+                # search again to get the answer with the indexed documents
+                retrieved_documents = self.retriever(
+                    query=question, document_ids=document_ids
+                )
+                answer = self.generate_answer(
+                    question=question, documents=retrieved_documents
+                )
+            else:
+                logger.info("No documents were ingested ...")
         return answer, retrieved_documents
 
     def _get_answer_reasoning(
