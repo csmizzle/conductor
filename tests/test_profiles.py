@@ -17,7 +17,9 @@ dspy.configure(lm=llm)
 
 def test_specify_model():
     specification = "The company is Thomson Reuters"
-    specified_fields = specify_model(model=Company, specification=specification)
+    specified_fields = specify_model(
+        model_schema=Company.model_json_schema(), specification=specification
+    )
     assert specified_fields
 
 
@@ -46,7 +48,7 @@ def test_generate_profile():
 
 @with_langtrace_root_span(name="test_generate_profile_parallel")
 def test_generate_profile_parallel():
-    specification = "The company is Thomson Reuters Special Services"
+    specification = "The farm is Abma's Farm"
     elasticsearch_test_index = os.getenv("ELASTICSEARCH_TEST_RAG_INDEX")
     elasticsearch = Elasticsearch(
         hosts=[os.getenv("ELASTICSEARCH_URL")],
@@ -64,5 +66,5 @@ def test_generate_profile_parallel():
     new_profile = {}
     for key, value in profile.items():
         new_profile[key] = value.model_dump()
-    with open("tests/data/company_profile_parallel.json", "w") as f:
+    with open("tests/data/farm_profile_parallel.json", "w") as f:
         json.dump(new_profile, f, indent=4)

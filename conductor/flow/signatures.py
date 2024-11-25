@@ -156,3 +156,22 @@ class CompanySearchQuestions(dspy.Signature):
     company_name: str = dspy.InputField(desc="The name of the company")
     perspective: str = dspy.InputField(desc="The perspective of the analyst")
     search_queries: list[str] = dspy.OutputField(desc="The generated search queries")
+
+
+class AnswerReasoning(dspy.Signature):
+    """
+    Create an answer reasoning from the answer, citations, question, documents, faithfulness, factual correctness, and confidence.
+    """
+
+    answer: str = dspy.InputField(desc="The answer to the question")
+    citations: list[str] = dspy.InputField(desc="The citations for the answer")
+    question: str = dspy.InputField(desc="The question to be answered")
+    documents: list[str] = dspy.InputField(
+        desc="The documents used to generate the answer"
+    )
+    faithfulness: int = dspy.InputField(desc="The faithfulness of the answer")
+    factual_correctness: int = dspy.InputField(
+        desc="The factual correctness of the answer"
+    )
+    confidence: int = dspy.InputField(desc="The confidence of the answer")
+    reasoning: str = dspy.OutputField(desc="The generated reasoning")

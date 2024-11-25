@@ -6,6 +6,7 @@ from conductor.flow.rag import (
     AgenticCitationValueRAG,
     WebSearchRAG,
     WebSearchValueRAG,
+    WebDocumentRetriever,
     get_answer,
     get_answers,
 )
@@ -13,6 +14,7 @@ from conductor.flow.retriever import ElasticRMClient, ElasticDocumentIdRMClient
 import os
 from elasticsearch import Elasticsearch
 from conductor.rag.embeddings import BedrockEmbeddings
+from tests.utils import save_model_to_test_data
 import dspy
 
 query = (
@@ -65,7 +67,14 @@ def test_agentic_rag_value() -> None:
     assert isinstance(value, CitedValueWithCredibility)
 
 
-def test_web_search_rag() -> None:
+def test_web_search_rag_no_cache() -> None:
+    search_lm = dspy.LM(
+        "openai/claude-3-5-sonnet",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        cache=False,
+    )
+    dspy.configure(lm=search_lm)
     elasticsearch = Elasticsearch(
         hosts=[os.getenv("ELASTICSEARCH_URL")],
     )
@@ -76,8 +85,9 @@ def test_web_search_rag() -> None:
         embeddings=BedrockEmbeddings(),
     )
     rag = WebSearchRAG(elastic_id_retriever=retriever)
-    answer = rag(question="Who the head of R&D and Data Science at TRSS?")
+    answer = rag(question="Who is the CFO of TRSS?")
     assert isinstance(answer, CitedAnswerWithCredibility)
+    save_model_to_test_data(answer, "web_search_rag_no_cache.json")
 
 
 def test_web_search_value_rag() -> None:
@@ -155,3 +165,30 @@ def test_get_answers(elasticsearch_cloud_test_research_index: str) -> None:
         ],
     )
     assert isinstance(answer, list)
+
+
+def test_get_documents(elasticsearch_cloud_test_research_index: str) -> None:
+    search_lm = dspy.LM(
+        "openai/claude-3-5-sonnet",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        # cache=False,
+    )
+    dspy.configure(lm=search_lm)
+    cloud_elastic = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_CLOUD_URL")],
+        api_key=os.getenv("ELASTICSEARCH_CLOUD_API_ADMIN_KEY"),
+    )
+    retriever = ElasticDocumentIdRMClient(
+        elasticsearch=cloud_elastic,
+        index_name=elasticsearch_cloud_test_research_index,
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        k=10,
+        rerank_top_n=5,
+    )
+    rag = WebDocumentRetriever(
+        elastic_id_retriever=retriever,
+    )
+    documents = rag("Who the head of R&D and Data Science at TRSS?")
+    assert isinstance(documents, list)

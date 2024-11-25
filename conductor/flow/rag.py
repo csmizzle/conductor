@@ -9,6 +9,7 @@ from conductor.flow.signatures import (
     CitedValue,
     QuestionHyde,
     ExtractValue,
+    AnswerReasoning,
 )
 from conductor.flow.models import CitedAnswer as CitedAnswerModel
 from conductor.flow.credibility import SourceCredibility, get_source_credibility
@@ -20,6 +21,7 @@ from pydantic import BaseModel, Field, InstanceOf
 from typing import Union, Tuple, Optional
 from loguru import logger
 from langchain_core.embeddings import Embeddings
+from langchain_core.documents import Document
 from elasticsearch import Elasticsearch
 import os
 import concurrent.futures
@@ -81,6 +83,20 @@ class CitedValueWithCredibility(BaseModel):
 
 class CitedBooleanWithCredibility(CitedValueWithCredibility):
     value: Union[bool, NotAvailable] = Field(description="The value for the question")
+
+
+class DocumentWithCredibility(BaseModel):
+    content: str = Field(description="The content of the document")
+    source: str = Field(description="The source of the document")
+    source_credibility: SourceCredibility = Field(
+        description="The credibility of the source"
+    )
+    source_credibility_reasoning: str = Field(
+        description="The reasoning behind the source credibility"
+    )
+
+    class Config:
+        use_enum_values = True
 
 
 class CitationRAG(dspy.Module):
@@ -315,6 +331,95 @@ class CitationValueRAG(dspy.Module):
         return value_with_credibility
 
 
+class WebDocumentRetriever(dspy.Module):
+    def __init__(
+        self,
+        elastic_id_retriever: ElasticDocumentIdRMClient,
+    ) -> None:
+        super().__init__()
+        self.retriever = elastic_id_retriever
+        self.generate_answer = dspy.ChainOfThought(CitedAnswer)
+        self.generate_answer_reasoning = dspy.ChainOfThought(AnswerReasoning)
+
+    def _retrieve_documents_from_internet(
+        self, question: str, results: int = 5
+    ) -> list[Document]:
+        """
+        Retrieve the answer from the internet and index document in ElasticSearch
+        """
+        # first check the answer box of serp for the answer
+        logger.info(f"Searching the internet for the answer to question: {question}")
+        retrieved_documents = None
+        search = GoogleSearch(
+            {
+                "q": question,
+                "hl": "en",
+                "gl": "us",
+                "api_key": os.getenv("SERPAPI_API_KEY"),
+            }
+        )
+        google_results_dict = search.get_dict()
+        if "answer_box" in google_results_dict:
+            logger.info(
+                f"Ingesting answer link {google_results_dict['answer_box']['link']}"
+            )
+            documents = ingest_with_ids(
+                url=google_results_dict["answer_box"]["link"],
+                client=self.retriever.client,
+            )
+            if "snippet" in google_results_dict["answer_box"]:
+                logger.info("Answer found in the snippet")
+                # get source documents
+                if documents:
+                    document_ids = []
+                    for urls in documents.values():
+                        document_ids.extend(urls)
+                    retrieved_documents = self.retriever.get_documents(
+                        query=question, document_ids=document_ids
+                    )
+                else:
+                    logger.info("No documents were ingested ...")
+            else:
+                logger.info("No answer found in the snippet, ingesting more data ...")
+        if not retrieved_documents and "organic_results" in google_results_dict:
+            urls_to_ingest = []
+            logger.info(f"Ingesting additional information for query {question}")
+            for idx in range(min(results, len(google_results_dict["organic_results"]))):
+                urls_to_ingest.append(
+                    google_results_dict["organic_results"][idx]["link"]
+                )
+            documents = parallel_ingest_with_ids(
+                urls=urls_to_ingest, client=self.retriever.client
+            )
+            # get the document ids
+            if documents:
+                document_ids = []
+                for urls in documents.values():
+                    document_ids.extend(urls)
+                # search again to get the answer with the indexed documents
+                retrieved_documents = self.retriever.get_documents(
+                    query=question, document_ids=document_ids
+                )
+            else:
+                logger.info("No documents were ingested ...")
+        return retrieved_documents
+
+    def forward(self, question: str) -> list[DocumentWithCredibility]:
+        documents = []
+        retrieved_documents = self._retrieve_documents_from_internet(question)
+        for document in retrieved_documents:
+            # assign source credibility
+            source_confidence = get_source_credibility(source=document.metadata["url"])
+            document = DocumentWithCredibility(
+                content=document.page_content,
+                source=document.metadata["url"],
+                source_credibility=source_confidence.credibility,
+                source_credibility_reasoning=source_confidence.reasoning,
+            )
+            documents.append(document)
+        return documents
+
+
 class WebSearchRAG(dspy.Module):
     def __init__(
         self,
@@ -323,10 +428,11 @@ class WebSearchRAG(dspy.Module):
         super().__init__()
         self.retriever = elastic_id_retriever
         self.generate_answer = dspy.ChainOfThought(CitedAnswer)
+        self.generate_answer_reasoning = dspy.ChainOfThought(AnswerReasoning)
 
     def _retrieve_answer_from_internet(
         self, question: str, results: int = 5
-    ) -> Tuple[CitedAnswerModel, list[str]]:
+    ) -> Tuple[dspy.Prediction, list[str]]:
         """
         Retrieve the answer from the internet and index document in ElasticSearch
         """
@@ -347,7 +453,7 @@ class WebSearchRAG(dspy.Module):
             logger.info(
                 f"Ingesting answer link {google_results_dict['answer_box']['link']}"
             )
-            ingest_with_ids(
+            documents = ingest_with_ids(
                 url=google_results_dict["answer_box"]["link"],
                 client=self.retriever.client,
             )
@@ -364,7 +470,16 @@ class WebSearchRAG(dspy.Module):
                         confidence=5,
                     )
                 )
-                retrieved_documents = dspy.Prediction(documents=retrieved_documents)
+                # get source documents
+                if documents:
+                    document_ids = []
+                    for urls in documents.values():
+                        document_ids.extend(urls)
+                    retrieved_documents = self.retriever(
+                        query=question, document_ids=document_ids
+                    )
+                else:
+                    logger.info("No documents were ingested ...")
             else:
                 logger.info("No answer found in the snippet, ingesting more data ...")
         if not answer and "organic_results" in google_results_dict:
@@ -377,21 +492,47 @@ class WebSearchRAG(dspy.Module):
             documents = parallel_ingest_with_ids(
                 urls=urls_to_ingest, client=self.retriever.client
             )
-            # get the document ids
-            document_ids = []
-            for urls in documents.values():
-                document_ids.extend(urls)
-            # search again to get the answer with the indexed documents
-            retrieved_documents = self.retriever(
-                query=question, document_ids=document_ids
-            )
-            answer = self.generate_answer(
-                question=question, documents=retrieved_documents
-            )
+            if documents:
+                # get the document ids
+                document_ids = []
+                for urls in documents.values():
+                    document_ids.extend(urls)
+                # search again to get the answer with the indexed documents
+                retrieved_documents = self.retriever(
+                    query=question, document_ids=document_ids
+                )
+                answer = self.generate_answer(
+                    question=question, documents=retrieved_documents
+                )
+            else:
+                logger.info("No documents were ingested ...")
         return answer, retrieved_documents
+
+    def _get_answer_reasoning(
+        self,
+        answer: CitedAnswerModel,
+        question: str,
+        retrieved_documents: dspy.Prediction,
+    ) -> None:
+        # generate answer reasoning if not available
+        if not hasattr(answer, "reasoning"):
+            logger.info(f"Generating reasoning for answer: {answer.answer.answer}")
+            reasoning = self.generate_answer_reasoning(
+                answer=answer.answer.answer,
+                citations=answer.answer.citations,
+                question=question,
+                documents=retrieved_documents.documents,
+                faithfulness=answer.answer.faithfulness,
+                factual_correctness=answer.answer.factual_correctness,
+                confidence=answer.answer.confidence,
+            )
+            return reasoning.reasoning
+        else:
+            return answer.reasoning
 
     def forward(self, question: str) -> CitedAnswerWithCredibility:
         answer, retrieved_documents = self._retrieve_answer_from_internet(question)
+        # assign source credibility
         source_confidences = [
             get_source_credibility(source=source) for source in answer.answer.citations
         ]
@@ -403,9 +544,10 @@ class WebSearchRAG(dspy.Module):
             faithfulness=answer.answer.faithfulness,
             factual_correctness=answer.answer.factual_correctness,
             confidence=answer.answer.confidence,
-            answer_reasoning=getattr(
-                answer, "reasoning", None
-            ),  # since not always chain of thought
+            # get answer reasoning if not there
+            answer_reasoning=self._get_answer_reasoning(
+                answer, question, retrieved_documents
+            ),
             source_credibility=[
                 source_confidence.credibility
                 for source_confidence in source_confidences
