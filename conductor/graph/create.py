@@ -188,28 +188,34 @@ def create_deduplicated_graph(
                             documents=aggregated_documents[entry],
                         )
                     )
-                # add relationship to cleaned relationships
-                cleaned_relationships.append(
-                    models.AggregatedCitedRelationship(
-                        source=relationships[idx].source,
-                        target=relationships[idx].target,
-                        relationship_type=relationships[idx].relationship_type,
-                        relationship_reasoning=relationships[
-                            idx
-                        ].relationship_reasoning,
-                        relationship_faithfulness=relationships[
-                            idx
-                        ].relationship_faithfulness,
-                        relationship_factual_correctness=relationships[
-                            idx
-                        ].relationship_factual_correctness,
-                        relationship_confidence=relationships[
-                            idx
-                        ].relationship_confidence,
-                        relationships_query=relationships[idx].relationships_query,
-                        documents=aggregated_documents[entry],
-                    )
-                )
+    # populate for all relationships and aggregated documents
+    for entry in aggregated_documents:
+        # on duplicate entries, take the first source and target and grab aggregated documents
+        cleaned_relationships.append(
+            models.AggregatedCitedRelationship(
+                source=relationships[dedupe_dict[entry][0]].source,
+                target=relationships[dedupe_dict[entry][0]].target,
+                relationship_type=relationships[
+                    dedupe_dict[entry][0]
+                ].relationship_type,
+                relationship_reasoning=relationships[
+                    dedupe_dict[entry][0]
+                ].relationship_reasoning,
+                relationship_faithfulness=relationships[
+                    dedupe_dict[entry][0]
+                ].relationship_faithfulness,
+                relationship_factual_correctness=relationships[
+                    dedupe_dict[entry][0]
+                ].relationship_factual_correctness,
+                relationship_confidence=relationships[
+                    dedupe_dict[entry][0]
+                ].relationship_confidence,
+                relationships_query=relationships[
+                    dedupe_dict[entry][0]
+                ].relationships_query,
+                documents=aggregated_documents[entry],
+            )
+        )
     return models.AggregatedCitedGraph(
         entities=cleaned_cited_entities,
         relationships=cleaned_relationships,
