@@ -12,56 +12,13 @@ Build out relationship and graph extraction utilities here
 .. with some optimizations
 """
 from typing import List, Tuple
-from conductor.graph.models import TripleType, Entity, Relationship, Graph
+from conductor.graph import models
 from conductor.graph import signatures
-from conductor.flow.credibility import SourceCredibility
 from conductor.flow.rag import DocumentWithCredibility
 import concurrent.futures
 import dspy
-from pydantic import InstanceOf, BaseModel, Field
+from pydantic import InstanceOf
 from loguru import logger
-import polars as pl
-
-
-class CitedRelationshipWithCredibility(BaseModel):
-    """
-    Cited relationship model
-    """
-
-    source: Entity = Field(description="Source entity")
-    target: Entity = Field(description="Target entity")
-    relationship_type: str = Field(description="Relationship type")
-    # individual relationship metadata
-    relationship_reasoning: str = Field(
-        description="The reasoning behind the relationship"
-    )
-    relationship_faithfulness: int = Field(
-        ge=1, le=5, description="The faithfulness of the relationship"
-    )
-    relationship_factual_correctness: int = Field(
-        ge=1, le=5, description="The factual correctness of the relationship"
-    )
-    relationship_confidence: int = Field(
-        ge=1, le=5, description="The confidence of the relationship"
-    )
-    # relationship extraction metadata
-    relationships_query: str = Field(
-        description="The query used to generate the relationship"
-    )
-    # document collection metadata
-    document_content: str = Field(
-        description="The document used to generate the relationship"
-    )
-    document_source: str = Field(description="The source of the document")
-    document_source_credibility: SourceCredibility = Field(
-        description="The credibility of the sources"
-    )
-    document_source_credibility_reasoning: str = Field(
-        description="The reasoning behind the source credibility"
-    )
-
-    class Config:
-        use_enum_values = True
 
 
 class RelationshipRAGExtractor:
@@ -72,7 +29,7 @@ class RelationshipRAGExtractor:
     def __init__(
         self,
         specification: str,
-        triple_types: List[TripleType],
+        triple_types: List[models.TripleType],
         rag: InstanceOf[dspy.Module],
     ) -> None:
         self.specification = specification
@@ -88,7 +45,7 @@ class RelationshipRAGExtractor:
             signatures.RelationshipReasoning
         )
 
-    def extract(self) -> list[CitedRelationshipWithCredibility]:
+    def extract(self) -> list[models.CitedRelationshipWithCredibility]:
         """
         Extract graph
         """
@@ -118,7 +75,7 @@ class RelationshipRAGExtractor:
                         document=document,
                     )
                     relationships.append(
-                        CitedRelationshipWithCredibility(
+                        models.CitedRelationshipWithCredibility(
                             source=relationship.source,
                             target=relationship.target,
                             relationship_type=relationship.relationship_type,
@@ -136,7 +93,7 @@ class RelationshipRAGExtractor:
         return relationships
 
     def _create_relationship_query(
-        self, triple_type: TripleType, specification: str
+        self, triple_type: models.TripleType, specification: str
     ) -> str:
         """
         Light wrapper around create_relationship_query to add logging
@@ -157,12 +114,12 @@ class RelationshipRAGExtractor:
 
     def _execute_queries_parallel(
         self,
-    ) -> Tuple[dict[str, TripleType], dict[str, list[DocumentWithCredibility]]]:
+    ) -> Tuple[dict[str, models.TripleType], dict[str, list[DocumentWithCredibility]]]:
         """
         Execute query generation and execution in parallel
         Returns queries and documents for extraction algorithm
         """
-        queries: dict[str, TripleType] = {}
+        queries: dict[str, models.TripleType] = {}
         # generate all queries
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = {}
@@ -188,8 +145,11 @@ class RelationshipRAGExtractor:
         return queries, documents
 
     def _extract_relationships(
-        self, query: str, document: DocumentWithCredibility, triple_type: TripleType
-    ) -> Tuple[str, list[Relationship]]:
+        self,
+        query: str,
+        document: DocumentWithCredibility,
+        triple_type: models.TripleType,
+    ) -> Tuple[str, list[models.Relationship]]:
         """
         Light wrapper around extract_relationships to add logging also return document for downstream reasoning
         """
@@ -203,15 +163,15 @@ class RelationshipRAGExtractor:
 
     def _extract_relationships_parallel(
         self,
-        queries: dict[str, TripleType],
+        queries: dict[str, models.TripleType],
         documents: dict[str, list[DocumentWithCredibility]],
-    ) -> dict[str, list[Tuple[DocumentWithCredibility, list[Relationship]]]]:
+    ) -> dict[str, list[Tuple[DocumentWithCredibility, list[models.Relationship]]]]:
         """
         Extract relationships in parallel
         We use the query maps to execute the correct extraction for each set of documents
         """
         relationships: dict[
-            str, list[Tuple[DocumentWithCredibility, list[Relationship]]]
+            str, list[Tuple[DocumentWithCredibility, list[models.Relationship]]]
         ] = {}  # map query to document and relationships
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures: dict[str, list] = {}
@@ -246,9 +206,12 @@ class RelationshipRAGExtractor:
         return relationships
 
     def _create_relationship_reasoning(
-        self, relationship: Relationship, query: str, document: DocumentWithCredibility
+        self,
+        relationship: models.Relationship,
+        query: str,
+        document: DocumentWithCredibility,
     ) -> Tuple[
-        str, DocumentWithCredibility, Relationship, str
+        str, DocumentWithCredibility, models.Relationship, str
     ]:  # query, document, relationship, reasoning
         """
         Light wrapper around create_relationship_reasoning to add logging
@@ -262,9 +225,9 @@ class RelationshipRAGExtractor:
     def _create_relationships_parallel(
         self,
         relationships: dict[
-            str, list[Tuple[DocumentWithCredibility, list[Relationship]]]
+            str, list[Tuple[DocumentWithCredibility, list[models.Relationship]]]
         ],
-    ) -> list[CitedRelationshipWithCredibility]:
+    ) -> list[models.CitedRelationshipWithCredibility]:
         """
         Create relationship reasoning in parallel and then map to cited relationship schema from answers
         """
@@ -296,7 +259,7 @@ class RelationshipRAGExtractor:
                 for future in futures[query]:
                     query, document, relationship, reasoning = future.result()
                     extracted_relationships.append(
-                        CitedRelationshipWithCredibility(
+                        models.CitedRelationshipWithCredibility(
                             source=relationship.source,
                             target=relationship.target,
                             relationship_type=relationship.relationship_type,
@@ -313,7 +276,7 @@ class RelationshipRAGExtractor:
                     )
         return extracted_relationships
 
-    def extract_parallel(self) -> list[CitedRelationshipWithCredibility]:
+    def extract_parallel(self) -> list[models.CitedRelationshipWithCredibility]:
         # first execute all queries in parallel
         queries, documents = self._execute_queries_parallel()
         # then extract relationships in parallel
@@ -326,66 +289,3 @@ class RelationshipRAGExtractor:
         )
         logger.info(f"Extracted {len(extracted_relationships)} relationships")
         return extracted_relationships
-
-
-def create_graph(
-    specification: str,
-    triple_types: List[TripleType],
-    rag: InstanceOf[dspy.Module],
-) -> dict:
-    """
-    Create graph
-    """
-    extractor = RelationshipRAGExtractor(
-        specification=specification, triple_types=triple_types, rag=rag
-    )
-    relationships = extractor.extract_parallel()
-    # deduplicate relationships through normalization and dedup with polars
-    normalized_relationships = []
-    for relationship in relationships:
-        # normalize source, relationship, and target
-        source_type = relationship.source.entity_type
-        source = relationship.source.name.lower()
-        relationship_type = relationship.relationship_type
-        target_type = relationship.target.entity_type
-        target = relationship.target.name.lower()
-        normalized_relationships.append(
-            {
-                "source_type": source_type,
-                "source": source,
-                "relationship_type": relationship_type,
-                "target_type": target_type,
-                "target": target,
-            }
-        )
-    df = pl.DataFrame(normalized_relationships)
-    logger.info(f"Deduplicating {len(df)} relationships")
-    df = df.unique()
-    deduped_relationships = df.to_dicts()
-    logger.info(f"Deduplicated to {len(deduped_relationships)} relationships")
-    # map relationships to graph
-    cleaned_relationships = []
-    cleaned_entities_map = {}
-    for relationship in deduped_relationships:
-        if relationship["source"] not in cleaned_entities_map:
-            cleaned_entities_map[relationship["source"]] = Entity(
-                entity_type=relationship["source_type"], name=relationship["source"]
-            )
-        if relationship["target"] not in cleaned_entities_map:
-            cleaned_entities_map[relationship["target"]] = Entity(
-                entity_type=relationship["target_type"], name=relationship["target"]
-            )
-        cleaned_relationships.append(
-            Relationship(
-                source=cleaned_entities_map[relationship["source"]],
-                target=cleaned_entities_map[relationship["target"]],
-                relationship_type=relationship["relationship_type"],
-            )
-        )
-    logger.info(
-        f"Created graph with {len(cleaned_entities_map)} entities and {len(cleaned_relationships)} relationships"
-    )
-    return Graph(
-        entities=list(cleaned_entities_map.values()),
-        relationships=cleaned_relationships,
-    )
