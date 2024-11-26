@@ -58,7 +58,9 @@ def make_request(url: str, **kwargs) -> Union[requests.Response, None]:
 
 
 # text data from websites
-def ingest_webpage(url: str, limit: int = 50000, **kwargs) -> WebPage:
+def ingest_webpage(
+    url: str, limit: int = 50000, pdf_page_limit: int = 10, **kwargs
+) -> WebPage:
     """
     Ingest webpage from URL
     """
@@ -78,7 +80,7 @@ def ingest_webpage(url: str, limit: int = 50000, **kwargs) -> WebPage:
                 # get text from soup
                 text = soup.get_text(strip=True)
                 # get the first limit characters
-                # text = text[:limit]
+                text = text[:limit]
                 # use the partition_text function
                 return WebPage(
                     url=url, created_at=created_at, content=text, raw=response_text
@@ -89,11 +91,13 @@ def ingest_webpage(url: str, limit: int = 50000, **kwargs) -> WebPage:
                 # docling document extractor from temp file
                 if response:
                     converter = DocumentConverter()
+                    stream = DocumentStream(
+                        name="web_ingest.pdf",
+                        stream=io.BytesIO(response.content),
+                    )
                     results = converter.convert(
-                        source=DocumentStream(
-                            name=url,
-                            stream=io.BytesIO(response.content),
-                        )
+                        source=stream,
+                        max_num_pages=pdf_page_limit,
                     )
                     markdown = results.document.export_to_markdown()
                     return WebPage(
@@ -103,6 +107,7 @@ def ingest_webpage(url: str, limit: int = 50000, **kwargs) -> WebPage:
                         raw=results.document.export_to_text(),
                     )
     except Exception as e:
+        logger.error(f"Error ingesting {url}")
         raise e
 
 
