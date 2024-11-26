@@ -5,7 +5,7 @@ Ingestion logic for RAG data
 - Vectorize data
 - Store data
 """
-from typing import List, Union
+from typing import List
 from elasticsearch import Elasticsearch
 from langchain_core.embeddings import Embeddings
 from langchain_elasticsearch import ElasticsearchStore
@@ -106,9 +106,10 @@ class ElasticsearchRetrieverClient:
         """
         return self.store.similarity_search(query=query, **kwargs)
 
-    def find_document_by_url(
-        self, url: str, min_score_threshold: float = 0.97, size: Union[int, None] = 1
-    ) -> dict:
+    def find_documents_by_url(
+        self,
+        url: str,
+    ) -> list[dict]:
         """
         Find document by URL
         """
@@ -116,12 +117,28 @@ class ElasticsearchRetrieverClient:
         body = {
             "query": {"term": {"metadata.url.keyword": url}},
         }
-        if size:
-            body["size"] = size
-        return self.elasticsearch.search(
+        results = self.elasticsearch.search(
             index=self.index_name,
             body=body,
+            scroll="2m",  # Keep the scroll context alive for 2 minutes
+            size=100,  # Batch size
         )
+        all_hits = []
+        scroll_id = results["_scroll_id"]
+        hits = results["hits"]["hits"]
+        # Continue scrolling until no more hits are returned
+        while len(hits) > 0:
+            for hit in hits:
+                all_hits.append(
+                    {**{"_id": hit["_id"]}, **hit["_source"]}
+                )  # append _id to documents
+
+            # Fetch the next batch of results
+            response = self.elasticsearch.scroll(scroll_id=scroll_id, scroll="2m")
+            hits = response["hits"]["hits"]
+        # Clear the scroll context when done
+        self.elasticsearch.clear_scroll(scroll_id=scroll_id)
+        return all_hits
 
     def mget_documents(self, document_ids: list[str]) -> list[Document]:
         """
