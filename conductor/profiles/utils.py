@@ -7,22 +7,22 @@ from pydantic import BaseModel, InstanceOf
 from conductor.flow.specify import specify_description
 
 
-def get_model_descriptions(model: InstanceOf[BaseModel]) -> dict[str, str]:
+def get_model_descriptions(model_schema: InstanceOf[BaseModel]) -> dict[str, str]:
     """
     Get the descriptions of the fields in a model
     """
     description = {}
-    properties = model.model_json_schema()["properties"]
+    properties = model_schema["properties"]
     for key in properties:
         description[key] = properties[key]["description"]
     return description
 
 
-def specify_model(model: InstanceOf[BaseModel], specification: str) -> dict[str, str]:
+def specify_model(model_schema: dict, specification: str) -> dict[str, str]:
     """
     Specify a model
     """
-    descriptions = get_model_descriptions(model=model)
+    descriptions = get_model_descriptions(model_schema=model_schema)
     specified_fields = {}
     for field in descriptions:
         specified_fields[field] = specify_description(

@@ -1,23 +1,24 @@
 """
 Relationship extraction
 """
+from conductor.graph.models import CitedRelationshipWithCredibility
 from conductor.graph.extraction import (
     RelationshipRAGExtractor,
-    create_graph,
 )
+from conductor.graph.create import create_deduplicated_graph
 from conductor.graph.models import (
     TripleType,
-    Relationship,
     EntityType,
     RelationshipType,
-    Graph,
+    AggregatedCitedGraph,
 )
-from conductor.flow.retriever import ElasticRMClient
+from conductor.flow.rag import WebDocumentRetriever
+from conductor.flow.retriever import ElasticDocumentIdRMClient
 from conductor.rag.embeddings import BedrockEmbeddings
 from elasticsearch import Elasticsearch
 import os
 import dspy
-from tests.utils import save_model_to_test_data
+from tests.utils import save_model_to_test_data, load_model_from_test_data
 
 bedrock_claude_sonnet = dspy.LM(
     model="bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
@@ -49,54 +50,85 @@ triple_types = [
         target=EntityType.PERSON,
     ),
 ]
-elasticsearch = Elasticsearch(
-    hosts=[os.getenv("ELASTICSEARCH_URL")],
-)
-elasticsearch_test_index = os.getenv("ELASTICSEARCH_TEST_RAG_INDEX")
-retriever = ElasticRMClient(
-    elasticsearch=elasticsearch,
-    index_name=elasticsearch_test_index,
-    embeddings=BedrockEmbeddings(),
-    cohere_api_key=os.getenv("COHERE_API_KEY"),
-    k=20,
-    rerank_top_n=10,
-)
 
 
 def test_relationship_extraction() -> None:
+    search_lm = dspy.LM(
+        "openai/gpt-4o-mini",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        cache=False,
+        max_tokens=3000,
+    )
+    dspy.configure(lm=search_lm)
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    elasticsearch_test_index = os.getenv("ELASTICSEARCH_TEST_RAG_INDEX")
+    retriever = ElasticDocumentIdRMClient(
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_test_index,
+        embeddings=BedrockEmbeddings(),
+    )
+    rag = WebDocumentRetriever(elastic_id_retriever=retriever)
     extractor = RelationshipRAGExtractor(
         specification=specification,
-        triple_types=triple_types,
-        retriever=retriever,
+        triple_types=[
+            triple_types[3]
+        ],  # just extract employee relationships for speed of testing ... and cost
+        rag=rag,
     )
     relationships = extractor.extract()
     assert isinstance(relationships, list)
-    assert all(isinstance(relationship, Relationship) for relationship in relationships)
+    assert all(
+        isinstance(relationship, CitedRelationshipWithCredibility)
+        for relationship in relationships
+    )
+    save_model_to_test_data(relationships, "test_relationship_extraction.json")
 
 
 def test_relationship_extraction_parallel() -> None:
+    search_lm = dspy.LM(
+        "openai/gpt-4o-mini",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        cache=False,
+        max_tokens=3000,
+    )
+    dspy.configure(lm=search_lm)
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    elasticsearch_test_index = os.getenv("ELASTICSEARCH_TEST_RAG_INDEX")
+    retriever = ElasticDocumentIdRMClient(
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_test_index,
+        embeddings=BedrockEmbeddings(),
+    )
+    rag = WebDocumentRetriever(elastic_id_retriever=retriever)
     extractor = RelationshipRAGExtractor(
         specification=specification,
-        triple_types=triple_types,
-        retriever=retriever,
+        triple_types=[
+            triple_types[3],
+            triple_types[2],
+        ],  # just extract employee relationships for speed of testing ... and cost
+        rag=rag,
     )
     relationships = extractor.extract_parallel()
     assert isinstance(relationships, list)
-    assert all(isinstance(relationship, Relationship) for relationship in relationships)
+    assert all(
+        isinstance(relationship, CitedRelationshipWithCredibility)
+        for relationship in relationships
+    )
+    save_model_to_test_data(relationships, "test_relationship_extraction_parallel.json")
 
 
 def test_create_graph() -> None:
-    graph = create_graph(
-        specification=specification, triple_types=triple_types, retriever=retriever
+    graph = create_deduplicated_graph(
+        relationships=load_model_from_test_data(
+            filename="test_relationship_extraction_parallel.json",
+            model=CitedRelationshipWithCredibility,
+        )
     )
-    assert isinstance(graph, Graph)
-    save_model_to_test_data(graph, "graph.json")
-
-
-def test_create_graph_mini() -> None:
-    dspy.configure(lm=mini)
-    graph = create_graph(
-        specification=specification, triple_types=triple_types, retriever=retriever
-    )
-    assert isinstance(graph, Graph)
-    save_model_to_test_data(graph, "graph.json")
+    assert isinstance(graph, AggregatedCitedGraph)
+    save_model_to_test_data(graph, "test_create_graph.json")

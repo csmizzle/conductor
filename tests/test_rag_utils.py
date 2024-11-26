@@ -65,7 +65,8 @@ def test_get_content_and_source_from_response_cloud_dev_index() -> None:
         embeddings=BedrockEmbeddings(),
         index_name="evrim-dev-index",
     )
-    url = "https://trssllc.com"
+    url = "https://gdit.com"
     result = client.find_document_by_url(url=url)
     data_with_source = get_content_and_source_from_response(result)
     assert isinstance(data_with_source, str)
+    assert f"Source Link: {url}" in data_with_source

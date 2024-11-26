@@ -7,11 +7,15 @@ from conductor.rag.ingest import (
     relationships_to_image_query,
     queries_to_image_results,
     describe_from_image_search_results,
+    ingest_with_ids,
+    parallel_ingest_with_ids,
 )
 from conductor.rag.models import WebPage, SourcedImageDescription
 from conductor.llms import openai_gpt_4o
 from tests.constants import GRAPH_JSON
 from conductor.reports.models import Graph, RelationshipType
+from conductor.rag.client import ElasticsearchRetrieverClient, Elasticsearch
+from conductor.rag.embeddings import BedrockEmbeddings
 import pytest
 import os
 
@@ -78,3 +82,42 @@ def test_graph_to_images() -> None:
     )
     assert isinstance(descriptions, list)
     assert len(descriptions) == 1
+
+
+def test_ingest_with_ids() -> None:
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    embeddings = BedrockEmbeddings()
+    client = ElasticsearchRetrieverClient(
+        elasticsearch=elasticsearch,
+        embeddings=embeddings,
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+    )
+    test_url = "https://trssllc.com"
+    webpages = ingest_with_ids(client=client, url=test_url, size=None)
+    assert isinstance(webpages, dict)
+    # retrieve chunks by document id
+    documents = client.mget_documents(document_ids=webpages[test_url])
+    assert isinstance(documents, list)
+
+
+def test_parrell_ingest_with_ids() -> None:
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    embeddings = BedrockEmbeddings()
+    client = ElasticsearchRetrieverClient(
+        elasticsearch=elasticsearch,
+        embeddings=embeddings,
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+    )
+    test_urls = ["https://trssllc.com", "https://flashpoint.io"]
+    webpages = parallel_ingest_with_ids(client=client, urls=test_urls, size=None)
+    assert isinstance(webpages, dict)
+    # retrieve chunks by document id
+    ids = []
+    for url in test_urls:
+        ids.extend(webpages[url])
+    documents = client.mget_documents(document_ids=ids)
+    assert isinstance(documents, list)

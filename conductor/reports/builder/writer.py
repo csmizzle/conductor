@@ -5,12 +5,12 @@ Section writer from a report outline
 - Write answers to sections
 """
 import dspy
-from conductor.flow.retriever import ElasticRMClient
-from conductor.flow.rag import CitationRAG, CitedAnswerWithCredibility
+from conductor.flow.rag import CitedAnswerWithCredibility
 from conductor.reports.builder import models
 from conductor.reports.builder import signatures
 import concurrent.futures
 from loguru import logger
+from pydantic import InstanceOf
 
 
 class SectionWriter(dspy.Module):
@@ -20,9 +20,9 @@ class SectionWriter(dspy.Module):
 
     def __init__(
         self,
-        elastic_retriever: ElasticRMClient,
+        rag: InstanceOf[dspy.Module],
     ) -> None:
-        self.rag = CitationRAG(elastic_retriever)
+        self.rag = rag
         self.generate_section_questions = dspy.ChainOfThought(
             signatures.SectionQuestion,
         )
@@ -94,9 +94,9 @@ class ReportWriter:
 
     def __init__(
         self,
-        elastic_retriever: ElasticRMClient,
+        rag: InstanceOf[dspy.Module],
     ) -> None:
-        self.elastic_retriever = elastic_retriever
+        self.rag = rag
 
     def write_section(
         self,
@@ -107,7 +107,7 @@ class ReportWriter:
         """
         Write a section from a report outline
         """
-        writer = SectionWriter(self.elastic_retriever)
+        writer = SectionWriter(rag=self.rag)
         return writer(
             section=section_outline,
             specification=specification,
@@ -143,12 +143,12 @@ def write_section(
     section: models.SectionOutline,
     specification: str,
     perspective: str,
-    elastic_retriever: ElasticRMClient,
+    rag: InstanceOf[dspy.Module],
 ) -> dspy.Prediction:
     """
     Write a section from a report outline
     """
-    writer = SectionWriter(elastic_retriever)
+    writer = SectionWriter(rag=rag)
     return writer(
         section=section,
         specification=specification,
@@ -160,12 +160,12 @@ def write_report(
     outline: models.ReportOutline,
     specification: str,
     perspective: str,
-    elastic_retriever: ElasticRMClient,
+    rag: InstanceOf[dspy.Module],
 ) -> dspy.Prediction:
     """
     Write a report from an outline
     """
-    writer = ReportWriter(elastic_retriever)
+    writer = ReportWriter(rag=rag)
     return writer.write(
         outline=outline,
         specification=specification,

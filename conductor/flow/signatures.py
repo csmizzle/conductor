@@ -121,3 +121,57 @@ class DescriptionSpecification(dspy.Signature):
     specified_retrieval_question: str = dspy.OutputField(
         desc="The specified retrieval question"
     )
+
+
+class QuestionHyde(dspy.Signature):
+    """
+    Take a question and create a hypothetical document that would answer the question.
+    Only use the elements of the question to create the document.
+    """
+
+    question: str = dspy.InputField(desc="The question to be answered")
+    document: str = dspy.OutputField(
+        desc="The hypothetical document that would answer the question"
+    )
+
+
+class ExtractValue(dspy.Signature):
+    """
+    Distill an answer to an answer into a value that would fit into a database.
+    Use the question to help understand which value to extract.
+    """
+
+    question: str = dspy.InputField(desc="The question to be answered")
+    answer: str = dspy.InputField(desc="The answer to the question")
+    value: str = dspy.OutputField(desc="The extracted value")
+
+
+class CompanySearchQuestions(dspy.Signature):
+    """
+    Generate analytical research questions for company research
+    Use the perspective of the analyst to generate the queries
+    The questions should help a novice analyst understand the company like a subject matter expert
+    """
+
+    company_name: str = dspy.InputField(desc="The name of the company")
+    perspective: str = dspy.InputField(desc="The perspective of the analyst")
+    search_queries: list[str] = dspy.OutputField(desc="The generated search queries")
+
+
+class AnswerReasoning(dspy.Signature):
+    """
+    Create an answer reasoning from the answer, citations, question, documents, faithfulness, factual correctness, and confidence.
+    """
+
+    answer: str = dspy.InputField(desc="The answer to the question")
+    citations: list[str] = dspy.InputField(desc="The citations for the answer")
+    question: str = dspy.InputField(desc="The question to be answered")
+    documents: list[str] = dspy.InputField(
+        desc="The documents used to generate the answer"
+    )
+    faithfulness: int = dspy.InputField(desc="The faithfulness of the answer")
+    factual_correctness: int = dspy.InputField(
+        desc="The factual correctness of the answer"
+    )
+    confidence: int = dspy.InputField(desc="The confidence of the answer")
+    reasoning: str = dspy.OutputField(desc="The generated reasoning")
