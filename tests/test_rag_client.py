@@ -224,3 +224,19 @@ def test_ingest_images_from_graph(elasticsearch_test_image_index) -> None:
         client=client,
     )
     assert len(documents) == 5
+
+
+def test_get_url_scroll() -> None:
+    url = "https://arxiv.org/pdf/2408.09869"
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    embeddings = BedrockEmbeddings()
+    client = ElasticsearchRetrieverClient(
+        elasticsearch=elasticsearch,
+        embeddings=embeddings,
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+    )
+    documents = client.find_documents_by_url(url=url)
+    assert isinstance(documents, list)
+    assert len(documents) == 12

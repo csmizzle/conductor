@@ -8,6 +8,9 @@ from conductor.reports.models import (
     ImageSearchResult,
     ImageResult,
 )
+from docling.document_converter import DocumentConverter
+from docling.datamodel.base_models import DocumentStream
+import io
 from conductor.chains.tools import ImageProcessor
 from conductor.chains.tools import image_search
 from conductor.chains import relationships_to_image_query, run_create_caption_chain
@@ -24,8 +27,40 @@ from loguru import logger
 from concurrent.futures import ThreadPoolExecutor
 
 
+def make_request(url: str, **kwargs) -> Union[requests.Response, None]:
+    zen_response = None
+    response = None
+    # use zenrows to get the text from the webpage
+    params = dict(
+        js_render="true",
+        premium_proxy="true",
+    )
+    try:
+        zen_response = zenrows_client.get(url, params=params, timeout=20)
+    except requests.exceptions.ReadTimeout:
+        logger.error(f"Zenrows Timeout Error: {url}")
+    # process response and try with requests if not successful
+    if not zen_response or not zen_response.ok:
+        if zen_response:
+            logger.error(f"Zenrows Error: {zen_response.status_code}")
+            logger.error(f"Zenrows Error: {zen_response.text}")
+        logger.error("Sending request with requests instead ...")
+        normal_response = requests.get(url, **kwargs)
+        if not normal_response.ok:
+            logger.error(f"Requests Error: {normal_response.status_code}")
+            logger.error(f"Requests Error: {normal_response.text}")
+            normal_response.raise_for_status()
+        else:
+            response = normal_response
+    else:
+        response = zen_response
+    return response
+
+
 # text data from websites
-def ingest_webpage(url: str, limit: int = 50000, **kwargs) -> WebPage:
+def ingest_webpage(
+    url: str, limit: int = 50000, pdf_page_limit: int = 10, **kwargs
+) -> WebPage:
     """
     Ingest webpage from URL
     """
@@ -33,30 +68,11 @@ def ingest_webpage(url: str, limit: int = 50000, **kwargs) -> WebPage:
     try:
         # get a created at timestamp
         created_at = datetime.now()
-        # handle pdfs by passing for now
-        if not url.endswith("pdf"):
-            # use zenrows to get the text from the webpage
-            params = dict(
-                js_render="true",
-                premium_proxy="true",
-            )
-            zen_response = zenrows_client.get(url, params=params, timeout=20)
-            # process response and try with requests if not successful
-            if not zen_response.ok:
-                logger.error(f"Zenrows Error: {zen_response.status_code}")
-                logger.error(f"Zenrows Error: {zen_response.text}")
-                logger.error("Sending request with requests instead ...")
-                normal_response = requests.get(url, **kwargs)
-                if not normal_response.ok:
-                    logger.error(f"Requests Error: {zen_response.status_code}")
-                    logger.error(f"Requests Error: {zen_response.text}")
-                    normal_response.raise_for_status()
-                else:
-                    response = normal_response
-            else:
-                response = zen_response
-            # process response if successful
-            if response:
+        # make request
+        response = make_request(url, **kwargs)
+        # process response if successful
+        if response:
+            if response.headers.get("content-type") != "application/pdf":
                 # get text from response
                 response_text = response.text
                 # parse with BeautifulSoup
@@ -69,7 +85,29 @@ def ingest_webpage(url: str, limit: int = 50000, **kwargs) -> WebPage:
                 return WebPage(
                     url=url, created_at=created_at, content=text, raw=response_text
                 )
+            # ingest pdfs
+            else:
+                logger.info(f"Ingesting PDF from {url} ...")
+                # docling document extractor from temp file
+                if response:
+                    converter = DocumentConverter()
+                    stream = DocumentStream(
+                        name="web_ingest.pdf",
+                        stream=io.BytesIO(response.content),
+                    )
+                    results = converter.convert(
+                        source=stream,
+                        max_num_pages=pdf_page_limit,
+                    )
+                    markdown = results.document.export_to_markdown()
+                    return WebPage(
+                        url=url,
+                        created_at=created_at,
+                        content=markdown,
+                        raw=results.document.export_to_text(),
+                    )
     except Exception as e:
+        logger.error(f"Error ingesting {url}")
         raise e
 
 
@@ -86,15 +124,14 @@ def url_to_db(url: str, client: ElasticsearchRetrieverClient, **kwargs) -> list[
 def ingest_with_ids(
     client: ElasticsearchRetrieverClient,
     url: str,
-    size: Union[int, None] = 1,
     headers: dict = None,
     cookies: dict = None,
 ) -> dict[str, list[str]]:
     logger.info(f"Ingesting data for {url} ...")
-    existing_document = client.find_document_by_url(url=url, size=size)
-    if existing_document["hits"]["total"]["value"] > 0:
-        logger.info(f"Document already exists for {url}, returning document ids")
-        document_ids = [doc["_id"] for doc in existing_document["hits"]["hits"]]
+    existing_documents = client.find_documents_by_url(url=url)
+    if len(existing_documents) > 0:
+        logger.info(f"Documents already exists for {url}, returning document ids")
+        document_ids = [doc["_id"] for doc in existing_documents]
         return {url: document_ids}
     else:
         try:
@@ -107,7 +144,7 @@ def ingest_with_ids(
 
 
 def parallel_ingest_with_ids(
-    urls, client, headers=None, cookies=None, size=None
+    urls, client, headers=None, cookies=None
 ) -> dict[str, list[str]]:
     """
     Run ingest_with_ids in parallel
@@ -121,7 +158,6 @@ def parallel_ingest_with_ids(
                     ingest_with_ids,
                     client=client,
                     url=url,
-                    size=size,
                     headers=headers,
                     cookies=cookies,
                 )
