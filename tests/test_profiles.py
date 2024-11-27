@@ -5,6 +5,8 @@ from conductor.profiles.factory import (
     create_custom_cited_model,
     create_extract_value_with_custom_type,
     create_web_search_value_rag,
+    create_value_rag_pipeline,
+    run_value_rag_pipeline,
 )
 from conductor.profiles.models import Company
 from conductor.flow.rag import WebSearchValueRAG
@@ -153,3 +155,37 @@ def test_create_custom_rag() -> None:
     )
     answer = created_rag(question="What is the revenue of TRSS?")
     assert isinstance(answer.value, int)
+
+
+def test_create_value_rag_pipeline() -> None:
+    value_map = {
+        "name": (str, "Farm name"),
+        "location": (str, "Farm location"),
+        "size": (int, "Farm size estimate in acres"),
+    }
+    pipeline = create_value_rag_pipeline(
+        value_map=value_map,
+        elasticsearch=Elasticsearch(hosts=[os.getenv("ELASTICSEARCH_URL")]),
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
+    assert isinstance(pipeline, dict)
+
+
+def test_run_value_rag_pipeline() -> None:
+    value_map = {
+        "name": (str, "Farm name"),
+        "location": (str, "Farm location"),
+        "size": (int, "Farm size estimate in acres"),
+    }
+    pipeline = create_value_rag_pipeline(
+        value_map=value_map,
+        elasticsearch=Elasticsearch(hosts=[os.getenv("ELASTICSEARCH_URL")]),
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
+    specification = "The farm is Abma's Farm"
+    results = run_value_rag_pipeline(specification=specification, pipeline=pipeline)
+    assert isinstance(results, dict)
