@@ -1,5 +1,9 @@
 from conductor.profiles.utils import specify_model
 from conductor.profiles.generate import generate_profile, generate_profile_parallel
+from conductor.profiles.factory import (
+    create_custom_cited_value,
+    create_custom_cited_model,
+)
 from conductor.profiles.models import Company
 from conductor.flow.rag import WebSearchValueRAG
 from conductor.rag.embeddings import BedrockEmbeddings
@@ -44,6 +48,8 @@ def test_generate_profile():
         new_profile[key] = value.model_dump()
     with open("tests/data/company_profile.json", "w") as f:
         json.dump(new_profile, f, indent=4)
+    with open("tests/data/abstract_company_profile.json", "w") as f:
+        json.dump(Company.model_json_schema(), f, indent=4)
 
 
 @with_langtrace_root_span(name="test_generate_profile_parallel")
@@ -68,3 +74,45 @@ def test_generate_profile_parallel():
         new_profile[key] = value.model_dump()
     with open("tests/data/farm_profile_parallel.json", "w") as f:
         json.dump(new_profile, f, indent=4)
+
+
+def test_create_custom_cited_value() -> None:
+    value_type = str
+    value_description = "Custom value description"
+    custom_cited_value = create_custom_cited_value(
+        value_type=value_type, value_description=value_description
+    )
+    assert custom_cited_value
+
+
+def test_create_custom_cited_model() -> None:
+    model_name = "Farm"
+    value_map = {
+        "name": (str, "Farm name"),
+        "location": (str, "Farm location"),
+        "size": (int, "Farm size estimate in acres"),
+    }
+    custom_cited_model = create_custom_cited_model(
+        model_name=model_name, value_map=value_map
+    )
+    assert custom_cited_model
+    with open("tests/data/abstract_farm_model.json", "w") as f:
+        json.dump(custom_cited_model.model_json_schema(), f, indent=4)
+
+
+def test_specify_custom_model() -> None:
+    model_name = "Farm"
+    value_map = {
+        "name": (str, "Farm name"),
+        "location": (str, "Farm location"),
+        "size": (int, "Farm size estimate in acres"),
+    }
+    custom_cited_model = create_custom_cited_model(
+        model_name=model_name, value_map=value_map
+    )
+    # specify the model
+    specification = "The farm is Abma's Farm"
+    specified_fields = specify_model(
+        model_schema=custom_cited_model.model_json_schema(), specification=specification
+    )
+    assert isinstance(specified_fields, dict)

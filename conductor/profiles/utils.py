@@ -3,11 +3,10 @@ Profiles should be decomposed into a series of questions based on field descript
 This should be executed and then the results should a value that is inserted into a profile.
 We can do this through reading the field descriptions and then generating a series of questions.
 """
-from pydantic import BaseModel, InstanceOf
 from conductor.flow.specify import specify_description
 
 
-def get_model_descriptions(model_schema: InstanceOf[BaseModel]) -> dict[str, str]:
+def get_model_descriptions(model_schema: dict) -> dict[str, str]:
     """
     Get the descriptions of the fields in a model
     """
