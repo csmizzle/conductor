@@ -8,6 +8,7 @@ from conductor.profiles.factory import (
     create_value_rag_pipeline,
     run_value_rag_pipeline,
 )
+from conductor.profiles.outputs import recursive_model_dump
 from conductor.profiles.models import Company
 from conductor.flow.rag import WebSearchValueRAG
 from conductor.rag.embeddings import BedrockEmbeddings
@@ -191,3 +192,59 @@ def test_run_value_rag_pipeline() -> None:
     specification = "The farm is Abma's Farm"
     results = run_value_rag_pipeline(specification=specification, pipeline=pipeline)
     assert isinstance(results, dict)
+
+
+def test_create_nested_pipeline() -> None:
+    value_map = {
+        "name": (str, "Farm name"),
+        "location": (str, "Farm location"),
+        "size": (int, "Farm size estimate in acres"),
+        "owner": (
+            {
+                "name": (str, "Farm owner name"),
+                "title": (str, "Farm owner title"),
+            },
+            "Farm owner",
+        ),
+        "revenue": (int, "Farm revenue"),
+    }
+    pipeline = create_value_rag_pipeline(
+        value_map=value_map,
+        elasticsearch=Elasticsearch(hosts=[os.getenv("ELASTICSEARCH_URL")]),
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
+    assert isinstance(pipeline, dict)
+
+
+def test_run_nested_value_pipeline() -> None:
+    value_map = {
+        "name": (str, "Farm name"),
+        "location": (str, "Farm location"),
+        "size": (int, "Farm size estimate in acres"),
+        "owner": (
+            {
+                "name": (str, "Farm owner name"),
+                "title": (str, "Farm owner title"),
+                "phone": (str, "Farm owner phone"),
+                "email": (str, "Farm owner email"),
+            },
+            "Farm owner",
+        ),
+        "revenue": (int, "Farm revenue"),
+    }
+    pipeline = create_value_rag_pipeline(
+        value_map=value_map,
+        elasticsearch=Elasticsearch(hosts=[os.getenv("ELASTICSEARCH_URL")]),
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
+    assert isinstance(pipeline, dict)
+    specification = "The farm is Agriberry Annapolis CSA"
+    results = run_value_rag_pipeline(specification=specification, pipeline=pipeline)
+    assert isinstance(results, dict)
+    data = recursive_model_dump(results)
+    with open("tests/data/nested_farm_profile.json", "w") as f:
+        json.dump(data, f, indent=4)

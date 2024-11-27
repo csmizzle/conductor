@@ -521,7 +521,9 @@ class WebSearchRAG(dspy.Module):
                 answer=answer.answer.answer,
                 citations=answer.answer.citations,
                 question=question,
-                documents=retrieved_documents.documents,
+                documents=retrieved_documents.documents
+                if hasattr(retrieved_documents, "documents")
+                else [],
                 faithfulness=answer.answer.faithfulness,
                 factual_correctness=answer.answer.factual_correctness,
                 confidence=answer.answer.confidence,

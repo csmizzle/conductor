@@ -1,7 +1,7 @@
 """
 Pydantic models for the profiles module.
 """
-from typing import Any, Type
+from typing import Any, Type, MutableMapping
 from pydantic import Field
 from conductor.flow.rag import CitedValueWithCredibility, WebSearchRAG
 from conductor.flow.signatures import ExtractValue
@@ -148,26 +148,37 @@ def create_value_rag_pipeline(
     """
     rag_pipeline = {}
     for field_name, (value_type, value_description) in value_map.items():
-        # Create a custom CitedValueWithCredibility subclass
-        custom_cited_value = create_custom_cited_value(
-            value_type=value_type, value_description=value_description
-        )
-        # Create a custom ExtractValue subclass
-        custom_extract_value = create_extract_value_with_custom_type(
-            value_type=value_type, value_description=value_description
-        )
-        # Create a custom WebSearchValueRAG subclass
-        custom_rag = create_web_search_value_rag(
-            return_class=custom_cited_value, extract_value=custom_extract_value
-        )
-        # Initialize the custom WebSearchValueRAG subclass
-        custom_rag = custom_rag.with_elasticsearch_id_retriever(
-            elasticsearch=elasticsearch,
-            index_name=index_name,
-            embeddings=embeddings,
-            cohere_api_key=cohere_api_key,
-        )
-        rag_pipeline[field_name] = (custom_rag, value_description)
+        if not isinstance(value_type, MutableMapping):
+            # Create a custom CitedValueWithCredibility subclass
+            custom_cited_value = create_custom_cited_value(
+                value_type=value_type, value_description=value_description
+            )
+            # Create a custom ExtractValue subclass
+            custom_extract_value = create_extract_value_with_custom_type(
+                value_type=value_type, value_description=value_description
+            )
+            # Create a custom WebSearchValueRAG subclass
+            custom_rag = create_web_search_value_rag(
+                return_class=custom_cited_value, extract_value=custom_extract_value
+            )
+            # Initialize the custom WebSearchValueRAG subclass
+            custom_rag = custom_rag.with_elasticsearch_id_retriever(
+                elasticsearch=elasticsearch,
+                index_name=index_name,
+                embeddings=embeddings,
+                cohere_api_key=cohere_api_key,
+            )
+            rag_pipeline[field_name] = (custom_rag, value_description)
+        # handle nested value maps
+        else:
+            nested_rag_pipeline = create_value_rag_pipeline(
+                value_map=value_type,
+                elasticsearch=elasticsearch,
+                index_name=index_name,
+                embeddings=embeddings,
+                cohere_api_key=cohere_api_key,
+            )
+            rag_pipeline[field_name] = (nested_rag_pipeline, value_description)
     return rag_pipeline
 
 
@@ -195,11 +206,17 @@ def run_value_rag_pipeline(
     """
     values = {}
     for field_name, (rag, value_description) in pipeline.items():
-        value = run_specified_rag(
-            specification=specification,
-            name=field_name,
-            description=value_description,
-            rag=rag,
-        )
-        values[field_name] = value
+        if not isinstance(rag, MutableMapping):
+            value = run_specified_rag(
+                specification=specification,
+                name=field_name,
+                description=value_description,
+                rag=rag,
+            )
+            values[field_name] = value
+        else:
+            nested_values = run_value_rag_pipeline(
+                specification=specification, pipeline=rag
+            )
+            values[field_name] = nested_values
     return values
