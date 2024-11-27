@@ -178,6 +178,8 @@ def test_run_value_rag_pipeline() -> None:
         "name": (str, "Farm name"),
         "location": (str, "Farm location"),
         "size": (int, "Farm size estimate in acres"),
+        "owner": (str, "Farm owner"),
+        "revenue": (int, "Farm revenue"),
     }
     pipeline = create_value_rag_pipeline(
         value_map=value_map,
