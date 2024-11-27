@@ -83,9 +83,15 @@ def create_extract_value_with_custom_type(
     """
 
     # Create a new subclass with the updated description for the value field
-    class CustomExtractValue(ExtractValue):  # Use generic specialization
+    class CustomExtractValue(ExtractValue):
+        """
+        Distill an answer to an answer into a value that would fit into a database.
+        Use the question to help understand which value to extract.
+        Only use the NOT_AVAILABLE value if the answer is not available to create a value.
+        """
+
         # this is crazy but it works
-        value: Union[value_type, NotAvailable] = dspy.OutputField(
+        value: Union[value_type, NotAvailable] = dspy.OutputField(  # type: ignore
             desc=value_description
         )  # type: ignore
 
