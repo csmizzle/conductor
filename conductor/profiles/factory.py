@@ -1,11 +1,12 @@
 """
 Pydantic models for the profiles module.
 """
-from typing import Any, Type, MutableMapping
+from typing import Any, Type, MutableMapping, Union
 from pydantic import Field
 from conductor.flow.rag import CitedValueWithCredibility, WebSearchRAG
 from conductor.flow.signatures import ExtractValue
 from conductor.flow.specify import specify_description
+from conductor.flow.models import NotAvailable
 from pydantic import BaseModel
 import dspy
 from elasticsearch import Elasticsearch
@@ -84,7 +85,9 @@ def create_extract_value_with_custom_type(
     # Create a new subclass with the updated description for the value field
     class CustomExtractValue(ExtractValue):  # Use generic specialization
         # this is crazy but it works
-        value: value_type = dspy.OutputField(desc=value_description)  # type: ignore
+        value: Union[value_type, NotAvailable] = dspy.OutputField(
+            desc=value_description
+        )  # type: ignore
 
     return CustomExtractValue
 
