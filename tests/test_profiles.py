@@ -3,6 +3,8 @@ from conductor.profiles.generate import generate_profile, generate_profile_paral
 from conductor.profiles.factory import (
     create_custom_cited_value,
     create_custom_cited_model,
+    create_extract_value_with_custom_type,
+    create_web_search_value_rag,
 )
 from conductor.profiles.models import Company
 from conductor.flow.rag import WebSearchValueRAG
@@ -116,3 +118,38 @@ def test_specify_custom_model() -> None:
         model_schema=custom_cited_model.model_json_schema(), specification=specification
     )
     assert isinstance(specified_fields, dict)
+
+
+def test_create_extract_value_with_custom_type() -> None:
+    value_type = int
+    value_description = "Custom value description"
+    custom_extract_value = create_extract_value_with_custom_type(
+        value_type=value_type, value_description=value_description
+    )
+    assert custom_extract_value
+
+
+def test_create_custom_rag() -> None:
+    value_type = int
+    value_description = "Company revenue"
+    custom_cited_value = create_custom_cited_value(
+        value_type=value_type, value_description=value_description
+    )
+    custom_extract_value = create_extract_value_with_custom_type(
+        value_type=value_type, value_description=value_description
+    )
+    rag = create_web_search_value_rag(
+        extract_value=custom_extract_value, return_class=custom_cited_value
+    )
+    elasticsearch_test_index = os.getenv("ELASTICSEARCH_TEST_RAG_INDEX")
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    created_rag = rag.with_elasticsearch_id_retriever(
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_test_index,
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
+    answer = created_rag(question="What is the revenue of TRSS?")
+    assert isinstance(answer.value, int)
