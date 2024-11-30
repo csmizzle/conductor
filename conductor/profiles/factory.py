@@ -1,8 +1,8 @@
 """
 Factories for creating custom classes and pipelines for Evrim Profiles.
 """
-from typing import Any, Type, MutableMapping, Union, List, Dict
-from pydantic import Field
+from typing import Any, Type, MutableMapping, Union, List, Dict, Optional, Tuple
+from pydantic import Field, create_model
 from conductor.flow.rag import CitedValueWithCredibility, WebSearchRAG
 from conductor.flow.signatures import ExtractValue
 from conductor.flow.specify import specify_description
@@ -70,6 +70,32 @@ def create_custom_cited_model(
         },
     )
     return model
+
+
+# Subclassing to add a dynamic field
+def create_subclass_with_dynamic_fields(
+    model_name: str,
+    base_class: Type[BaseModel],
+    new_fields: Dict[
+        str, Tuple[Any, Optional[Any], str]
+    ],  # name, type, default, description
+) -> Type[BaseModel]:
+    fields = {
+        field_name: (
+            field_type,
+            Field(default=default_value, description=field_description),
+        )
+        for field_name, (
+            field_type,
+            default_value,
+            field_description,
+        ) in new_fields.items()
+    }
+    return create_model(
+        model_name,
+        **fields,
+        __base__=base_class,
+    )
 
 
 def create_extract_value_with_custom_type(
@@ -341,15 +367,11 @@ class GraphModelFactoryPipeline:
         """
         Create the Entity BaseModel dynamically with the EntityType Enum.
         """
-        self.entity_model = type(
-            "CustomEntity",
-            (graph_models.Entity,),
-            {
-                "__annotations__": {
-                    **graph_models.Entity.__annotations__,
-                    "entity_type": self.entity_type,  # Update the type of the `entity` field
-                },
-                "entity_type": Field(description="Entity type"),
+        self.entity_model = create_subclass_with_dynamic_fields(
+            model_name="CustomEntity",
+            base_class=graph_models.Entity,
+            new_fields={
+                "entity_type": (self.entity_type, None, "Entity type"),  # type: ignore
             },
         )
 
@@ -358,19 +380,17 @@ class GraphModelFactoryPipeline:
         Create the Relationship BaseModel dynamically with the RelationshipType Enum.
         """
         # Dynamically create a subclass of CitedValueWithCredibility
-        self.relationship_model = type(
-            "CustomRelationship",
-            (graph_models.Relationship,),
-            {
-                "__annotations__": {
-                    **graph_models.Relationship.__annotations__,
-                    "source": self.entity_model,  # Update the type of the `entity` field
-                    "target": self.entity_model,  # Update the type of the `entity` field
-                    "relationship_type": self.relationship_type,  # Update the type of the `relationship_type` field
-                },
-                "source": Field(description="Source entity"),
-                "target": Field(description="Target entity"),
-                "relationship_type": Field(description="Relationship type"),
+        self.relationship_model = create_subclass_with_dynamic_fields(
+            model_name="CustomRelationship",
+            base_class=graph_models.Relationship,
+            new_fields={
+                "source": (self.entity_model, None, "Source entity"),
+                "target": (self.entity_model, None, "Target entity"),
+                "relationship_type": (
+                    self.relationship_type,
+                    None,
+                    "Relationship type",
+                ),
             },
         )
 
@@ -378,17 +398,12 @@ class GraphModelFactoryPipeline:
         """
         Create the CitedRelationship BaseModel dynamically with the Relationship BaseModel.
         """
-        self.cited_relationship = type(
-            "CustomCitedRelationship",
-            (graph_models.CitedRelationshipWithCredibility,),
-            {
-                "__annotations__": {
-                    **graph_models.CitedRelationshipWithCredibility.__annotations__,
-                    "source": self.entity_model,  # Update the type of the `entity` field
-                    "target": self.entity_model,  # Update the type of the `entity` field
-                },
-                "source": Field(description="Source entity"),
-                "target": Field(description="Target entity"),
+        self.cited_relationship = create_subclass_with_dynamic_fields(
+            model_name="CustomCitedRelationship",
+            base_class=graph_models.CitedRelationshipWithCredibility,
+            new_fields={
+                "source": (self.entity_model, None, "Source entity"),
+                "target": (self.entity_model, None, "Target entity"),
             },
         )
 
@@ -396,15 +411,11 @@ class GraphModelFactoryPipeline:
         """
         Create the CitedEntity BaseModel dynamically with the Entity BaseModel.
         """
-        self.cited_entity = type(
-            "CustomCitedEntity",
-            (graph_models.AggregatedCitedEntity,),
-            {
-                "__annotations__": {
-                    **graph_models.AggregatedCitedEntity.__annotations__,
-                    "entity": self.entity_model,  # Update the type of the `entity` field
-                },
-                "entity": Field(description="The entity"),
+        self.cited_entity = create_subclass_with_dynamic_fields(
+            model_name="CustomCitedEntity",
+            base_class=graph_models.AggregatedCitedEntity,
+            new_fields={
+                "entity": (self.entity_model, None, "The entity"),
             },
         )
 
@@ -412,17 +423,12 @@ class GraphModelFactoryPipeline:
         """
         Create the CitedRelationship BaseModel dynamically with the Relationship BaseModel.
         """
-        self.cited_relationship = type(
-            "CustomCitedRelationship",
-            (graph_models.AggregatedCitedRelationship,),
-            {
-                "__annotations__": {
-                    **graph_models.CitedRelationshipWithCredibility.__annotations__,
-                    "source": self.entity_model,  # Update the type of the `entity` field
-                    "target": self.entity_model,  # Update the type of the `entity` field
-                },
-                "source": Field(description="Source entity"),
-                "target": Field(description="Target entity"),
+        self.cited_relationship = create_subclass_with_dynamic_fields(
+            model_name="CustomCitedRelationship",
+            base_class=graph_models.AggregatedCitedRelationship,
+            new_fields={
+                "source": (self.entity_model, None, "Source entity"),
+                "target": (self.entity_model, None, "Target entity"),
             },
         )
 
@@ -430,21 +436,16 @@ class GraphModelFactoryPipeline:
         """
         Create an aggregated cited graph model dynamically with the CitedEntity and CitedRelationship BaseModels.
         """
-        self.aggregated_cited_graph = type(
-            "CustomAggregatedCitedGraph",
-            (graph_models.AggregatedCitedGraph,),
-            {
-                "__annotations__": {
-                    **graph_models.AggregatedCitedGraph.__annotations__,
-                    "entities": List[
-                        self.cited_entity
-                    ],  # Update the type of the `entities` field
-                    "relationships": List[
-                        self.cited_relationship
-                    ],  # Update the type of the `relationships` field
-                },
-                "entities": Field(description="List of cited entities"),
-                "relationships": Field(description="List of cited relationships"),
+        self.aggregated_cited_graph = create_subclass_with_dynamic_fields(
+            model_name="CustomAggregatedCitedGraph",
+            base_class=graph_models.AggregatedCitedGraph,
+            new_fields={
+                "entities": (List[self.cited_entity], None, "List of cited entities"),
+                "relationships": (
+                    List[self.cited_relationship],
+                    None,
+                    "List of cited relationships",
+                ),
             },
         )
 
@@ -452,19 +453,17 @@ class GraphModelFactoryPipeline:
         """
         Iterate over created entity and relationship types to create the triple types enum.
         """
-        self.created_triple_type_model = type(
-            "CustomTripleTypes",
-            (graph_models.TripleType,),
-            {
-                "__annotations__": {
-                    **graph_models.TripleType.__annotations__,
-                    "relationship_type": self.relationship_type,  # Update the type of the `relationship_type` field
-                    "source": self.entity_type,  # Update the type of the `source_entity_type` field
-                    "target": self.entity_type,  # Update the type of the `target_entity_type` field
-                },
-                "relationship_type": Field(description="Relationship type"),
-                "source": Field(description="Source entity type"),
-                "target": Field(description="Target entity type"),
+        self.created_triple_type_model = create_subclass_with_dynamic_fields(
+            model_name="CustomTripleTypes",
+            base_class=graph_models.TripleType,
+            new_fields={
+                "relationship_type": (
+                    self.relationship_type,
+                    None,
+                    "Relationship type",
+                ),
+                "source": (self.entity_type, None, "Source entity type"),
+                "target": (self.entity_type, None, "Target entity type"),
             },
         )
 
@@ -504,10 +503,10 @@ class GraphModelFactoryPipeline:
 class GraphSignatureFactory:
     def __init__(
         self,
-        triple_types: Type[graph_models.TripleType],
+        triple_type_model: Type[graph_models.TripleType],
         relationship: Type[graph_models.Relationship],
     ) -> None:
-        self.triple_types = triple_types
+        self.triple_type_model = triple_type_model
         self.relationship = relationship
         self.relationship_query: Type[graph_signatures.RelationshipQuery] = None
         self.extracted_relationships: Type[
@@ -525,7 +524,7 @@ class GraphSignatureFactory:
                 description="Specification for entity extraction",
                 prefix="Specification: ",
             )
-            triple_type: self.triple_types = dspy.InputField(
+            triple_type: self.triple_type_model = dspy.InputField(
                 description="Triple containing source_type, relationship_type, and target_type",
                 prefix="Triple: ",
             )
@@ -611,6 +610,8 @@ class RelationshipRAGExtractorFactory:
         self,
         rag_instance: Type[dspy.Module],
         signature_map: Dict[str, dspy.Signature],
+        specification: str,
+        triple_types: List[graph_models.TripleType],
         cited_relationship_model: Type[graph_models.CitedRelationshipWithCredibility],
     ) -> None:
         """
@@ -622,10 +623,11 @@ class RelationshipRAGExtractorFactory:
         self.rag_instance = rag_instance
         self.signature_map = signature_map
         self.cited_relationship_model = cited_relationship_model
+        self.specification = specification
+        self.triple_types = triple_types
+        self.created_rag_instance: Type[RelationshipRAGExtractor] = None
 
-    def create_instance(
-        self, specification: str, triple_types: List[graph_models.TripleType]
-    ) -> "RelationshipRAGExtractor":
+    def create_instance(self) -> "RelationshipRAGExtractor":
         """
         Creates a configured instance of RelationshipRAGExtractor.
 
@@ -639,16 +641,16 @@ class RelationshipRAGExtractorFactory:
         }
 
         # Use type() to dynamically create a subclass with additional attributes
-        class ConfiguredRelationshipRAGExtractor(RelationshipRAGExtractor):
-            pass
-
-        for method_name, chain in extractor_methods.items():
-            setattr(ConfiguredRelationshipRAGExtractor, method_name, chain)
+        ConfiguredRelationshipRAGExtractor = type(
+            "ConfiguredRelationshipRAGExtractor",  # Name of the new class
+            (RelationshipRAGExtractor,),  # Base classes
+            extractor_methods,  # Methods or attributes as a dictionary
+        )
 
         # Instantiate and return the configured extractor
-        return ConfiguredRelationshipRAGExtractor(
-            specification=specification,
-            triple_types=triple_types,
+        self.created_rag_instance = ConfiguredRelationshipRAGExtractor(
+            specification=self.specification,
+            triple_types=self.triple_types,
             rag=self.rag_instance,
             cited_relationship_model=self.cited_relationship_model,
         )
