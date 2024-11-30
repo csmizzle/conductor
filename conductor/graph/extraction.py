@@ -31,10 +31,14 @@ class RelationshipRAGExtractor:
         specification: str,
         triple_types: List[models.TripleType],
         rag: InstanceOf[dspy.Module],
+        cited_relationship_model: InstanceOf[
+            models.CitedRelationshipWithCredibility
+        ] = models.CitedRelationshipWithCredibility,
     ) -> None:
         self.specification = specification
         self.triple_types = triple_types
         self.rag = rag
+        self.cited_relationship_model = cited_relationship_model
         self.create_relationship_query = dspy.ChainOfThought(
             signatures.RelationshipQuery
         )
@@ -75,7 +79,7 @@ class RelationshipRAGExtractor:
                         document=document,
                     )
                     relationships.append(
-                        models.CitedRelationshipWithCredibility(
+                        self.cited_relationship_model(
                             source=relationship.source,
                             target=relationship.target,
                             relationship_type=relationship.relationship_type,
@@ -259,7 +263,7 @@ class RelationshipRAGExtractor:
                 for future in futures[query]:
                     query, document, relationship, reasoning = future.result()
                     extracted_relationships.append(
-                        models.CitedRelationshipWithCredibility(
+                        self.cited_relationship_model(
                             source=relationship.source,
                             target=relationship.target,
                             relationship_type=relationship.relationship_type,

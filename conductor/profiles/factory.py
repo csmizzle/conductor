@@ -1,7 +1,7 @@
 """
 Factories for creating custom classes and pipelines for Evrim Profiles.
 """
-from typing import Any, Type, MutableMapping, Union, List
+from typing import Any, Type, MutableMapping, Union, List, Dict
 from pydantic import Field
 from conductor.flow.rag import CitedValueWithCredibility, WebSearchRAG
 from conductor.flow.signatures import ExtractValue
@@ -9,6 +9,7 @@ from conductor.flow.specify import specify_description
 from conductor.flow.models import NotAvailable
 from conductor.graph import models as graph_models
 from conductor.graph import signatures as graph_signatures
+from conductor.graph.extraction import RelationshipRAGExtractor
 from pydantic import BaseModel
 import dspy
 from elasticsearch import Elasticsearch
@@ -508,7 +509,7 @@ class GraphSignatureFactory:
     ) -> None:
         self.triple_types = triple_types
         self.relationship = relationship
-        self.relationship_query = Type[graph_signatures.RelationshipQuery] = None
+        self.relationship_query: Type[graph_signatures.RelationshipQuery] = None
         self.extracted_relationships: Type[
             graph_signatures.ExtractedRelationships
         ] = None
@@ -586,3 +587,68 @@ class GraphSignatureFactory:
         self.create_relationship_query()
         self.create_extracted_relationships()
         self.create_relationship_reasoning()
+
+    def create_signatures_map(self) -> dict:
+        """
+        Create a mapping of signature names to their corresponding classes.
+
+        Returns:
+            dict: A mapping of signature names to classes.
+        """
+        return {
+            "create_relationship_query": self.relationship_query,
+            "extract_relationships": self.extracted_relationships,
+            "create_relationship_reasoning": self.relationship_reasoning,
+        }
+
+
+class RelationshipRAGExtractorFactory:
+    """
+    Factory to dynamically configure and instantiate RelationshipRAGExtractor
+    """
+
+    def __init__(
+        self,
+        rag_instance: Type[dspy.Module],
+        signature_map: Dict[str, dspy.Signature],
+        cited_relationship_model: Type[graph_models.CitedRelationshipWithCredibility],
+    ) -> None:
+        """
+        Initializes the factory with reusable components.
+
+        :param rag_instance: Instance of the RAG module for document retrieval.
+        :param signature_map: A mapping of method names to their signature classes.
+        """
+        self.rag_instance = rag_instance
+        self.signature_map = signature_map
+        self.cited_relationship_model = cited_relationship_model
+
+    def create_instance(
+        self, specification: str, triple_types: List[graph_models.TripleType]
+    ) -> "RelationshipRAGExtractor":
+        """
+        Creates a configured instance of RelationshipRAGExtractor.
+
+        :param specification: Specification string.
+        :param triple_types: List of TripleType objects.
+        :return: Configured RelationshipRAGExtractor instance.
+        """
+        # Dynamically build the extractor methods based on the signature map
+        extractor_methods = {
+            key: dspy.ChainOfThought(value) for key, value in self.signature_map.items()
+        }
+
+        # Use type() to dynamically create a subclass with additional attributes
+        class ConfiguredRelationshipRAGExtractor(RelationshipRAGExtractor):
+            pass
+
+        for method_name, chain in extractor_methods.items():
+            setattr(ConfiguredRelationshipRAGExtractor, method_name, chain)
+
+        # Instantiate and return the configured extractor
+        return ConfiguredRelationshipRAGExtractor(
+            specification=specification,
+            triple_types=triple_types,
+            rag=self.rag_instance,
+            cited_relationship_model=self.cited_relationship_model,
+        )
