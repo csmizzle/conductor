@@ -200,17 +200,19 @@ def test_run_value_rag_pipeline() -> None:
 
 def test_create_nested_pipeline() -> None:
     value_map = {
-        "name": (str, "Farm name"),
-        "location": (str, "Farm location"),
-        "size": (int, "Farm size estimate in acres"),
-        "owner": (
-            {
-                "name": (str, "Farm owner name"),
-                "title": (str, "Farm owner title"),
-            },
-            "Farm owner",
-        ),
-        "revenue": (int, "Farm revenue"),
+        "farm": {
+            "name": (str, "Farm name"),
+            "location": (str, "Farm location"),
+            "size": (int, "Farm size estimate in acres"),
+            "owner": (
+                {
+                    "name": (str, "Farm owner name"),
+                    "title": (str, "Farm owner title"),
+                },
+                "Farm owner",
+            ),
+            "revenue": (int, "Farm revenue"),
+        }
     }
     pipeline = create_value_rag_pipeline(
         value_map=value_map,
@@ -223,20 +225,34 @@ def test_create_nested_pipeline() -> None:
 
 
 def test_run_nested_value_pipeline() -> None:
+    search_lm = dspy.LM(
+        "openai/gpt-4o-mini",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        cache=False,
+        max_tokens=3000,
+    )
+    dspy.configure(lm=search_lm)
     value_map = {
-        "name": (str, "Farm name"),
-        "location": (str, "Farm location"),
-        "size": (int, "Farm size estimate in acres"),
-        "owner": (
-            {
-                "name": (str, "Farm owner name"),
-                "title": (str, "Farm owner title"),
-                "phone": (str, "Farm owner phone"),
-                "email": (str, "Farm owner email"),
-            },
-            "Farm owner",
-        ),
-        "revenue": (int, "Farm revenue"),
+        "farm": {
+            "name": (str, "Farm name"),
+            "location": (str, "Farm location"),
+            "size": (int, "Farm size estimate in acres"),
+            "employees": (
+                {"name": (str, "Employee name")},
+                "Farm employees",
+            ),
+            "owners": (
+                {
+                    "name": (str, "Farm owner name"),
+                    "title": (str, "Farm owner title"),
+                    "phone": (str, "Farm owner phone"),
+                    "email": (str, "Farm owner email"),
+                },
+                "Farm owners",
+            ),
+            "revenue": (int, "Farm revenue"),
+        }
     }
     pipeline = create_value_rag_pipeline(
         value_map=value_map,

@@ -2,7 +2,7 @@
 Factories for creating custom classes and pipelines for Evrim Profiles.
 """
 from typing import Any, Type, MutableMapping, Union, List, Dict, Optional, Tuple
-from pydantic import Field, create_model
+from pydantic import Field, create_model, InstanceOf
 from conductor.flow.rag import CitedValueWithCredibility, WebSearchRAG
 from conductor.flow.signatures import ExtractValue
 from conductor.flow.specify import specify_description
@@ -13,6 +13,7 @@ from conductor.graph.extraction import RelationshipRAGExtractor
 from conductor.flow.rag import WebDocumentRetriever
 from conductor.rag.embeddings import BedrockEmbeddings
 from conductor.flow.retriever import ElasticDocumentIdRMClient
+from conductor.profiles.sigantures import generate_relationship
 from elasticsearch import Elasticsearch
 from pydantic import BaseModel
 import dspy
@@ -172,67 +173,6 @@ def create_web_search_value_rag(
     return CustomWebSearchValueRAG
 
 
-def create_value_rag_pipeline(
-    value_map: dict[
-        str, dict[str, tuple[Type[Any], str]]
-    ],  # model_name [name, type, description
-    elasticsearch: Elasticsearch,
-    index_name: str,
-    embeddings: Embeddings,
-    cohere_api_key: str,
-) -> dict[str, tuple[Type[WebSearchRAG], str]]:  # name, search class, description
-    """
-    Create a pipeline of WebSearchValueRAG classes based on the provided value map.
-
-    Args:
-        value_map (dict): A mapping of field names to (value_type, value_description) tuples.
-
-    Returns:
-        dict: A mapping of field names to (WebSearchValueRAG subclass, value_description) tuples.
-    """
-    rag_pipeline = {}  # model_name [name, type, description]
-    for model_name in value_map:
-        rag_pipeline[model_name] = {}
-        for field_name, (value_type, value_description) in value_map[
-            model_name
-        ].items():
-            if not isinstance(value_type, MutableMapping):
-                # Create a custom CitedValueWithCredibility subclass
-                custom_cited_value = create_custom_cited_value(
-                    value_type=value_type, value_description=value_description
-                )
-                # Create a custom ExtractValue subclass
-                custom_extract_value = create_extract_value_with_custom_type(
-                    value_type=value_type, value_description=value_description
-                )
-                # Create a custom WebSearchValueRAG subclass
-                custom_rag = create_web_search_value_rag(
-                    return_class=custom_cited_value, extract_value=custom_extract_value
-                )
-                # Initialize the custom WebSearchValueRAG subclass
-                custom_rag = custom_rag.with_elasticsearch_id_retriever(
-                    elasticsearch=elasticsearch,
-                    index_name=index_name,
-                    embeddings=embeddings,
-                    cohere_api_key=cohere_api_key,
-                )
-                rag_pipeline[model_name][field_name] = (custom_rag, value_description)
-            # handle nested value maps
-            else:
-                nested_rag_pipeline = create_value_rag_pipeline(
-                    value_map=value_type,
-                    elasticsearch=elasticsearch,
-                    index_name=index_name,
-                    embeddings=embeddings,
-                    cohere_api_key=cohere_api_key,
-                )
-                rag_pipeline[model_name][field_name] = (
-                    nested_rag_pipeline,
-                    value_description,
-                )
-    return rag_pipeline
-
-
 def run_specified_rag(
     specification: str, name: str, description: str, rag: Type[WebSearchRAG]
 ):
@@ -240,39 +180,6 @@ def run_specified_rag(
         name=name, description=description, specification=specification
     )
     return rag(question=query)
-
-
-def run_value_rag_pipeline(
-    specification: str,
-    pipeline: dict[str, tuple[Type[WebSearchRAG], str]],
-) -> dict[str, list[dict[str, Type[CitedValueWithCredibility]]]]:
-    """
-    Run a pipeline of WebSearchValueRAG classes based on the provided value map.
-
-    Args:
-        rag_pipeline (dict): A mapping of field names to (WebSearchValueRAG subclass, value_description) tuples.
-
-    Returns:
-        dict: A mapping of field names to CitedValueWithCredibility instances.
-    """
-    values = {}
-    for model_name in pipeline:
-        values[model_name] = {}
-        for field_name, (rag, value_description) in pipeline[model_name].items():
-            if not isinstance(rag, MutableMapping):
-                value = run_specified_rag(
-                    specification=specification,
-                    name=field_name,
-                    description=value_description,
-                    rag=rag,
-                )
-                values[model_name][field_name] = value
-            else:
-                nested_values = run_value_rag_pipeline(
-                    specification=specification, pipeline=rag
-                )
-                values[model_name][field_name] = nested_values
-    return values
 
 
 def enum_factory(name: str, values: list[tuple[str, Any]]) -> Enum:
@@ -676,7 +583,7 @@ def create_dynamic_relationship_extraction(
     ],  # relationship_type, source entity type, target entity type
     elasticsearch: Elasticsearch,
     index_name: str,
-) -> None:
+) -> InstanceOf[RelationshipRAGExtractor]:
     model_factory = GraphModelFactoryPipeline(triple_types)
     model_factory.create_models()
     model_factory.create_triple_type_input()
@@ -701,3 +608,109 @@ def create_dynamic_relationship_extraction(
     )
     rag_factory.create_instance()
     return rag_factory.created_rag_instance
+
+
+def create_value_rag_pipeline(
+    value_map: dict[
+        str, dict[str, tuple[Type[Any], str]]
+    ],  # model_name [name, type, description
+    elasticsearch: Elasticsearch,
+    index_name: str,
+    embeddings: Embeddings,
+    cohere_api_key: str,
+) -> dict[str, tuple[Type[WebSearchRAG], str]]:  # name, search class, description
+    """
+    Create a pipeline of WebSearchValueRAG classes based on the provided value map.
+
+    Args:
+        value_map (dict): A mapping of field names to (value_type, value_description) tuples.
+
+    Returns:
+        dict: A mapping of field names to (WebSearchValueRAG subclass, value_description) tuples.
+    """
+    rag_pipeline = {}  # model_name [name, type, description]
+    for model_name in value_map:
+        rag_pipeline[model_name] = {}
+        for field_name, (value_type, value_description) in value_map[
+            model_name
+        ].items():
+            if not isinstance(value_type, MutableMapping):
+                # Create a custom CitedValueWithCredibility subclass
+                custom_cited_value = create_custom_cited_value(
+                    value_type=value_type, value_description=value_description
+                )
+                # Create a custom ExtractValue subclass
+                custom_extract_value = create_extract_value_with_custom_type(
+                    value_type=value_type, value_description=value_description
+                )
+                # Create a custom WebSearchValueRAG subclass
+                custom_rag = create_web_search_value_rag(
+                    return_class=custom_cited_value, extract_value=custom_extract_value
+                )
+                # Initialize the custom WebSearchValueRAG subclass
+                custom_rag = custom_rag.with_elasticsearch_id_retriever(
+                    elasticsearch=elasticsearch,
+                    index_name=index_name,
+                    embeddings=embeddings,
+                    cohere_api_key=cohere_api_key,
+                )
+                rag_pipeline[model_name][field_name] = (custom_rag, value_description)
+            # handle nested value maps
+            else:
+                # create a triple type map (relationship_type, source entity type, target entity type)
+                relationship = generate_relationship(
+                    source=model_name,
+                    target=field_name,
+                )
+                # create triple type
+                triple_type = {relationship: (model_name, field_name)}
+                rag_pipeline[model_name][
+                    field_name
+                ] = triple_type  # check length when executing to build pipeline dynamically
+    rag_pipeline["_resources"] = {}
+    # set up the pipeline resources for downstream access
+    rag_pipeline["_resources"]["elasticsearch"] = elasticsearch
+    rag_pipeline["_resources"]["index_name"] = index_name
+    rag_pipeline["_resources"]["embeddings"] = embeddings
+    rag_pipeline["_resources"]["cohere_api_key"] = cohere_api_key
+    return rag_pipeline
+
+
+def run_value_rag_pipeline(
+    specification: str,
+    pipeline: dict[str, tuple[Type[WebSearchRAG], str]],
+) -> dict[str, list[dict[str, Type[CitedValueWithCredibility]]]]:
+    """
+    Run a pipeline of WebSearchValueRAG classes based on the provided value map.
+
+    Args:
+        rag_pipeline (dict): A mapping of field names to (WebSearchValueRAG subclass, value_description) tuples.
+
+    Returns:
+        dict: A mapping of field names to CitedValueWithCredibility instances.
+    """
+    resources = pipeline.pop("_resources")
+    values = {}
+    for model_name in pipeline:
+        values[model_name] = {}
+        for field_name, entry in pipeline[model_name].items():
+            if isinstance(entry, tuple):  # handle single value maps
+                value = run_specified_rag(
+                    specification=specification,
+                    name=field_name,
+                    description=entry[1],  # value_description
+                    rag=entry[0],  # WebSearchValueRAG subclass
+                )
+                values[model_name][field_name] = value
+            if isinstance(
+                entry, dict
+            ):  # handle nested value maps with relationship extraction
+                relationship_extractor = create_dynamic_relationship_extraction(
+                    specification=specification,
+                    triple_types=pipeline[model_name][field_name],
+                    elasticsearch=resources["elasticsearch"],
+                    index_name=resources["index_name"],
+                )
+                relationships = relationship_extractor.extract()
+                values[model_name][field_name] = relationships
+    return values
