@@ -229,7 +229,6 @@ def test_run_nested_value_pipeline() -> None:
         "openai/gpt-4o-mini",
         api_base=os.getenv("LITELLM_HOST"),
         api_key=os.getenv("LITELLM_API_KEY"),
-        cache=False,
         max_tokens=3000,
     )
     dspy.configure(lm=search_lm)
@@ -239,18 +238,22 @@ def test_run_nested_value_pipeline() -> None:
             "location": (str, "Farm location"),
             "size": (int, "Farm size estimate in acres"),
             "employees": (
-                {"name": (str, "Employee name")},
+                {
+                    "title": (str, "Farm employee title"),
+                    "phone": (str, "Farm employee phone"),
+                    "email": (str, "Farm employee email"),
+                },
                 "Farm employees",
             ),
-            "owners": (
-                {
-                    "name": (str, "Farm owner name"),
-                    "title": (str, "Farm owner title"),
-                    "phone": (str, "Farm owner phone"),
-                    "email": (str, "Farm owner email"),
-                },
-                "Farm owners",
-            ),
+            # "owners": (
+            #     {
+            #         "name": (str, "Farm owner name"),
+            #         "title": (str, "Farm owner title"),
+            #         "phone": (str, "Farm owner phone"),
+            #         "email": (str, "Farm owner email"),
+            #     },
+            #     "Farm owners",
+            # ),
             "revenue": (int, "Farm revenue"),
         }
     }

@@ -13,9 +13,13 @@ from conductor.graph.extraction import RelationshipRAGExtractor
 from conductor.flow.rag import WebDocumentRetriever
 from conductor.rag.embeddings import BedrockEmbeddings
 from conductor.flow.retriever import ElasticDocumentIdRMClient
-from conductor.profiles.sigantures import generate_relationship
+from conductor.profiles.signatures import (
+    generate_relationship,
+    generate_relationship_specification,
+)
 from elasticsearch import Elasticsearch
 from pydantic import BaseModel
+from loguru import logger
 import dspy
 from langchain_core.embeddings import Embeddings
 from enum import Enum
@@ -610,6 +614,32 @@ def create_dynamic_relationship_extraction(
     return rag_factory.created_rag_instance
 
 
+def build_value_rag_pipeline(
+    value_type: Type[Any],
+    value_description: str,
+    elasticsearch: Elasticsearch,
+    index_name: str,
+    embeddings: Embeddings,
+    cohere_api_key: str = None,
+) -> InstanceOf[WebSearchRAG]:
+    custom_cited_value = create_custom_cited_value(
+        value_type=value_type, value_description=value_description
+    )
+    custom_extract_value = create_extract_value_with_custom_type(
+        value_type=value_type, value_description=value_description
+    )
+    custom_rag = create_web_search_value_rag(
+        return_class=custom_cited_value, extract_value=custom_extract_value
+    )
+    custom_rag = custom_rag.with_elasticsearch_id_retriever(
+        elasticsearch=elasticsearch,
+        index_name=index_name,
+        embeddings=embeddings,
+        cohere_api_key=cohere_api_key,
+    )
+    return custom_rag
+
+
 def create_value_rag_pipeline(
     value_map: dict[
         str, dict[str, tuple[Type[Any], str]]
@@ -635,20 +665,9 @@ def create_value_rag_pipeline(
             model_name
         ].items():
             if not isinstance(value_type, MutableMapping):
-                # Create a custom CitedValueWithCredibility subclass
-                custom_cited_value = create_custom_cited_value(
-                    value_type=value_type, value_description=value_description
-                )
-                # Create a custom ExtractValue subclass
-                custom_extract_value = create_extract_value_with_custom_type(
-                    value_type=value_type, value_description=value_description
-                )
-                # Create a custom WebSearchValueRAG subclass
-                custom_rag = create_web_search_value_rag(
-                    return_class=custom_cited_value, extract_value=custom_extract_value
-                )
-                # Initialize the custom WebSearchValueRAG subclass
-                custom_rag = custom_rag.with_elasticsearch_id_retriever(
+                custom_rag = build_value_rag_pipeline(
+                    value_type=value_type,
+                    value_description=value_description,
                     elasticsearch=elasticsearch,
                     index_name=index_name,
                     embeddings=embeddings,
@@ -662,11 +681,30 @@ def create_value_rag_pipeline(
                     source=model_name,
                     target=field_name,
                 )
-                # create triple type
-                triple_type = {relationship: (model_name, field_name)}
+                # create profile pipeline
+                profile_pipeline = {}
+                for _field_name, (
+                    _value_type,
+                    _value_description,
+                ) in value_type.items():
+                    custom_rag = build_value_rag_pipeline(
+                        value_type=_value_type,
+                        value_description=_value_description,
+                        elasticsearch=elasticsearch,
+                        index_name=index_name,
+                        embeddings=embeddings,
+                        cohere_api_key=cohere_api_key,
+                    )
+                    profile_pipeline[_field_name] = (custom_rag, _value_description)
+                # map the two pipelines together
+                profile_relationship_pipeline = {
+                    "triple_type": {relationship: (model_name, field_name)},
+                    "profile_pipeline": profile_pipeline,
+                }
+                # add the profile pipeline to the rag pipeline
                 rag_pipeline[model_name][
                     field_name
-                ] = triple_type  # check length when executing to build pipeline dynamically
+                ] = profile_relationship_pipeline  # check length when executing to build pipeline dynamically
     rag_pipeline["_resources"] = {}
     # set up the pipeline resources for downstream access
     rag_pipeline["_resources"]["elasticsearch"] = elasticsearch
@@ -705,12 +743,43 @@ def run_value_rag_pipeline(
             if isinstance(
                 entry, dict
             ):  # handle nested value maps with relationship extraction
+                profile_pipeline = pipeline[model_name][field_name].pop(
+                    "profile_pipeline"
+                )
+                triple_type = pipeline[model_name][field_name].pop("triple_type")
+                # get relationships
                 relationship_extractor = create_dynamic_relationship_extraction(
                     specification=specification,
-                    triple_types=pipeline[model_name][field_name],
+                    triple_types=triple_type,
                     elasticsearch=resources["elasticsearch"],
                     index_name=resources["index_name"],
                 )
-                relationships = relationship_extractor.extract()
-                values[model_name][field_name] = relationships
+                relationships = relationship_extractor.extract_parallel()
+                profiled_relationships = []
+                for relationship in relationships:
+                    profile = {}
+                    # run the profile pipeline
+                    relationship_specification = generate_relationship_specification(
+                        source=relationship.source.name,
+                        relationship_type=relationship.relationship_type,
+                        target=relationship.target.name,
+                    )
+                    logger.info(
+                        f"Running profile pipeline for {relationship_specification}"
+                    )
+                    for _field_name, _entry in profile_pipeline.items():
+                        profile[_field_name] = run_specified_rag(
+                            specification=relationship_specification,
+                            name=_field_name,
+                            rag=_entry[0],  # WebSearchValueRAG subclass
+                            description=_entry[1],  # value_description
+                        )
+                    # add the profile values to the relationship
+                    profiled_relationships.append(
+                        {
+                            "relationship": relationship,
+                            "profile": profile,
+                        }
+                    )
+                values[model_name][field_name] = profiled_relationships
     return values
