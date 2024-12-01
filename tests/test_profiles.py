@@ -160,9 +160,11 @@ def test_create_custom_rag() -> None:
 
 def test_create_value_rag_pipeline() -> None:
     value_map = {
-        "name": (str, "Farm name"),
-        "location": (str, "Farm location"),
-        "size": (int, "Farm size estimate in acres"),
+        "Farm": {
+            "name": (str, "Farm name"),
+            "location": (str, "Farm location"),
+            "size": (int, "Farm size estimate in acres"),
+        }
     }
     pipeline = create_value_rag_pipeline(
         value_map=value_map,
@@ -176,11 +178,13 @@ def test_create_value_rag_pipeline() -> None:
 
 def test_run_value_rag_pipeline() -> None:
     value_map = {
-        "name": (str, "Farm name"),
-        "location": (str, "Farm location"),
-        "size": (int, "Farm size estimate in acres"),
-        "owner": (str, "Farm owner"),
-        "revenue": (int, "Farm revenue"),
+        "farm": {
+            "name": (str, "Farm name"),
+            "location": (str, "Farm location"),
+            "size": (int, "Farm size estimate in acres"),
+            "owner": (str, "Farm owner"),
+            "revenue": (int, "Farm revenue"),
+        }
     }
     pipeline = create_value_rag_pipeline(
         value_map=value_map,
