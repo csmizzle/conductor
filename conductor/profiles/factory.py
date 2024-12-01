@@ -10,9 +10,12 @@ from conductor.flow.models import NotAvailable
 from conductor.graph import models as graph_models
 from conductor.graph import signatures as graph_signatures
 from conductor.graph.extraction import RelationshipRAGExtractor
+from conductor.flow.rag import WebDocumentRetriever
+from conductor.rag.embeddings import BedrockEmbeddings
+from conductor.flow.retriever import ElasticDocumentIdRMClient
+from elasticsearch import Elasticsearch
 from pydantic import BaseModel
 import dspy
-from elasticsearch import Elasticsearch
 from langchain_core.embeddings import Embeddings
 from enum import Enum
 
@@ -653,3 +656,37 @@ class RelationshipRAGExtractorFactory:
             rag=self.rag_instance,
             cited_relationship_model=self.cited_relationship_model,
         )
+
+
+def create_dynamic_relationship_extraction(
+    specification: str,
+    triple_types: dict[
+        str, tuple[str, str]
+    ],  # relationship_type, source entity type, target entity type
+    elasticsearch: Elasticsearch,
+    index_name: str,
+) -> None:
+    model_factory = GraphModelFactoryPipeline(triple_types)
+    model_factory.create_models()
+    model_factory.create_triple_type_input()
+    signature_factory = GraphSignatureFactory(
+        triple_type_model=model_factory.created_triple_type_model,
+        relationship=model_factory.relationship_model,
+    )
+    signature_factory.create_signatures()
+    signature_map = signature_factory.create_signatures_map()
+    retriever = ElasticDocumentIdRMClient(
+        elasticsearch=elasticsearch,
+        index_name=index_name,
+        embeddings=BedrockEmbeddings(),
+    )
+    rag = WebDocumentRetriever(elastic_id_retriever=retriever)
+    rag_factory = RelationshipRAGExtractorFactory(
+        specification=specification,
+        triple_types=model_factory.triple_type_inputs,
+        rag_instance=rag,
+        signature_map=signature_map,
+        cited_relationship_model=model_factory.created_cited_relationship,
+    )
+    rag_factory.create_instance()
+    return rag_factory.created_rag_instance
