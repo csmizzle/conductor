@@ -398,8 +398,8 @@ class GraphModelFactoryPipeline:
         """
         Create the CitedRelationship BaseModel dynamically with the Relationship BaseModel.
         """
-        self.cited_relationship = create_subclass_with_dynamic_fields(
-            model_name="CustomCitedRelationship",
+        self.created_cited_relationship = create_subclass_with_dynamic_fields(
+            model_name="CustomCitedRelationshipWithCredibility",
             base_class=graph_models.CitedRelationshipWithCredibility,
             new_fields={
                 "source": (self.entity_model, None, "Source entity"),
@@ -520,16 +520,9 @@ class GraphSignatureFactory:
         """
 
         class CustomRelationshipQuery(graph_signatures.RelationshipQuery):
-            specification: str = dspy.InputField(
-                description="Specification for entity extraction",
-                prefix="Specification: ",
-            )
             triple_type: self.triple_type_model = dspy.InputField(
                 description="Triple containing source_type, relationship_type, and target_type",
                 prefix="Triple: ",
-            )
-            query: str = dspy.OutputField(
-                description="Generated query", prefix="Query: "
             )
 
         self.relationship_query = CustomRelationshipQuery
@@ -540,16 +533,9 @@ class GraphSignatureFactory:
         """
 
         class CustomExtractedRelationships(graph_signatures.ExtractedRelationships):
-            query: str = dspy.InputField(
-                description="Query to ground extraction", prefix="Query: "
-            )
-            triple_type: graph_models.TripleType = dspy.InputField(
+            triple_type: self.triple_type_model = dspy.InputField(
                 description="Triple containing source_type, relationship_type, and target_type",
                 prefix="Triple: ",
-            )
-            document: graph_models.DocumentWithCredibility = dspy.InputField(
-                description="Document to extract relationships from",
-                prefix="Documents: ",
             )
             relationships: list[self.relationship] = dspy.OutputField(
                 description="Extracted relationships", prefix="Relationships: "
@@ -563,18 +549,8 @@ class GraphSignatureFactory:
         """
 
         class CustomRelationshipReasoning(graph_signatures.RelationshipReasoning):
-            query: str = dspy.InputField(
-                description="Query to ground reasoning", prefix="Query: "
-            )
             relationship: self.relationship = dspy.InputField(
                 description="Relationships to reason about", prefix="Relationships: "
-            )
-            document: str = dspy.InputField(
-                description="Document that relationship was extracted from",
-                prefix="Documents: ",
-            )
-            relationship_reasoning: str = dspy.OutputField(
-                description="Reasoning about relationships", prefix="Reasoning: "
             )
 
         self.relationship_reasoning = CustomRelationshipReasoning
@@ -635,17 +611,40 @@ class RelationshipRAGExtractorFactory:
         :param triple_types: List of TripleType objects.
         :return: Configured RelationshipRAGExtractor instance.
         """
-        # Dynamically build the extractor methods based on the signature map
-        extractor_methods = {
-            key: dspy.ChainOfThought(value) for key, value in self.signature_map.items()
-        }
+        create_relationship_query_signature = self.signature_map[
+            "create_relationship_query"
+        ]
+        extracted_relationships_signature = self.signature_map["extract_relationships"]
+        create_relationship_reasoning_signature = self.signature_map[
+            "create_relationship_reasoning"
+        ]
 
-        # Use type() to dynamically create a subclass with additional attributes
-        ConfiguredRelationshipRAGExtractor = type(
-            "ConfiguredRelationshipRAGExtractor",  # Name of the new class
-            (RelationshipRAGExtractor,),  # Base classes
-            extractor_methods,  # Methods or attributes as a dictionary
-        )
+        class ConfiguredRelationshipRAGExtractor(RelationshipRAGExtractor):
+            def __init__(
+                self,
+                specification: str,
+                triple_types: List[graph_models.TripleType],
+                rag: Type[dspy.Module],
+                cited_relationship_model: Type[
+                    graph_models.CitedRelationshipWithCredibility
+                ],
+            ) -> None:
+                super().__init__(
+                    specification=specification,
+                    triple_types=triple_types,
+                    rag=rag,
+                    cited_relationship_model=cited_relationship_model,
+                )
+                self.created_rag_instance: Type[RelationshipRAGExtractor] = None
+                self.create_relationship_query = dspy.ChainOfThought(
+                    create_relationship_query_signature
+                )
+                self.extract_relationships = dspy.ChainOfThought(
+                    extracted_relationships_signature
+                )
+                self.create_relationship_reasoning = dspy.ChainOfThought(
+                    create_relationship_reasoning_signature
+                )
 
         # Instantiate and return the configured extractor
         self.created_rag_instance = ConfiguredRelationshipRAGExtractor(

@@ -3,12 +3,15 @@ from conductor.profiles.factory import (
     GraphSignatureFactory,
     RelationshipRAGExtractorFactory,
 )
+from conductor.graph.create import create_deduplicated_graph
 from elasticsearch import Elasticsearch
 from conductor.flow.credibility import SourceCredibility
 from conductor.flow.rag import WebDocumentRetriever
 from conductor.rag.embeddings import BedrockEmbeddings
 from conductor.flow.retriever import ElasticDocumentIdRMClient
+from tests.utils import save_model_to_test_data
 import os
+import dspy
 
 
 def test_graph_model_factory_pipeline():
@@ -79,7 +82,7 @@ def test_graph_create_pipeline_functions() -> None:
     # create the cited relationship models for the pipeline
     pipeline._create_cited_relationship()
     # create the cited relationship model
-    relationship_model = pipeline.cited_relationship
+    relationship_model = pipeline.created_cited_relationship
     relationship = relationship_model(
         source=entity_instance,
         target=entity_instance,
@@ -110,7 +113,15 @@ def test_graph_create_pipeline_functions() -> None:
     assert triple_type.relationship_type == "FOLLOWER"
 
 
-def test_relationship_factory() -> None:
+def test_relationship_factory_extract() -> None:
+    search_lm = dspy.LM(
+        "openai/gpt-4o-mini",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        cache=False,
+        max_tokens=3000,
+    )
+    dspy.configure(lm=search_lm)
     triple_types = {
         "SUBSIDIARY": ("COMPANY", "COMPANY"),
     }
@@ -138,10 +149,61 @@ def test_relationship_factory() -> None:
         triple_types=pipeline.triple_type_inputs,
         rag_instance=rag,
         signature_map=map_,
-        cited_relationship_model=pipeline.cited_relationship,
+        cited_relationship_model=pipeline.created_cited_relationship,
+    )
+    rag_factory.create_instance()
+    assert rag_factory.created_rag_instance is not None
+    custom_rag = rag_factory.created_rag_instance
+    relationships = custom_rag.extract()
+    assert relationships is not None
+
+
+def test_relationship_factory_extract_parallel() -> None:
+    search_lm = dspy.LM(
+        "openai/gpt-4o-mini",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        cache=False,
+        max_tokens=3000,
+    )
+    dspy.configure(lm=search_lm)
+    triple_types = {
+        # "EXECUTIVE": ("COMPANY", "PERSON"),
+        # "SUBSIDIARY": ("COMPANY", "COMPANY"),
+        "LOCATIONS": ("COMPANY", "LOCATION"),
+    }
+    pipeline = GraphModelFactoryPipeline(triple_types)
+    pipeline.create_models()
+    pipeline.create_triple_type_input()
+    factory = GraphSignatureFactory(
+        triple_type_model=pipeline.created_triple_type_model,
+        relationship=pipeline.relationship_model,
+    )
+    factory.create_signatures()
+    map_ = factory.create_signatures_map()
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    elasticsearch_test_index = os.getenv("ELASTICSEARCH_TEST_RAG_INDEX")
+    retriever = ElasticDocumentIdRMClient(
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_test_index,
+        embeddings=BedrockEmbeddings(),
+    )
+    rag = WebDocumentRetriever(elastic_id_retriever=retriever)
+    rag_factory = RelationshipRAGExtractorFactory(
+        specification="The company is Thomson Reuters.",
+        triple_types=pipeline.triple_type_inputs,
+        rag_instance=rag,
+        signature_map=map_,
+        cited_relationship_model=pipeline.created_cited_relationship,
     )
     rag_factory.create_instance()
     assert rag_factory.created_rag_instance is not None
     custom_rag = rag_factory.created_rag_instance
     relationships = custom_rag.extract_parallel()
     assert relationships is not None
+    graph = create_deduplicated_graph(relationships)
+    save_model_to_test_data(
+        graph, "test_unique_relationship_factory_extract_parallel.json"
+    )
