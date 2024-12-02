@@ -32,7 +32,9 @@ class QuestionSpecification:
     Specify a question
     """
 
-    def __init__(self, question: str, specification: str, perspective: str) -> None:
+    def __init__(
+        self, question: str, specification: str, perspective: str = None
+    ) -> None:
         self.question = question
         self.specification = specification
         self.perspective = perspective
@@ -41,9 +43,7 @@ class QuestionSpecification:
         """
         Specify the question
         """
-        specifier = dspy.ChainOfThought(
-            "question: str, specification: str, perspective: str -> specified_question: str"
-        )
+        specifier = dspy.ChainOfThought(signatures.QuestionSpecification)
         return specifier(
             question=self.question,
             specification=self.specification,
@@ -123,7 +123,7 @@ def specify_research_team(team: models.Team, specification: str) -> models.Team:
 
 
 def specify_research_question(
-    question: str, specification: str, perspective: str
+    question: str, specification: str, perspective: str = None
 ) -> str:
     """
     Specify a research question
@@ -150,7 +150,7 @@ def specify_research_questions(
 
 
 def specify_research_questions_parallel(
-    questions: list[str], specification: str, perspective: str
+    questions: list[str], specification: str, perspective: str = None
 ) -> list[str]:
     """
     Specify a list of research questions in parallel

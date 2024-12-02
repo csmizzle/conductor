@@ -48,7 +48,6 @@ from conductor.images.search import (
 )
 from conductor.pipelines.models import ResearchPipelineState
 from conductor.flow.rag import CitedAnswerWithCredibility, get_answers
-from conductor.flow.signatures import CompanySearchQuestions
 from pydantic import BaseModel, InstanceOf
 from typing import Callable, Optional
 from reportlab.platypus import SimpleDocTemplate
@@ -896,57 +895,25 @@ class SearchPipeline:
 
     def __init__(
         self,
-        company: str,
+        specification: str,
         perspective: str,
-        # triple_types: list[TripleType],
         rag: InstanceOf[dspy.Module],
-        research_questions: list[str] = None,
-        n_research_questions: int = 5,
-        question_lm: LM = None,
-        search_lm: LM = None,
+        research_questions: list[str],
     ) -> None:
-        self.company = company
+        self.specification = specification
         self.research_questions = research_questions
-        # self.triple_types = triple_types
         self.perspective = perspective
         self.rag = rag
-        self.question_lm = question_lm
-        self.search_lm = search_lm
-        self.search_results: list[CitedAnswerWithCredibility]
-        self.generate_questions = dspy.ChainOfThought(
-            CompanySearchQuestions, n=n_research_questions
-        )
+        self.search_results: list[CitedAnswerWithCredibility] = None
 
-    def generate_research_questions(self) -> list[str]:
-        """
-        Generate research questions for the company.
-        Returns:
-            list[str]: The generated research questions.
-        """
-        if self.question_lm:
-            dspy.configure(lm=self.question_lm)
-        logger.info("Generating research questions ...")
-        self.research_questions = self.generate_questions(
-            company_name=self.company,
-            perspective=self.perspective,
-        ).search_queries
-        logger.info("Research questions generated.")
-        return self.research_questions
-
-    def run_search(self) -> list[runner.SearchTeamAnswers]:
+    def run_search(self) -> list[CitedAnswerWithCredibility]:
         """
         Runs the search flow.
         Returns:
             list[runner.SearchTeamAnswers]: The search results.
         """
-        if self.research_questions:
-            if self.search_lm:
-                dspy.configure(lm=self.search_lm)
-            self.search_results = get_answers(
-                questions=self.research_questions,
-                rag=self.rag,
-            )
-            return self.search_results
-        else:
-            logger.error("Missing research questions to run search")
-            raise ValueError("Missing research questions to run search")
+        self.search_results = get_answers(
+            questions=self.research_questions,
+            rag=self.rag,
+        )
+        return self.search_results

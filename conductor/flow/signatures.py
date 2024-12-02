@@ -6,6 +6,7 @@ of data collection efforts using search engines and APIs.
 import dspy
 from conductor.flow.models import CitedAnswer as CitedAnswerModel
 from conductor.flow.models import CitedValue as CitedValueModel
+from typing import Optional
 
 
 class AgentBackstory(dspy.Signature):
@@ -150,14 +151,15 @@ class ExtractValue(dspy.Signature):
     value: str = dspy.OutputField(desc="The extracted value")
 
 
-class CompanySearchQuestions(dspy.Signature):
+class SearchQuestions(dspy.Signature):
     """
-    Generate analytical research questions for company research
+    Generate analytical research questions for entity research
+    Use the specification as the name of the entity to build the questions around
     Use the perspective of the analyst to generate the queries
-    The questions should help a novice analyst understand the company like a subject matter expert
+    The questions should help a novice analyst understand the entity like a subject matter expert
     """
 
-    company_name: str = dspy.InputField(desc="The name of the company")
+    specification: str = dspy.InputField(desc="The name of the entity")
     perspective: str = dspy.InputField(desc="The perspective of the analyst")
     search_queries: list[str] = dspy.OutputField(desc="The generated search queries")
 
@@ -179,3 +181,19 @@ class AnswerReasoning(dspy.Signature):
     )
     confidence: int = dspy.InputField(desc="The confidence of the answer")
     reasoning: str = dspy.OutputField(desc="The generated reasoning")
+
+
+class QuestionSpecification(dspy.Signature):
+    """
+    Generate an analytical research question for entity research
+    Use the specification as the name of the entity to build the questions around
+    Use the perspective of the analyst to generate the queries if provided
+    The questions should surface information about the entity like a subject matter expert from a search engine
+    """
+
+    question: str = dspy.InputField(desc="The question to specify")
+    specification: str = dspy.InputField(
+        desc="The specific entity to build the question around"
+    )
+    perspective: Optional[str] = dspy.InputField(desc="The perspective of the analyst")
+    specified_question: str = dspy.OutputField(desc="The specified question")
