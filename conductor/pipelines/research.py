@@ -35,8 +35,8 @@ from conductor.reports.builder import models as report_models
 from conductor.graph.models import Relationship
 from conductor.profiles.generate import generate_profile_parallel
 from conductor.profiles.models import Company
-from conductor.graph.extraction import (
-    create_graph,
+from conductor.graph.create import (
+    create_deduplicated_graph,
 )
 from conductor.graph.models import (
     TripleType,
@@ -651,7 +651,7 @@ class ResearchPipelineV2:
                     if self.graph_llm:
                         dspy.configure(lm=self.graph_llm)
                     logger.info("Building graph ...")
-                    self.generated_graph = create_graph(
+                    self.generated_graph = create_deduplicated_graph(
                         specification=self.specification,
                         triple_types=self.triple_types,
                         retriever=self.graph_retriever,
