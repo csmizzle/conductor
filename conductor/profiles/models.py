@@ -52,3 +52,12 @@ class PipelineResult(BaseModel):
         description="Profile fields"
     )
     specification: str = Field(description="Profile specification")
+
+
+class RelationshipEvaluation(BaseModel):
+    """
+    Relationship evaluation model
+    """
+
+    quality: float = Field(g=1, le=5, description="Confidence in relationship")
+    reasoning: str = Field(description="Reasoning for relationship")

@@ -10,12 +10,14 @@ from conductor.flow.models import NotAvailable
 from conductor.graph import models as graph_models
 from conductor.graph import signatures as graph_signatures
 from conductor.graph.extraction import RelationshipRAGExtractor
+from conductor.graph.create import create_deduplicated_graph
 from conductor.flow.rag import WebDocumentRetriever
 from conductor.rag.embeddings import BedrockEmbeddings
 from conductor.flow.retriever import ElasticDocumentIdRMClient
 from conductor.profiles.signatures import (
     generate_relationship,
     generate_relationship_specification,
+    evaluate_extraction,
 )
 from elasticsearch import Elasticsearch
 from pydantic import BaseModel
@@ -23,6 +25,8 @@ from loguru import logger
 import dspy
 from langchain_core.embeddings import Embeddings
 from enum import Enum
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
 
 
 def create_custom_cited_value(
@@ -716,9 +720,78 @@ def create_value_rag_pipeline(
     return rag_pipeline
 
 
+def process_relationship(
+    relationship: InstanceOf[graph_models.AggregatedCitedRelationship],
+    profile_pipeline: dict,
+    quality_threshold: int = 3,
+) -> Union[dict, None]:
+    profile = {}
+    # Run the profile pipeline
+    extraction_evaluation = evaluate_extraction(
+        source_name=relationship.source.name,
+        source_type=relationship.source.entity_type,
+        target_name=relationship.target.name,
+        target_type=relationship.target.entity_type,
+        relationship_type=relationship.relationship_type,
+    )
+    if extraction_evaluation.quality >= quality_threshold:
+        relationship_specification = generate_relationship_specification(
+            source=relationship.source.name,
+            relationship_type=relationship.relationship_type,
+            target=relationship.target.name,
+        )
+        logger.info(f"Running profile pipeline for {relationship_specification}")
+        for _field_name, _entry in profile_pipeline.items():
+            profile[_field_name] = run_specified_rag(
+                specification=relationship_specification,
+                name=_field_name,
+                rag=_entry[0],  # WebSearchValueRAG subclass
+                description=_entry[1],  # value_description
+            )
+        return {
+            "relationship": relationship,
+            "profile": profile,
+        }
+    else:
+        logger.warning(
+            f"Extraction evaluation quality is below threshold for {relationship.source.name}->{relationship.relationship_type}->{relationship.target.name}"
+        )
+        logger.warning(f"Quality: {extraction_evaluation.reasoning}")
+
+
+def parallel_process_relationships(
+    deduplicated_graph: graph_models.AggregatedCitedGraph,
+    profile_pipeline: dict,
+    max_workers: int = 4,
+    quality_threshold: int = 3,
+):
+    profiled_relationships = []
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit tasks to the thread pool
+        future_to_relationship = {
+            executor.submit(
+                process_relationship, relationship, profile_pipeline, quality_threshold
+            ): relationship
+            for relationship in deduplicated_graph.relationships
+        }
+        for future in tqdm(
+            as_completed(future_to_relationship), total=len(future_to_relationship)
+        ):
+            try:
+                # Collect the processed relationship
+                result = future.result()
+                if result:
+                    profiled_relationships.append(result)
+            except Exception as e:
+                logger.error(f"Error processing relationship: {e}")
+    return profiled_relationships
+
+
 def run_value_rag_pipeline(
     specification: str,
     pipeline: dict[str, tuple[Type[WebSearchRAG], str]],
+    max_workers: int = 4,
+    quality_threshold: int = 3,
 ) -> dict[str, list[dict[str, Type[CitedValueWithCredibility]]]]:
     """
     Run a pipeline of WebSearchValueRAG classes based on the provided value map.
@@ -757,31 +830,15 @@ def run_value_rag_pipeline(
                     index_name=resources["index_name"],
                 )
                 relationships = relationship_extractor.extract_parallel()
-                profiled_relationships = []
-                for relationship in relationships:
-                    profile = {}
-                    # run the profile pipeline
-                    relationship_specification = generate_relationship_specification(
-                        source=relationship.source.name,
-                        relationship_type=relationship.relationship_type,
-                        target=relationship.target.name,
-                    )
-                    logger.info(
-                        f"Running profile pipeline for {relationship_specification}"
-                    )
-                    for _field_name, _entry in profile_pipeline.items():
-                        profile[_field_name] = run_specified_rag(
-                            specification=relationship_specification,
-                            name=_field_name,
-                            rag=_entry[0],  # WebSearchValueRAG subclass
-                            description=_entry[1],  # value_description
-                        )
-                    # add the profile values to the relationship
-                    profiled_relationships.append(
-                        {
-                            "relationship": relationship,
-                            "profile": profile,
-                        }
-                    )
+                # clean the graph to get the deduplicated relationships
+                deduplicated_graph = create_deduplicated_graph(
+                    relationships=relationships
+                )
+                profiled_relationships = parallel_process_relationships(
+                    deduplicated_graph=deduplicated_graph,
+                    profile_pipeline=profile_pipeline,
+                    max_workers=max_workers,
+                    quality_threshold=quality_threshold,
+                )
                 values[model_name][field_name] = profiled_relationships
     return values
