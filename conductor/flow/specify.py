@@ -3,6 +3,7 @@ import concurrent.futures
 from conductor.flow import signatures
 from conductor.flow import models
 from conductor.flow.research import TrimmedPromptTask
+from loguru import logger
 
 
 class DescriptionSpecification:
@@ -44,6 +45,7 @@ class QuestionSpecification:
         Specify the question
         """
         specifier = dspy.ChainOfThought(signatures.QuestionSpecification)
+        logger.info(f"Specifying question: {self.question} for {self.specification}")
         return specifier(
             question=self.question,
             specification=self.specification,
