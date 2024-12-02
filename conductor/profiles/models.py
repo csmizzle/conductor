@@ -1,7 +1,7 @@
 """
 Pydantic models for the profiles module.
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, InstanceOf
 from conductor.flow.rag import CitedValueWithCredibility
 
 
@@ -40,3 +40,15 @@ class Company(BaseModel):
     us_govt_contracts: CitedValueWithCredibility = Field(
         description="A field denoting if company has US government contracts"
     )
+
+
+class PipelineResult(BaseModel):
+    """
+    Pipeline result
+    """
+
+    name: str = Field(description="Profile name")
+    fields: dict[str, InstanceOf[CitedValueWithCredibility]] = Field(
+        description="Profile fields"
+    )
+    specification: str = Field(description="Profile specification")

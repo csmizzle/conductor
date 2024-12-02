@@ -8,7 +8,7 @@ Key models:
 from conductor.flow.rag import DocumentWithCredibility
 from conductor.flow.credibility import SourceCredibility
 from typing import List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, InstanceOf
 from enum import Enum
 
 
@@ -38,7 +38,7 @@ class Entity(BaseModel):
     Entity model
     """
 
-    entity_type: EntityType = Field(description="Entity type")
+    entity_type: InstanceOf[EntityType] = Field(description="Entity type")
     name: str = Field(description="Entity value")
 
     class Config:
@@ -138,7 +138,7 @@ class AggregatedCitedEntity(BaseModel):
     Aggregated cited entity model
     """
 
-    entity: Entity = Field(description="The entity")
+    entity: InstanceOf[Entity] = Field(description="The entity")
     documents: List[DocumentWithCredibility] = Field(description="List of documents")
 
     class Config:
@@ -150,8 +150,8 @@ class AggregatedCitedRelationship(BaseModel):
     Aggregated documents with a single relationship
     """
 
-    source: Entity = Field(description="Source entity")
-    target: Entity = Field(description="Target entity")
+    source: InstanceOf[Entity] = Field(description="Source entity")
+    target: InstanceOf[Entity] = Field(description="Target entity")
     relationship_type: str = Field(description="Relationship type")
     # individual relationship metadata
     relationship_reasoning: str = Field(

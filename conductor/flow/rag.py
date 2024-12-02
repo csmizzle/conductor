@@ -521,7 +521,9 @@ class WebSearchRAG(dspy.Module):
                 answer=answer.answer.answer,
                 citations=answer.answer.citations,
                 question=question,
-                documents=retrieved_documents.documents,
+                documents=retrieved_documents.documents
+                if hasattr(retrieved_documents, "documents")
+                else [],
                 faithfulness=answer.answer.faithfulness,
                 factual_correctness=answer.answer.factual_correctness,
                 confidence=answer.answer.confidence,
@@ -539,7 +541,9 @@ class WebSearchRAG(dspy.Module):
         answer_with_credibility = CitedAnswerWithCredibility(
             question=question,
             answer=answer.answer.answer,
-            documents=retrieved_documents.documents,
+            documents=retrieved_documents.documents
+            if hasattr(retrieved_documents, "documents")
+            else [],
             citations=answer.answer.citations,
             faithfulness=answer.answer.faithfulness,
             factual_correctness=answer.answer.factual_correctness,
