@@ -112,12 +112,16 @@ class DescriptionSpecification(dspy.Signature):
     You are build a query from a value name, description, and specification.
     The value name is the name of a data field you need to search for.
     The description is the description of the data field.
-    The specification is the specification is context for the query. The query should only return results that match the specification.
+    Sometimes the description will be posed as a question. Use this to build the query around the specification.
+    The specification is the specification is the entity to build the query around.
+    The query should only return results that match the specification.
     """
 
     value_name: str = dspy.InputField(desc="The name of the value to search for")
     description: str = dspy.InputField(desc="The description of the value")
-    specification: str = dspy.InputField(desc="The specification of the value")
+    specification: str = dspy.InputField(
+        desc="The specific entity to build the query around"
+    )
     specified_retrieval_question: str = dspy.OutputField(
         desc="The specified retrieval question"
     )

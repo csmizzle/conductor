@@ -271,3 +271,33 @@ def test_run_nested_value_pipeline() -> None:
     data = recursive_model_dump(results)
     with open("tests/data/nested_farm_profile.json", "w") as f:
         json.dump(data, f, indent=4)
+
+
+def test_value_extraction_not_available() -> None:
+    search_lm = dspy.LM(
+        "openai/gpt-4o-mini",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        max_tokens=3000,
+    )
+    dspy.configure(lm=search_lm)
+    value_map = {
+        "Company": {
+            "name": (str, "Official name of the company"),
+            "foreign_ownership": (bool, "Is the company US owned?"),
+        }
+    }
+    pipeline = create_value_rag_pipeline(
+        value_map=value_map,
+        elasticsearch=Elasticsearch(hosts=[os.getenv("ELASTICSEARCH_URL")]),
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
+    assert isinstance(pipeline, dict)
+    specification = "Thomson Reuters"
+    results = run_value_rag_pipeline(specification=specification, pipeline=pipeline)
+    assert isinstance(results, dict)
+    data = recursive_model_dump(results)
+    with open("tests/data/test_value_extraction_not_available.json", "w") as f:
+        json.dump(data, f, indent=4)

@@ -45,7 +45,9 @@ def create_custom_cited_value(
         {
             "__annotations__": {
                 **CitedValueWithCredibility.__annotations__,
-                "value": value_type,  # Update the type of the `value` field
+                "value": Union[
+                    value_type, NotAvailable
+                ],  # Update the type of the `value` field
             },
             "value": Field(description=value_description),  # Update the field metadata
         },
