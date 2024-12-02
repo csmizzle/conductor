@@ -896,13 +896,11 @@ class SearchPipeline:
     def __init__(
         self,
         specification: str,
-        perspective: str,
         rag: InstanceOf[dspy.Module],
         research_questions: list[str],
     ) -> None:
         self.specification = specification
         self.research_questions = research_questions
-        self.perspective = perspective
         self.rag = rag
         self.search_results: list[CitedAnswerWithCredibility] = None
 
