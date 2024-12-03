@@ -27,6 +27,33 @@ import os
 import concurrent.futures
 
 
+class SlimCitedAnswerWithCredibility(BaseModel):
+    """
+    Citation Answer with credibility without the documents
+    """
+
+    question: str = Field(description="The question")
+    answer: str = Field(description="The answer for the question")
+    answer_reasoning: Union[str, None] = Field(
+        description="The reasoning behind the answer"
+    )
+    citations: list[str] = Field(description="The URLs used in the answer")
+    faithfulness: int = Field(ge=1, le=5, description="The faithfulness of the answer")
+    factual_correctness: int = Field(
+        ge=1, le=5, description="The factual correctness of the answer"
+    )
+    confidence: int = Field(ge=1, le=5, description="The confidence of the answer")
+    source_credibility: list[SourceCredibility] = Field(
+        description="The credibility of the sources"
+    )
+    source_credibility_reasoning: Optional[list[str]] = Field(
+        description="The reasoning behind the source credibility"
+    )
+
+    class Config:
+        use_enum_values = True
+
+
 class CitedAnswerWithCredibility(BaseModel):
     question: str = Field(description="The question")
     answer: str = Field(description="The answer for the question")
@@ -51,6 +78,19 @@ class CitedAnswerWithCredibility(BaseModel):
 
     class Config:
         use_enum_values = True
+
+    def slim(self) -> list[SlimCitedAnswerWithCredibility]:
+        return SlimCitedAnswerWithCredibility(
+            question=self.question,
+            answer=self.answer,
+            answer_reasoning=self.answer_reasoning,
+            citations=self.citations,
+            faithfulness=self.faithfulness,
+            factual_correctness=self.factual_correctness,
+            confidence=self.confidence,
+            source_credibility=self.source_credibility,
+            source_credibility_reasoning=self.source_credibility_reasoning,
+        )
 
 
 class CitedValueWithCredibility(BaseModel):

@@ -3,7 +3,7 @@ Signatures for report building
 """
 import dspy
 from conductor.reports.builder import models
-from conductor.flow.rag import CitedAnswerWithCredibility
+from conductor.flow.rag import SlimCitedAnswerWithCredibility
 
 
 class ConversationTurn(dspy.Signature):
@@ -146,7 +146,7 @@ class Section(dspy.Signature):
     section_outline_title: str = dspy.InputField(prefix="Section Outline Title: ")
     section_outline_content: str = dspy.InputField(prefix="Section Outline Content: ")
     questions: list[str] = dspy.InputField(prefix="Questions: ")
-    answers: list[CitedAnswerWithCredibility] = dspy.InputField(prefix="Answers: ")
+    answers: list[SlimCitedAnswerWithCredibility] = dspy.InputField(prefix="Answers: ")
     section: models.Section = dspy.OutputField(prefix="Section: ")
 
 

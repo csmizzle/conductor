@@ -1,6 +1,9 @@
 from pydantic import BaseModel, Field
 from conductor.builder.agent import ResearchAgentTemplate
-from conductor.flow.rag import CitedAnswerWithCredibility
+from conductor.flow.rag import (
+    CitedAnswerWithCredibility,
+    SlimCitedAnswerWithCredibility,
+)
 from typing import Union
 
 
@@ -56,7 +59,7 @@ class Sentence(BaseModel):
 
 
 class SentenceWithAnswer(Sentence):
-    answer: CitedAnswerWithCredibility = Field(description="The sentence answer")
+    answer: SlimCitedAnswerWithCredibility = Field(description="The sentence answer")
 
 
 class Paragraph(BaseModel):
