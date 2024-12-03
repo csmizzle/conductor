@@ -138,3 +138,33 @@ def test_write_report() -> None:
     )
     assert isinstance(report, models.Report)
     save_model_to_test_data(report, "report.json")
+
+
+def test_write_report_gemini() -> None:
+    lm = dspy.LM(
+        "openai/gpt-4o",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        cache=False,
+        max_tokens=3000,
+    )
+    dspy.configure(lm=lm)
+    outline = load_model_from_test_data(ReportOutline, "test_build_outline.json")
+    elasticsearch = Elasticsearch(
+        hosts=[os.getenv("ELASTICSEARCH_URL")],
+    )
+    elasticsearch_test_index = os.getenv("ELASTICSEARCH_TEST_RAG_INDEX")
+    rag = WebSearchRAG.with_elasticsearch_id_retriever(
+        elasticsearch=elasticsearch,
+        index_name=elasticsearch_test_index,
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
+    report = write_report(
+        outline=outline,
+        rag=rag,
+        specification="Thomson Reuters Special Services",
+        perspective="Looking for strategic gaps in the company's operations and what they also do well.",
+    )
+    assert isinstance(report, models.Report)
+    save_model_to_test_data(report, "report.json")

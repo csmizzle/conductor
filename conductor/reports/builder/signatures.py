@@ -3,7 +3,7 @@ Signatures for report building
 """
 import dspy
 from conductor.reports.builder import models
-from conductor.flow.rag import CitedAnswerWithCredibility, DocumentWithCredibility
+from conductor.flow.rag import CitedAnswerWithCredibility
 
 
 class ConversationTurn(dspy.Signature):
@@ -80,8 +80,7 @@ class SectionOutline(dspy.Signature):
     You are generating an outline for a section of the report.
     Use the specification to ground the outline. Content should only be tailored to the specification. Never use abbreviations when referring to the specification, use the full name if possible to avoid confusion.
     Use the section title to guide the outline.
-    Use the documents to guide the outline and ground the content of the section outline.
-    If the documents are not available, use a general outline combined with the perspective and specification to generate the outline.
+    Use the documents summary to guide the outline.
     The section content should be multi level headers and bullet points.
     The section headers should be marked by # and sub headers by ## and so on.
     Content should be marked by - and sub content by -- and so on.
@@ -89,7 +88,7 @@ class SectionOutline(dspy.Signature):
 
     specification: str = dspy.InputField(prefix="Specification: ")
     section_title: str = dspy.InputField(prefix="Section Title: ")
-    documents: list[DocumentWithCredibility] = dspy.InputField(prefix="Documents: ")
+    documents_summary: str = dspy.InputField(prefix="Documents summary: ")
     section_outline: models.SectionOutline = dspy.OutputField()
 
 

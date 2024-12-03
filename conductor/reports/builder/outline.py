@@ -5,6 +5,7 @@ import dspy
 from conductor.flow.rag import WebDocumentRetriever
 from conductor.reports.builder import signatures
 from conductor.reports.builder import models
+from conductor.summarize.summarize import generate_master_summary
 from pydantic import InstanceOf
 from functools import partial
 import concurrent.futures
@@ -41,11 +42,15 @@ class SectionOutlineBuilder:
             section_title=self.section_title,
         )
         documents = self.rag(question=search.search)
+        summary = generate_master_summary(
+            documents=documents,
+            question=search.search,
+        )
         section_outline = self.generate_section_outline(
             perspective=self.perspective,
             specification=self.specification,
             section_title=self.section_title,
-            documents=documents,
+            documents_summary=summary.summary,
         )
         return section_outline
 
