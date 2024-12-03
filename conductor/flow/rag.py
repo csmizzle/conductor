@@ -360,27 +360,34 @@ class WebDocumentRetriever(dspy.Module):
         )
         google_results_dict = search.get_dict()
         if "answer_box" in google_results_dict:
-            logger.info(
-                f"Ingesting answer link {google_results_dict['answer_box']['link']}"
-            )
-            documents = ingest_with_ids(
-                url=google_results_dict["answer_box"]["link"],
-                client=self.retriever.client,
-            )
-            if "snippet" in google_results_dict["answer_box"]:
-                logger.info("Answer found in the snippet")
-                # get source documents
-                if documents:
-                    document_ids = []
-                    for urls in documents.values():
-                        document_ids.extend(urls)
-                    retrieved_documents = self.retriever.get_documents(
-                        query=question, document_ids=document_ids
-                    )
+            if "link" in google_results_dict["answer_box"]:
+                logger.info(
+                    f"Ingesting answer link {google_results_dict['answer_box']['link']}"
+                )
+                documents = ingest_with_ids(
+                    url=google_results_dict["answer_box"]["link"],
+                    client=self.retriever.client,
+                )
+                if "snippet" in google_results_dict["answer_box"]:
+                    logger.info("Answer found in the snippet")
+                    # get source documents
+                    if documents:
+                        document_ids = []
+                        for urls in documents.values():
+                            document_ids.extend(urls)
+                        retrieved_documents = self.retriever.get_documents(
+                            query=question, document_ids=document_ids
+                        )
+                    else:
+                        logger.info("No documents were ingested ...")
                 else:
-                    logger.info("No documents were ingested ...")
+                    logger.info(
+                        "No answer found in the snippet, ingesting more data ..."
+                    )
             else:
-                logger.info("No answer found in the snippet, ingesting more data ...")
+                logger.info(
+                    "No answer link found in the answer box, ingesting more data ..."
+                )
         if not retrieved_documents and "organic_results" in google_results_dict:
             urls_to_ingest = []
             logger.info(f"Ingesting additional information for query {question}")
@@ -407,16 +414,21 @@ class WebDocumentRetriever(dspy.Module):
     def forward(self, question: str) -> list[DocumentWithCredibility]:
         documents = []
         retrieved_documents = self._retrieve_documents_from_internet(question)
-        for document in retrieved_documents:
-            # assign source credibility
-            source_confidence = get_source_credibility(source=document.metadata["url"])
-            document = DocumentWithCredibility(
-                content=document.page_content,
-                source=document.metadata["url"],
-                source_credibility=source_confidence.credibility,
-                source_credibility_reasoning=source_confidence.reasoning,
-            )
-            documents.append(document)
+        if retrieved_documents:
+            for document in retrieved_documents:
+                # assign source credibility
+                source_confidence = get_source_credibility(
+                    source=document.metadata["url"]
+                )
+                document = DocumentWithCredibility(
+                    content=document.page_content,
+                    source=document.metadata["url"],
+                    source_credibility=source_confidence.credibility,
+                    source_credibility_reasoning=source_confidence.reasoning,
+                )
+                documents.append(document)
+        else:
+            logger.warning(f"No documents found for question: {question}")
         return documents
 
 

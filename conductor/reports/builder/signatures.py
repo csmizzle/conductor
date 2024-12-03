@@ -3,7 +3,7 @@ Signatures for report building
 """
 import dspy
 from conductor.reports.builder import models
-from conductor.flow.rag import CitedAnswerWithCredibility
+from conductor.flow.rag import CitedAnswerWithCredibility, DocumentWithCredibility
 
 
 class ConversationTurn(dspy.Signature):
@@ -78,15 +78,18 @@ class RefinedQuestion(dspy.Signature):
 class SectionOutline(dspy.Signature):
     """
     You are generating an outline for a section of the report.
-    Use the specification to ground the outline.
+    Use the specification to ground the outline. Content should only be tailored to the specification. Never use abbreviations when referring to the specification, use the full name if possible to avoid confusion.
     Use the section title to guide the outline.
-    the section content should be multi level headers and bullet points.
-    the section headers should be marked by # and sub headers by ## and so on.
-    content should be marked by - and sub content by -- and so on.
+    Use the documents to guide the outline and ground the content of the section outline.
+    If the documents are not available, use a general outline combined with the perspective and specification to generate the outline.
+    The section content should be multi level headers and bullet points.
+    The section headers should be marked by # and sub headers by ## and so on.
+    Content should be marked by - and sub content by -- and so on.
     """
 
     specification: str = dspy.InputField(prefix="Specification: ")
     section_title: str = dspy.InputField(prefix="Section Title: ")
+    documents: list[DocumentWithCredibility] = dspy.InputField(prefix="Documents: ")
     section_outline: models.SectionOutline = dspy.OutputField()
 
 
@@ -109,6 +112,7 @@ class RefinedOutline(dspy.Signature):
 class SectionQuestion(dspy.Signature):
     """
     You are generating questions for a vector database that will get answers that will be transformed into sentences for a section of the report.
+    The specification will ground the questions generated. Avoid using abbreviations when referring to the specification, use the full name if possible to avoid confusion.
     Use the section outline title to guide the questions.
     Use the section outline content to tailor the questions to ensure that the answers will be relevant to the section.
     The answers of the questions will be transformed into sentences for the section.
@@ -180,3 +184,19 @@ class SectionForReview(dspy.Signature):
     section: list[str] = dspy.InputField(prefix="Section: ")
     perspective: str = dspy.InputField(prefix="Perspective: ")
     edited_section: list[str] = dspy.OutputField(prefix="Edited Section: ")
+
+
+class SectionOutlineSearch(dspy.Signature):
+    """
+    Search for information that will help you generate a section outline based on a specification, section title, and perspective.
+    The section outline will be used down stream to generate a section of the report.
+    The specification is will be an entity or a topic that will ground your search. Never use abbreviations when referring to the specification, use the full name if possible to avoid confusion.
+    The section title will guide the search to find information that is relevant to the section combined with the specification.
+    The perspective will guide the search to find information that is relevant to the section combined with the specification.
+    The generated search will be a search engine query that will help you collect information to generate the section outline.
+    """
+
+    specification: str = dspy.InputField(prefix="Specification: ")
+    section_title: str = dspy.InputField(prefix="Section Title: ")
+    perspective: str = dspy.InputField(prefix="Perspective: ")
+    search: str = dspy.OutputField(prefix="Search: ")

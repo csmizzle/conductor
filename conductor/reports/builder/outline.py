@@ -2,22 +2,91 @@
 Use Claude to generate an outline of the report based on the user's input
 """
 import dspy
+from conductor.flow.rag import WebDocumentRetriever
 from conductor.reports.builder import signatures
 from conductor.reports.builder import models
+from pydantic import InstanceOf
 from functools import partial
 import concurrent.futures
 
 
-class OutlineBuilder(dspy.Module):
+class SectionOutlineBuilder:
+    """
+    Build a section outline with real time access to information
+    """
+
+    def __init__(
+        self,
+        specification: str,
+        section_title: str,
+        perspective: str,
+        rag: InstanceOf[WebDocumentRetriever],
+    ) -> None:
+        self.specification = specification
+        self.section_title = section_title
+        self.perspective = perspective
+        self.generate_section_outline_search = dspy.ChainOfThought(
+            signatures.SectionOutlineSearch
+        )
+        self.generate_section_outline = dspy.ChainOfThought(signatures.SectionOutline)
+        self.rag = rag
+
+    def build(self) -> signatures.SectionOutline:
+        """
+        Generate an outline for the section based on the specification
+        """
+        search = self.generate_section_outline_search(
+            specification=self.specification,
+            perspective=self.perspective,
+            section_title=self.section_title,
+        )
+        documents = self.rag(question=search.search)
+        section_outline = self.generate_section_outline(
+            perspective=self.perspective,
+            specification=self.specification,
+            section_title=self.section_title,
+            documents=documents,
+        )
+        return section_outline
+
+
+def generate_section_outline(
+    specification: str,
+    section_title: str,
+    perspective: str,
+    rag: InstanceOf[WebDocumentRetriever],
+) -> models.SectionOutline:
+    """
+    Generate an outline for a section based on the specification
+    """
+    section_builder = SectionOutlineBuilder(
+        specification=specification,
+        section_title=section_title,
+        perspective=perspective,
+        rag=rag,
+    )
+    generated_section_outline = section_builder.build()
+    return generated_section_outline.section_outline
+
+
+class OutlineBuilder:
     """
     Outline builder that only uses the Language Model's knowledge to generate an outline for a report
     """
 
-    def __init__(self, section_titles: list[str]):
+    def __init__(
+        self,
+        section_titles: list[str],
+        perspective: str,
+        specification: str,
+        rag: InstanceOf[WebDocumentRetriever],
+    ) -> None:
         self.section_titles = section_titles
-        self.generate_section_outline = dspy.ChainOfThought(signatures.SectionOutline)
+        self.perspective = perspective
+        self.specification = specification
+        self.rag = rag
 
-    def forward(self, specification: str) -> list[signatures.SectionOutline]:
+    def build(self) -> list[signatures.SectionOutline]:
         """
         Generate an outline for the report based on the specification in parallel
         """
@@ -27,9 +96,11 @@ class OutlineBuilder(dspy.Module):
             for title in self.section_titles:
                 # Use functools.partial to pass multiple arguments
                 func = partial(
-                    self.generate_section_outline,
-                    specification=specification,
+                    generate_section_outline,
+                    specification=self.specification,
                     section_title=title,
+                    perspective=self.perspective,
+                    rag=self.rag,
                 )
                 futures.append(executor.submit(func))
             for future in concurrent.futures.as_completed(futures):
@@ -64,19 +135,30 @@ class OutlineRefiner(dspy.Module):
 
 
 def build_outline(
-    specification: str, section_titles: list[str]
-) -> list[signatures.SectionOutline]:
+    report_title: str,
+    section_titles: list[str],
+    perspective: str,
+    specification: str,
+    rag: InstanceOf[WebDocumentRetriever],
+) -> models.ReportOutline:
     """
     Generate an outline for the report based on the specification
     """
-    outline_builder = OutlineBuilder(section_titles=section_titles)
-    outline = outline_builder(specification=specification)
-    sections = [section.section_outline for section in outline]
+    outline_builder = OutlineBuilder(
+        section_titles=section_titles,
+        perspective=perspective,
+        specification=specification,
+        rag=rag,
+    )
+    sections = outline_builder.build()
     # sort outlines by section title to match the order of input section titles
     sorted_outlines = sorted(
         sections, key=lambda x: section_titles.index(x.section_title)
     )
-    return sorted_outlines
+    return models.ReportOutline(
+        report_title=report_title,
+        report_sections=sorted_outlines,
+    )
 
 
 def build_refined_outline(
