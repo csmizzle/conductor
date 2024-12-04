@@ -22,7 +22,6 @@ from conductor.flow.utils import build_organization_determination_crew
 from conductor.crews.rag_marketing import tools
 from langchain_core.embeddings import Embeddings
 from langtrace_python_sdk import with_langtrace_root_span
-import agentops
 from loguru import logger
 
 
@@ -150,14 +149,10 @@ class SearchFlow(Flow):
 
 
 async def arun_flow(flow: InstanceOf[Flow], session_id=None) -> str:
-    if session_id:
-        agentops.init(inherited_session_id=session_id)
     return await flow.kickoff_async()
 
 
 def run_flow(flow: InstanceOf[Flow], session_id=None) -> Union[list[CrewOutput], Any]:
-    if session_id:
-        agentops.init(inherited_session_id=session_id)
     return asyncio.run(arun_flow(flow=flow, session_id=session_id))
 
 

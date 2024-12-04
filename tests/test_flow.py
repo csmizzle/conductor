@@ -48,7 +48,6 @@ from elasticsearch import Elasticsearch
 import dspy
 import os
 import json
-import agentops
 
 
 langtrace.init()
@@ -441,7 +440,6 @@ def test_research_team_specification() -> None:
 
 @with_langtrace_root_span()
 def test_research_flow(elasticsearch_test_agent_index) -> None:
-    session = agentops.init(os.getenv("AGENTOPS_API_KEY"))
     title = "Company Research Team"
     perspective = "Focus on company risks and opportunities for investment"
     website_url = "https://www.trssllc.com"
@@ -494,7 +492,7 @@ def test_research_flow(elasticsearch_test_agent_index) -> None:
         index_name=elasticsearch_test_agent_index,
         parallel=True,
     )
-    result = run_flow(flow=flow, session_id=session)
+    result = run_flow(flow=flow)
     assert isinstance(result, list)
     assert all([isinstance(output, CrewOutput) for output in result])
 
@@ -561,7 +559,6 @@ def test_research_run_async(elasticsearch_cloud_test_research_index) -> None:
 
 
 def test_research_flow_sequential(elasticsearch_test_agent_index) -> None:
-    agentops.init(os.getenv("AGENTOPS_API_KEY"))
     title = "Company Research Team"
     perspective = "Focus on company risks and opportunities for investment"
     lm = dspy.LM(
