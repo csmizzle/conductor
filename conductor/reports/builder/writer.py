@@ -51,11 +51,13 @@ class SectionWriter(dspy.Module):
             for question in questions.questions:
                 futures.append(executor.submit(self.rag, question=question))
             for future in concurrent.futures.as_completed(futures):
-                answers.extend(future.result())
+                answers.append(future.result())
         # slim answers by removing unnecessary fields like the documents
-        logger.info("Slimming answers ...")
         if len(answers) > 0:
+            logger.info("Slimming answers ...")
             answers = [answer.slim() for answer in answers]
+        else:
+            logger.warning("No answers found ...")
         logger.info("Writing section ...")
         # write sections
         generated_section = self.generate_section(
