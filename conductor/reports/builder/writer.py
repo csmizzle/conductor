@@ -51,17 +51,18 @@ class SectionWriter(dspy.Module):
             for question in questions.questions:
                 futures.append(executor.submit(self.rag, question=question))
             for future in concurrent.futures.as_completed(futures):
-                answers.append(future.result())
+                answers.extend(future.result())
         # slim answers by removing unnecessary fields like the documents
         logger.info("Slimming answers ...")
-        slim_answers = [answer.slim() for answer in answers]
+        if len(answers) > 0:
+            answers = [answer.slim() for answer in answers]
         logger.info("Writing section ...")
         # write sections
         generated_section = self.generate_section(
             section_outline_title=section.section_title,
             section_outline_content=section.section_content,
             questions=questions.questions,
-            answers=slim_answers,
+            answers=answers,
         )
         # # map question sourcing to paragraph sentences
         sourced_paragraphs = []
@@ -70,7 +71,7 @@ class SectionWriter(dspy.Module):
                 if isinstance(paragraph, models.Paragraph):
                     sourced_sentences = []
                     for sentence in paragraph.sentences:
-                        for answer in slim_answers:
+                        for answer in answers:
                             if sentence.question == answer.question:
                                 sourced_sentence = models.SentenceWithAnswer(
                                     content=sentence.content,
