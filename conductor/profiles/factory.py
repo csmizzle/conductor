@@ -6,7 +6,6 @@ from pydantic import Field, create_model, InstanceOf
 from conductor.flow.rag import CitedValueWithCredibility, WebSearchRAG
 from conductor.flow.signatures import ExtractValue
 from conductor.flow.specify import specify_description
-from conductor.flow.models import NotAvailable
 from conductor.graph import models as graph_models
 from conductor.graph import signatures as graph_signatures
 from conductor.graph.extraction import RelationshipRAGExtractor
@@ -27,63 +26,6 @@ from langchain_core.embeddings import Embeddings
 from enum import Enum
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
-
-
-def create_custom_cited_value(
-    value_type: Type[Any], value_description: str
-) -> Type[CitedValueWithCredibility]:
-    """
-    Dynamically creates a subclass of `CitedValueWithCredibility` with a modified `value` field.
-
-    Args:
-        value_type (Type[Any]): The new type for the `value` field.
-        value_description (str): The new description for the `value` field.
-
-    Returns:
-        Type[CitedValueWithCredibility]: A dynamically generated subclass.
-    """
-    # Dynamically create a subclass of CitedValueWithCredibility
-    model = type(
-        "CustomCitedValueWithCredibility",
-        (CitedValueWithCredibility,),
-        {
-            "__annotations__": {
-                **CitedValueWithCredibility.__annotations__,
-                "value": Union[
-                    value_type, NotAvailable
-                ],  # Update the type of the `value` field
-            },
-            "value": Field(description=value_description),  # Update the field metadata
-        },
-    )
-    return model
-
-
-def create_custom_cited_model(
-    model_name: str, value_map: dict[str, tuple[Type[Any], str]]
-) -> Type[BaseModel]:
-    """
-    Dynamically creates a subclass of `BaseModel` with custom `CitedValueWithCredibility` fields.
-
-    Args:
-        model_name (str): The name of the new model.
-        value_map (dict): A mapping of field names to (value_type, value_description) tuples.
-
-    Returns:
-        Type[BaseModel]: A dynamically generated subclass.
-    """
-    # Dynamically create a subclass of BaseModel
-    model = type(
-        model_name,
-        (BaseModel,),
-        {
-            "__annotations__": {
-                field_name: (create_custom_cited_value(value_type, value_description))
-                for field_name, (value_type, value_description) in value_map.items()
-            },
-        },
-    )
-    return model
 
 
 # Subclassing to add a dynamic field
@@ -135,7 +77,7 @@ def create_extract_value_with_custom_type(
         """
 
         # this is crazy but it works
-        value: Union[value_type, NotAvailable] = dspy.OutputField(  # type: ignore
+        value: value_type = dspy.OutputField(  # type: ignore
             desc=value_description
         )  # type: ignore
 
@@ -628,8 +570,10 @@ def build_value_rag_pipeline(
     embeddings: Embeddings,
     cohere_api_key: str = None,
 ) -> InstanceOf[WebSearchRAG]:
-    custom_cited_value = create_custom_cited_value(
-        value_type=value_type, value_description=value_description
+    custom_cited_value = create_subclass_with_dynamic_fields(
+        model_name="CustomCitedValueWithCredibility",
+        base_class=CitedValueWithCredibility,
+        new_fields={"value": (value_type, None, value_description)},
     )
     custom_extract_value = create_extract_value_with_custom_type(
         value_type=value_type, value_description=value_description
