@@ -11,17 +11,16 @@ from conductor.crews.marketing.tools import (
     ScrapeWebsiteToolSchema,
     SerpSearchToolSchema,
 )
-from conductor.rag.ingest import url_to_db
 from conductor.rag.client import ElasticsearchRetrieverClient
 from elasticsearch import Elasticsearch
 from conductor.rag.embeddings import BedrockEmbeddings
+from conductor.rag.ingest import ingest, parallel_ingest
 from conductor.rag.utils import (
     get_page_content_with_source_url,
     get_content_and_source_from_response,
 )
 from serpapi import GoogleSearch
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from loguru import logger
 
 
@@ -53,41 +52,6 @@ class VectorMetaSearchToolSchema(FixedVectorMetaSearchToolSchema):
         ...,
         description="The URL of the company to find the website in vector database in the document metadata",
     )
-
-
-def ingest(
-    client: ElasticsearchRetrieverClient,
-    url: str,
-    headers: dict = None,
-    cookies: dict = None,
-):
-    logger.info(f"Ingesting data for {url} ...")
-    existing_document = client.find_document_by_url(url=url)
-    if existing_document["hits"]["total"]["value"] > 0:
-        return "Document already exists in the vector database"
-    else:
-        webpage = url_to_db(
-            url=url, client=client, headers=headers, cookies=cookies, timeout=10
-        )
-        return f"New documents added: {', '.join(webpage)}"
-
-
-# parallelized ingest function
-def parallel_ingest(urls, client, headers=None, cookies=None):
-    with ThreadPoolExecutor() as executor:
-        futures = {
-            executor.submit(ingest, client, url, headers, cookies): url for url in urls
-        }
-        results = []
-        for future in as_completed(futures):
-            url = futures[future]
-            try:
-                result = future.result()
-                results.append(result)
-            except Exception as e:
-                results.append(f"Error processing: {url}")
-                logger.error(f"Error: {url} --> {e}")
-    return results
 
 
 class ScrapeWebsiteIngestTool(ScrapeWebsiteTool):

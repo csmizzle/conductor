@@ -24,7 +24,7 @@ import requests
 from tqdm import tqdm
 from typing import Union
 from loguru import logger
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 def make_request(url: str, **kwargs) -> Union[requests.Response, None]:
@@ -478,3 +478,38 @@ def ingest_images_from_graph(
         save_path=save_path,
     )
     return added_documents
+
+
+def ingest(
+    client: ElasticsearchRetrieverClient,
+    url: str,
+    headers: dict = None,
+    cookies: dict = None,
+):
+    logger.info(f"Ingesting data for {url} ...")
+    existing_document = client.find_document_by_url(url=url)
+    if existing_document["hits"]["total"]["value"] > 0:
+        return "Document already exists in the vector database"
+    else:
+        webpage = url_to_db(
+            url=url, client=client, headers=headers, cookies=cookies, timeout=10
+        )
+        return f"New documents added: {', '.join(webpage)}"
+
+
+# parallelized ingest function
+def parallel_ingest(urls, client, headers=None, cookies=None):
+    with ThreadPoolExecutor() as executor:
+        futures = {
+            executor.submit(ingest, client, url, headers, cookies): url for url in urls
+        }
+        results = []
+        for future in as_completed(futures):
+            url = futures[future]
+            try:
+                result = future.result()
+                results.append(result)
+            except Exception as e:
+                results.append(f"Error processing: {url}")
+                logger.error(f"Error: {url} --> {e}")
+    return results
