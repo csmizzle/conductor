@@ -10,7 +10,7 @@ from elasticsearch import Elasticsearch
 from langchain_core.embeddings import Embeddings
 from langchain_elasticsearch import ElasticsearchStore
 from langchain_core.documents import Document
-from conductor.rag.models import WebPage, SourcedImageDescription
+from conductor.rag.models import WebPage
 from conductor.rag.chunking import WebPageContentSplitter
 
 
@@ -33,18 +33,6 @@ class ElasticsearchRetrieverClient:
             embedding=embeddings,
         )
         self.index_name = index_name
-
-    def create_image_document(self, image: SourcedImageDescription) -> Document:
-        return Document(
-            page_content=image.image_description.combine_description_metadata(),
-            metadata={
-                "url": image.source,
-                "created_at": image.created_at,
-                "path": image.path,
-                "image_metadata": image.image_description.metadata,
-                "description": image.image_description.description,
-            },
-        )
 
     def create_webpage_document(self, webpage: WebPage) -> List[Document]:
         """
@@ -70,22 +58,6 @@ class ElasticsearchRetrieverClient:
         ]
         for created_document in created_documents:
             documents.extend(created_document)
-        return self.store.add_documents(documents=documents)
-
-    def create_insert_image_document(self, image: SourcedImageDescription) -> list[str]:
-        """
-        Insert image document into Elasticsearch
-        """
-        document = self.create_image_document(image)
-        return self.store.add_documents(documents=[document])
-
-    def create_insert_image_documents(
-        self, images: list[SourcedImageDescription]
-    ) -> None:
-        """
-        Insert multiple image documents into Elasticsearch
-        """
-        documents = [self.create_image_document(image) for image in images]
         return self.store.add_documents(documents=documents)
 
     def delete_document(self, document_id: str) -> None:
