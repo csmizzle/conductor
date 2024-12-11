@@ -52,14 +52,14 @@ def generate_master_summary(
     """
     logger.info("Generating master summary")
     summarized_documents = summarize_document_parallel(documents, question)
-    generate_master_summary = dspy.ChainOfThought(MasterSummary)
+    master_summary = dspy.ChainOfThought(MasterSummary)
     # get the summaries from parallel processing
     summaries = [summary.summary for summary in summarized_documents]
     # create the master summary
-    master_summary = generate_master_summary(
+    generated_master_summary = master_summary(
         question=question, summaries=summaries
     ).summary
     return SummarizedDocuments(
-        summary=master_summary,
+        summary=generated_master_summary,
         documents=summarized_documents,
     )
