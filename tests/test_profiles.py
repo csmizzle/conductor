@@ -306,15 +306,10 @@ def test_value_extraction_parallel() -> None:
                 {},  # test with blank template
                 "Farm employees",
             ),
-            # "owners": (
-            #     {
-            #         "name": (str, "Farm owner name"),
-            #         "title": (str, "Farm owner title"),
-            #         "phone": (str, "Farm owner phone"),
-            #         "email": (str, "Farm owner email"),
-            #     },
-            #     "Farm owners",
-            # ),
+            "owners": (
+                {},  # test with blank template
+                "Farm owners",
+            ),
             "revenue": (int, "Farm revenue"),
         }
     }
