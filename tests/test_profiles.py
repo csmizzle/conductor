@@ -4,6 +4,7 @@ from conductor.profiles.factory import (
     create_extract_value_with_custom_type,
     create_value_rag_pipeline,
     run_value_rag_pipeline,
+    run_value_rag_pipeline_parallel,
 )
 from conductor.profiles.outputs import recursive_model_dump
 from conductor.profiles.models import Company
@@ -232,4 +233,101 @@ def test_value_extraction_not_available() -> None:
     assert isinstance(results, dict)
     data = recursive_model_dump(results)
     with open("tests/data/test_value_extraction_not_available.json", "w") as f:
+        json.dump(data, f, indent=4)
+
+
+def test_value_extraction_with_relationship_no_profiles() -> None:
+    search_lm = dspy.LM(
+        "openai/gpt-4o-mini",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        max_tokens=3000,
+    )
+    dspy.configure(lm=search_lm)
+    value_map = {
+        "farm": {
+            "name": (str, "Farm name"),
+            "location": (str, "Farm location"),
+            "size": (int, "Farm size estimate in acres"),
+            "employees": (
+                {
+                    "title": (str, "Farm employee title"),
+                    "phone": (str, "Farm employee phone"),
+                    "email": (str, "Farm employee email"),
+                },
+                "Farm employees",
+            ),
+            # "owners": (
+            #     {
+            #         "name": (str, "Farm owner name"),
+            #         "title": (str, "Farm owner title"),
+            #         "phone": (str, "Farm owner phone"),
+            #         "email": (str, "Farm owner email"),
+            #     },
+            #     "Farm owners",
+            # ),
+            "revenue": (int, "Farm revenue"),
+        }
+    }
+    pipeline = create_value_rag_pipeline(
+        value_map=value_map,
+        elasticsearch=Elasticsearch(hosts=[os.getenv("ELASTICSEARCH_URL")]),
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
+    assert isinstance(pipeline, dict)
+    specification = "Abma's Farm"
+    results = run_value_rag_pipeline(
+        specification=specification,
+        pipeline=pipeline,
+        generate_relationship_profiles=False,
+    )
+    assert isinstance(results, dict)
+    data = recursive_model_dump(results)
+    with open("tests/data/test_value_extraction_no_profiles.json", "w") as f:
+        json.dump(data, f, indent=4)
+
+
+def test_value_extraction_parallel() -> None:
+    search_lm = dspy.LM(
+        "openai/gpt-4o-mini",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        max_tokens=3000,
+    )
+    dspy.configure(lm=search_lm)
+    value_map = {
+        "farm": {
+            "name": (str, "Farm name"),
+            "location": (str, "Farm location"),
+            "size": (int, "Farm size estimate in acres"),
+            "employees": (
+                {},  # test with blank template
+                "Farm employees",
+            ),
+            "owners": (
+                {},  # test with blank template
+                "Farm owners",
+            ),
+            "revenue": (int, "Farm revenue"),
+        }
+    }
+    pipeline = create_value_rag_pipeline(
+        value_map=value_map,
+        elasticsearch=Elasticsearch(hosts=[os.getenv("ELASTICSEARCH_URL")]),
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
+    assert isinstance(pipeline, dict)
+    specification = "Abma's Farm"
+    results = run_value_rag_pipeline_parallel(
+        specification=specification,
+        pipeline=pipeline,
+        generate_relationship_profiles=False,
+    )
+    assert isinstance(results, dict)
+    data = recursive_model_dump(results)
+    with open("tests/data/test_value_extraction_parallel_no_profiles.json", "w") as f:
         json.dump(data, f, indent=4)
