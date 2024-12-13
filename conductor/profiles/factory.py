@@ -668,8 +668,8 @@ def process_relationship(
     relationship: InstanceOf[graph_models.AggregatedCitedRelationship],
     profile_pipeline: dict,
     quality_threshold: int = 3,
+    generate_profile: bool = True,
 ) -> Union[dict, None]:
-    profile = {}
     # Run the profile pipeline
     extraction_evaluation = evaluate_extraction(
         source_name=relationship.source.name,
@@ -679,19 +679,23 @@ def process_relationship(
         relationship_type=relationship.relationship_type,
     )
     if extraction_evaluation.quality >= quality_threshold:
+        profile = {}
         relationship_specification = generate_relationship_specification(
             source=relationship.source.name,
             relationship_type=relationship.relationship_type,
             target=relationship.target.name,
         )
-        logger.info(f"Running profile pipeline for {relationship_specification}")
-        for _field_name, _entry in profile_pipeline.items():
-            profile[_field_name] = run_specified_rag(
-                specification=relationship_specification,
-                name=_field_name,
-                rag=_entry[0],  # WebSearchValueRAG subclass
-                description=_entry[1],  # value_description
-            )
+        if generate_profile:
+            logger.info(f"Running profile pipeline for {relationship_specification}")
+            for _field_name, _entry in profile_pipeline.items():
+                profile[_field_name] = run_specified_rag(
+                    specification=relationship_specification,
+                    name=_field_name,
+                    rag=_entry[0],  # WebSearchValueRAG subclass
+                    description=_entry[1],  # value_description
+                )
+        else:
+            logger.info(f"Skipping profile generation for {relationship_specification}")
         return {
             "relationship": relationship,
             "profile": profile,
@@ -708,13 +712,18 @@ def parallel_process_relationships(
     profile_pipeline: dict,
     max_workers: int = 4,
     quality_threshold: int = 3,
+    generate_profiles: bool = True,
 ):
     profiled_relationships = []
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit tasks to the thread pool
         future_to_relationship = {
             executor.submit(
-                process_relationship, relationship, profile_pipeline, quality_threshold
+                process_relationship,
+                relationship,
+                profile_pipeline,
+                quality_threshold,
+                generate_profiles,
             ): relationship
             for relationship in deduplicated_graph.relationships
         }
@@ -736,12 +745,17 @@ def run_value_rag_pipeline(
     pipeline: dict[str, tuple[Type[WebSearchRAG], str]],
     max_workers: int = 4,
     quality_threshold: int = 3,
+    generate_relationship_profiles: bool = False,
 ) -> dict[str, list[dict[str, Type[CitedValueWithCredibility]]]]:
     """
     Run a pipeline of WebSearchValueRAG classes based on the provided value map.
 
     Args:
-        rag_pipeline (dict): A mapping of field names to (WebSearchValueRAG subclass, value_description) tuples.
+        specification (str): The specification string.
+        pipeline (dict): A mapping of field names to (WebSearchValueRAG subclass, value_description) tuples.
+        max_workers (int): The maximum number of workers to use for parallel processing.
+        quality_threshold (int): The minimum quality threshold for extraction evaluation.
+        generate_relationship_profiles (bool): Whether to generate profiles for relationships.
 
     Returns:
         dict: A mapping of field names to CitedValueWithCredibility instances.
@@ -783,6 +797,85 @@ def run_value_rag_pipeline(
                     profile_pipeline=profile_pipeline,
                     max_workers=max_workers,
                     quality_threshold=quality_threshold,
+                    generate_profiles=generate_relationship_profiles,
                 )
                 values[model_name][field_name] = profiled_relationships
+    return values
+
+
+def collect_single_value(
+    specification: str,
+    pipeline: dict,
+    model_name: str,
+    field_name: str,
+    entry: Union[tuple[Type[WebSearchRAG], str], dict],
+    resources: dict,
+    max_workers: int,
+    quality_threshold: int,
+    generate_relationship_profiles: bool,
+):
+    if isinstance(entry, tuple):  # handle single value maps
+        value = run_specified_rag(
+            specification=specification,
+            name=field_name,
+            description=entry[1],  # value_description
+            rag=entry[0],  # WebSearchValueRAG subclass
+        )
+        return {field_name: value}
+    if isinstance(entry, dict):  # handle nested value maps with relationship extraction
+        profile_pipeline = pipeline[model_name][field_name].pop("profile_pipeline")
+        triple_type = pipeline[model_name][field_name].pop("triple_type")
+        # get relationships
+        relationship_extractor = create_dynamic_relationship_extraction(
+            specification=specification,
+            triple_types=triple_type,
+            elasticsearch=resources["elasticsearch"],
+            index_name=resources["index_name"],
+        )
+        relationships = relationship_extractor.extract_parallel()
+        # clean the graph to get the deduplicated relationships
+        deduplicated_graph = create_deduplicated_graph(relationships=relationships)
+        profiled_relationships = parallel_process_relationships(
+            deduplicated_graph=deduplicated_graph,
+            profile_pipeline=profile_pipeline,
+            max_workers=max_workers,
+            quality_threshold=quality_threshold,
+            generate_profiles=generate_relationship_profiles,
+        )
+        return {field_name: profiled_relationships}
+
+
+def run_value_rag_pipeline_parallel(
+    specification: str,
+    pipeline: dict[str, tuple[Type[WebSearchRAG], str]],
+    max_workers: int = 4,
+    quality_threshold: int = 3,
+    generate_relationship_profiles: bool = False,
+) -> dict[str, list[dict[str, Type[CitedValueWithCredibility]]]]:
+    """
+    Run a pipeline of WebSearchValueRAG classes based on the provided value map.
+    """
+    resources = pipeline.pop("_resources")
+    values = {}
+    futures = []
+    for model_name in pipeline:
+        values[model_name] = {}
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            for field_name, entry in pipeline[model_name].items():
+                future = executor.submit(
+                    collect_single_value,
+                    specification,
+                    pipeline,
+                    model_name,
+                    field_name,
+                    entry,
+                    resources,
+                    max_workers,
+                    quality_threshold,
+                    generate_relationship_profiles,
+                )
+                futures.append(future)
+            for future in tqdm(as_completed(futures), total=len(futures)):
+                result = future.result()
+                values[model_name].update(result)
     return values
