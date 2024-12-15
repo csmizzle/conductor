@@ -58,7 +58,10 @@ def ingest_webpage(
         response = make_request(url, **kwargs)
         # process response if successful
         if response:
-            if response.headers.get("content-type") != "application/pdf":
+            if (
+                response.headers.get("content-type") != "application/pdf"
+                or ".pdf" not in url
+            ):
                 # get text from response
                 response_text = response.text
                 # parse with BeautifulSoup
@@ -73,7 +76,7 @@ def ingest_webpage(
                 )
             # ingest pdfs
             else:
-                logger.info(f"Ingesting PDF from {url} ...")
+                logger.info(f"Attempting to ingest PDF from {url} ...")
                 # docling document extractor from temp file
                 converter = DocumentConverter()
                 results = converter.convert(
