@@ -54,14 +54,11 @@ def ingest_webpage(
     try:
         # get a created at timestamp
         created_at = datetime.now()
-        # make request
-        response = make_request(url, **kwargs)
-        # process response if successful
-        if response:
-            if (
-                response.headers.get("content-type") != "application/pdf"
-                or ".pdf" not in url
-            ):
+        if ".pdf" not in url:
+            # make request
+            response = make_request(url, **kwargs)
+            # process response if successful
+            if response:
                 # get text from response
                 response_text = response.text
                 # parse with BeautifulSoup
@@ -74,22 +71,22 @@ def ingest_webpage(
                 return WebPage(
                     url=url, created_at=created_at, content=text, raw=response_text
                 )
-            # ingest pdfs
-            else:
-                logger.info(f"Attempting to ingest PDF from {url} ...")
-                # docling document extractor from temp file
-                converter = DocumentConverter()
-                results = converter.convert(
-                    source=url,
-                    max_num_pages=pdf_page_limit,
-                )
-                markdown = results.document.export_to_markdown()
-                return WebPage(
-                    url=url,
-                    created_at=created_at,
-                    content=markdown,
-                    raw=results.document.export_to_text(),
-                )
+        # ingest pdfs
+        else:
+            logger.info(f"Attempting to ingest PDF from {url} ...")
+            # docling document extractor from temp file
+            converter = DocumentConverter()
+            results = converter.convert(
+                source=url,
+                max_num_pages=pdf_page_limit,
+            )
+            markdown = results.document.export_to_markdown()
+            return WebPage(
+                url=url,
+                created_at=created_at,
+                content=markdown,
+                raw=results.document.export_to_text(),
+            )
     except Exception as e:
         logger.error(f"Error ingesting {url}")
         raise e
