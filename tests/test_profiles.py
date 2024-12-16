@@ -331,3 +331,199 @@ def test_value_extraction_parallel() -> None:
     data = recursive_model_dump(results)
     with open("tests/data/test_value_extraction_parallel_no_profiles.json", "w") as f:
         json.dump(data, f, indent=4)
+
+
+def test_with_enum_generation() -> None:
+    search_lm = dspy.LM(
+        "openai/gpt-4o-mini",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        max_tokens=3000,
+    )
+    dspy.configure(lm=search_lm)
+    value_map = {
+        "farm": {
+            "name": (str, "Farm name"),
+            "location": (str, "Farm location"),
+            "size": (int, "Farm size estimate in acres"),
+            "employees": (
+                {},  # test with blank template
+                "Farm employees",
+            ),
+            "owners": (
+                {},  # test with blank template
+                "Farm owners",
+            ),
+            "revenue": (int, "Farm revenue"),
+            "type": (
+                ["Dairy", "Vegetable", "Fruit", "Grain"],
+                "Farm type",
+            ),
+        }
+    }
+    pipeline = create_value_rag_pipeline(
+        value_map=value_map,
+        elasticsearch=Elasticsearch(hosts=[os.getenv("ELASTICSEARCH_URL")]),
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
+    assert isinstance(pipeline, dict)
+    assert len(pipeline[list(value_map.keys())[0]]) == 7
+
+
+def test_with_enum_pipeline() -> None:
+    search_lm = dspy.LM(
+        "openai/gpt-4o-mini",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        max_tokens=3000,
+        cache=False,
+    )
+    dspy.configure(lm=search_lm)
+    value_map = {
+        "farm": {
+            "name": (str, "Farm name"),
+            "location": (str, "Farm location"),
+            "size": (int, "Farm size estimate in acres"),
+            "employees": (
+                {},  # test with blank template
+                "Farm employees",
+            ),
+            "owners": (
+                {},  # test with blank template
+                "Farm owners",
+            ),
+            "revenue": (int, "Farm revenue"),
+            "type": (
+                ["Dairy", "Vegetable", "Fruit", "Grain"],
+                "Farm type",
+            ),
+        }
+    }
+    pipeline = create_value_rag_pipeline(
+        value_map=value_map,
+        elasticsearch=Elasticsearch(hosts=[os.getenv("ELASTICSEARCH_URL")]),
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+    )
+    assert isinstance(pipeline, dict)
+    specification = "Abma's Farm"
+    results = run_value_rag_pipeline_parallel(
+        specification=specification,
+        pipeline=pipeline,
+        generate_relationship_profiles=False,
+    )
+    assert isinstance(results, dict)
+    data = recursive_model_dump(results)
+    with open("tests/data/test_value_extraction_enum_no_profiles.json", "w") as f:
+        json.dump(data, f, indent=4)
+
+
+def test_with_enum_pipeline_not_available_many() -> None:
+    search_lm = dspy.LM(
+        "openai/bedrock/claude-3-5-sonnet",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        max_tokens=3000,
+        cache=False,
+    )
+    dspy.configure(lm=search_lm)
+    value_map = {
+        "farm": {
+            "name": (str, "Farm name"),
+            "location": (str, "Farm location"),
+            "size": (int, "Farm size estimate in acres"),
+            "employees": (
+                {},  # test with blank template
+                "Farm employees",
+            ),
+            "owners": (
+                {},  # test with blank template
+                "Farm owners",
+            ),
+            "revenue": (int, "Farm revenue"),
+            "Soil Management Techniques": (
+                (["No Till", "Crop Rotation", "Cover Cropping", "Composting"], "many"),
+                "Farming soil management techniques",
+            ),
+        }
+    }
+    pipeline = create_value_rag_pipeline(
+        value_map=value_map,
+        elasticsearch=Elasticsearch(hosts=[os.getenv("ELASTICSEARCH_URL")]),
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        add_not_available=True,
+    )
+    assert isinstance(pipeline, dict)
+    specification = "A Farm Less Ordinary - (Bluemont, VA)"
+    results = run_value_rag_pipeline_parallel(
+        specification=specification,
+        pipeline=pipeline,
+        generate_relationship_profiles=False,
+    )
+    assert isinstance(results, dict)
+    data = recursive_model_dump(results)
+    with open(
+        "tests/data/test_value_extraction_enum_not_available_many_claude.json", "w"
+    ) as f:
+        json.dump(data, f, indent=4)
+
+
+def test_with_enum_pipeline_not_available_single() -> None:
+    search_lm = dspy.LM(
+        "openai/bedrock/claude-3-5-sonnet",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        max_tokens=3000,
+        cache=False,
+    )
+    dspy.configure(lm=search_lm)
+    value_map = {
+        "farm": {
+            "Soil Management Techniques": (
+                (
+                    ["No Till", "Crop Rotation", "Cover Cropping", "Composting"],
+                    "single",
+                ),
+                "Farming soil management techniques",
+            ),
+            "Pest Management Approach": (
+                (
+                    [
+                        "Integrated Pest Management",
+                        "Biological Control",
+                        "Chemical Control",
+                        "Cultural Control",
+                    ],
+                    "many",
+                ),
+                "Farming pest management approach",
+            ),
+        }
+    }
+    pipeline = create_value_rag_pipeline(
+        value_map=value_map,
+        elasticsearch=Elasticsearch(hosts=[os.getenv("ELASTICSEARCH_URL")]),
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        add_not_available=True,
+    )
+    assert isinstance(pipeline, dict)
+    specification = "A Farm Less Ordinary - (Bluemont, VA)"
+    results = run_value_rag_pipeline_parallel(
+        specification=specification,
+        pipeline=pipeline,
+        generate_relationship_profiles=False,
+    )
+    assert isinstance(results, dict)
+    data = recursive_model_dump(results)
+    with open(
+        "tests/data/test_value_extraction_enum_not_available_many_claude_single.json",
+        "w",
+    ) as f:
+        json.dump(data, f, indent=4)

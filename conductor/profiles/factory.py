@@ -1,11 +1,12 @@
 """
 Factories for creating custom classes and pipelines for Evrim Profiles.
 """
-from typing import Any, Type, MutableMapping, Union, List, Dict, Optional, Tuple
+from typing import Any, Type, Union, List, Dict, Optional, Tuple
 from pydantic import Field, create_model, InstanceOf
 from conductor.flow.rag import CitedValueWithCredibility, WebSearchRAG
 from conductor.flow.signatures import ExtractValue
 from conductor.flow.specify import specify_description
+from conductor.flow.models import NotAvailable
 from conductor.graph import models as graph_models
 from conductor.graph import signatures as graph_signatures
 from conductor.graph.extraction import RelationshipRAGExtractor
@@ -73,13 +74,10 @@ def create_extract_value_with_custom_type(
         """
         Distill an answer to an answer into a value that would fit into a database.
         Use the question to help understand which value to extract.
-        Only use the NOT_AVAILABLE value if the answer is not available to create a value.
         """
 
         # this is crazy but it works
-        value: value_type = dspy.OutputField(  # type: ignore
-            desc=value_description
-        )  # type: ignore
+        value: value_type = dspy.OutputField(desc=value_description)  # type: ignore
 
     return CustomExtractValue
 
@@ -107,11 +105,16 @@ def create_web_search_value_rag(
             # Run the forward method of the parent class
             cited_answer = super().forward(question=question)
             # Convert the answer to a value
-            value = self.generate_value(question=question, answer=cited_answer.answer)
+            if cited_answer.answer != NotAvailable.NOT_AVAILABLE:
+                value = self.generate_value(
+                    question=question, answer=cited_answer.answer
+                ).value
+            else:
+                value = NotAvailable.NOT_AVAILABLE
             # Return an instance of the specified return class
             return return_class(
                 question=question,
-                value=value.value,
+                value=value,
                 documents=cited_answer.documents,
                 citations=cited_answer.citations,
                 faithfulness=cited_answer.faithfulness,
@@ -134,7 +137,9 @@ def run_specified_rag(
     return rag(question=query)
 
 
-def enum_factory(name: str, values: list[tuple[str, Any]]) -> Enum:
+def enum_factory(
+    name: str, values: list[tuple[str, Any]], not_available: bool = False
+) -> Enum:
     """
     Creates an Enum dynamically.
 
@@ -160,6 +165,8 @@ def enum_factory(name: str, values: list[tuple[str, Any]]) -> Enum:
             raise ValueError(
                 f"Enum member name '{item_name}' is not a valid Python identifier."
             )
+    if not_available:
+        values.append(("NOT_AVAILABLE", "NOT_AVAILABLE"))
 
     # Dynamically create and return the Enum
     return Enum(name, {item_name: item_value for item_name, item_value in values})
@@ -598,6 +605,7 @@ def create_value_rag_pipeline(
     index_name: str,
     embeddings: Embeddings,
     cohere_api_key: str,
+    add_not_available: bool = False,
 ) -> dict[str, tuple[Type[WebSearchRAG], str]]:  # name, search class, description
     """
     Create a pipeline of WebSearchValueRAG classes based on the provided value map.
@@ -614,7 +622,7 @@ def create_value_rag_pipeline(
         for field_name, (value_type, value_description) in value_map[
             model_name
         ].items():
-            if not isinstance(value_type, MutableMapping):
+            if value_type in [int, float, str, bool]:
                 custom_rag = build_value_rag_pipeline(
                     value_type=value_type,
                     value_description=value_description,
@@ -624,8 +632,38 @@ def create_value_rag_pipeline(
                     cohere_api_key=cohere_api_key,
                 )
                 rag_pipeline[model_name][field_name] = (custom_rag, value_description)
+            # handle enum creation prior to building the pipeline
+            elif isinstance(value_type, tuple):
+                field_name = field_name.replace(" ", "_").lower()  # snake sane
+                enum_name = field_name.title().replace(" ", "")  # camel case
+                enum = enum_factory(
+                    name=enum_name,
+                    values=[
+                        (
+                            value.replace(" ", "_").upper(),
+                            value.replace(" ", "_").upper(),
+                        )
+                        for value in value_type[0]
+                    ],
+                    not_available=add_not_available,
+                )
+                if value_type[1] == "many":
+                    enum = List[enum]
+                elif value_type[1] == "single":
+                    enum = enum
+                else:
+                    raise ValueError("Enum type must be 'single' or 'many'")
+                custom_rag = build_value_rag_pipeline(
+                    value_type=enum,
+                    value_description=value_description,
+                    elasticsearch=elasticsearch,
+                    index_name=index_name,
+                    embeddings=embeddings,
+                    cohere_api_key=cohere_api_key,
+                )
+                rag_pipeline[model_name][field_name] = (custom_rag, value_description)
             # handle nested value maps
-            else:
+            elif isinstance(value_type, dict):
                 # create a triple type map (relationship_type, source entity type, target entity type)
                 relationship = generate_relationship(
                     source=model_name,
