@@ -669,8 +669,9 @@ def process_relationship(
     profile_pipeline: dict,
     quality_threshold: int = 3,
     generate_profile: bool = True,
-) -> Union[dict, None]:
+) -> dict:
     # Run the profile pipeline
+    profile = {}
     extraction_evaluation = evaluate_extraction(
         source_name=relationship.source.name,
         source_type=relationship.source.entity_type,
@@ -679,13 +680,12 @@ def process_relationship(
         relationship_type=relationship.relationship_type,
     )
     if extraction_evaluation.quality >= quality_threshold:
-        profile = {}
-        relationship_specification = generate_relationship_specification(
-            source=relationship.source.name,
-            relationship_type=relationship.relationship_type,
-            target=relationship.target.name,
-        )
         if generate_profile:
+            relationship_specification = generate_relationship_specification(
+                source=relationship.source.name,
+                relationship_type=relationship.relationship_type,
+                target=relationship.target.name,
+            )
             logger.info(f"Running profile pipeline for {relationship_specification}")
             for _field_name, _entry in profile_pipeline.items():
                 profile[_field_name] = run_specified_rag(
@@ -695,16 +695,20 @@ def process_relationship(
                     description=_entry[1],  # value_description
                 )
         else:
-            logger.info(f"Skipping profile generation for {relationship_specification}")
-        return {
-            "relationship": relationship,
-            "profile": profile,
-        }
+            logger.info("Skipping profile ...")
     else:
         logger.warning(
             f"Extraction evaluation quality is below threshold for {relationship.source.name}->{relationship.relationship_type}->{relationship.target.name}"
         )
         logger.warning(f"Quality: {extraction_evaluation.reasoning}")
+    return {
+        "relationship": relationship,
+        "quality": {
+            "value": extraction_evaluation.quality,
+            "reasoning": extraction_evaluation.reasoning,
+        },
+        "profile": profile,
+    }
 
 
 def parallel_process_relationships(
