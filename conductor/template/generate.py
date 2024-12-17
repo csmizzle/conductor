@@ -4,34 +4,26 @@ import dspy
 from loguru import logger
 
 
-def generate_template_schema(prompt: str) -> dspy.Prediction:
-    """
-    Generate a list of fields that will be used to define a data schema used for the data collection task downstream.
-
-    Args:
-    - prompt: Prompt to generate fields from
-
-    Returns:
-    - Generated fields
-    """
-    template_generator = dspy.ChainOfThought(signatures.GeneratedFieldsSignature)
-    return template_generator(prompt=prompt)
-
-
 class SchemaGenerator:
     def __init__(
         self,
         prompt: str,
-        generate_nested_enums: bool,
-        generate_nested_relationship: bool,
+        generate_nested_enums: bool = False,
+        generate_nested_relationship: bool = False,
     ) -> None:
         self.prompt = prompt
+        self.generate_template = dspy.ChainOfThought(
+            signatures.GeneratedFieldsSignature
+        )
         self.generate_enum = dspy.ChainOfThought(signatures.GeneratedEnumSignature)
         self.generate_relationship = dspy.ChainOfThought(
             signatures.GeneratedRelationshipSignature
         )
         self.generate_nested_enums = generate_nested_enums
         self.generate_nested_relationship = generate_nested_relationship
+        self.generate_schema_name = dspy.ChainOfThought(
+            signatures.GeneratedSchemaNameSignature
+        )
 
     def _unpack_enum_values(
         self, generated_enums: list[str], many: bool
@@ -57,15 +49,15 @@ class SchemaGenerator:
                 values[field.name] = (field.type.value, field.description)
         return values
 
-    def generate(self) -> dict:
+    def generate(self) -> models.ValueMap:
         """
         Generate a list of fields that will be used to define a data schema used for the data collection task downstream.
 
         Returns:
         - Generated fields
         """
-        value_map = {}
-        generated_fields = generate_template_schema(self.prompt)
+        fields = []
+        generated_fields = self.generate_template(prompt=self.prompt)
         for field in generated_fields.generated_fields:
             if field.type in [
                 models.FieldTypes.STRING,
@@ -73,29 +65,55 @@ class SchemaGenerator:
                 models.FieldTypes.INTEGER,
                 models.FieldTypes.FLOAT,
             ]:
-                value_map[field.name] = (field.type.value, field.description)
+                fields.append(
+                    models.ValueField(
+                        name=field.name, field=(field.type.value, field.description)
+                    )
+                )
             if field.type == models.FieldTypes.RELATIONSHIP:
                 if self.generate_nested_relationship:
                     logger.info(f"Generating relationship for field: {field.name}")
                     generated_relationships = self.generate_relationship(
                         name=field.name, description=field.description
                     ).generated_fields
-                    value_map[field.name] = (
-                        self._unpack_generated_fields(generated_relationships),
-                        field.description,
+                    fields.append(
+                        models.ValueRelationshipField(
+                            name=field.name,
+                            field=(
+                                self._unpack_generated_fields(generated_relationships),
+                                field.description,
+                            ),
+                        )
                     )
                 else:
-                    value_map[field.name] = ({}, field.description)
+                    fields.append(
+                        models.ValueRelationshipField(
+                            name=field.name, field=({}, field.description)
+                        )
+                    )
             if field.type == field.type.ENUM:
                 if self.generate_nested_enums:
                     logger.info(f"Generating enums for field: {field.name}")
                     generated_enums = self.generate_enum(
                         name=field.name, description=field.description
                     ).generated_values
-                    value_map[field.name] = (
-                        self._unpack_enum_values(generated_enums, field.many),
-                        field.description,
+                    fields.append(
+                        models.ValueEnumField(
+                            name=field.name,
+                            field=(
+                                self._unpack_enum_values(generated_enums, field.many),
+                                field.description,
+                            ),
+                        )
                     )
                 else:
-                    value_map[field.name] = ([], field.description)
-        return value_map
+                    fields.append(
+                        models.ValueEnumField(
+                            name=field.name, field=(([], ""), field.description)
+                        )
+                    )
+        # generate schema name
+        schema_name = self.generate_schema_name(
+            prompt=self.prompt
+        ).generated_schema_name
+        return models.ValueMap(name=schema_name, fields=fields)

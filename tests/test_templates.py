@@ -1,22 +1,8 @@
-from conductor.template.generate import generate_template_schema, SchemaGenerator
+from conductor.template.generate import SchemaGenerator
+from conductor.template import models
+from tests.utils import load_model_from_test_data, save_model_to_test_data
 import dspy
 import os
-import json
-
-
-def test_generate_template_schema() -> None:
-    search_lm = dspy.LM(
-        "openai/bedrock/claude-3-5-sonnet",
-        api_base=os.getenv("LITELLM_HOST"),
-        api_key=os.getenv("LITELLM_API_KEY"),
-        max_tokens=3000,
-        cache=False,
-    )
-    dspy.configure(lm=search_lm)
-    prompt = "I am conduct due diligence on a company."
-    response = generate_template_schema(prompt)
-    assert isinstance(response, dspy.Prediction)
-    assert len(response.generated_fields) > 0
 
 
 def test_schema_generator_with_enums() -> None:
@@ -30,9 +16,9 @@ def test_schema_generator_with_enums() -> None:
     dspy.configure(lm=search_lm)
     prompt = "I am conducting due diligence on a company."
     schema_generator = SchemaGenerator(prompt)
-    value_map = schema_generator.generate(generate_enums=True)
-    assert isinstance(value_map, dict)
-    assert len(value_map) > 0
+    value_map = schema_generator.generate()
+    assert isinstance(value_map, models.ValueMap)
+    save_model_to_test_data(value_map, "test_schema_generator_with_enums.json")
 
 
 def test_schema_generator_with_enums_relationship_claude() -> None:
@@ -51,12 +37,10 @@ def test_schema_generator_with_enums_relationship_claude() -> None:
         generate_nested_relationship=True,
     )
     value_map = schema_generator.generate()
-    assert isinstance(value_map, dict)
-    assert len(value_map) > 0
-    with open(
-        "tests/data/test_schema_generator_with_enums_relationship_claude.json", "w"
-    ) as f:
-        json.dump(value_map, f, indent=4)
+    assert isinstance(value_map, models.ValueMap)
+    save_model_to_test_data(
+        value_map, "test_schema_generator_with_enums_relationship_claude.json"
+    )
 
 
 def test_schema_generator_with_enums_relationship_4o() -> None:
@@ -75,12 +59,18 @@ def test_schema_generator_with_enums_relationship_4o() -> None:
         generate_nested_relationship=True,
     )
     value_map = schema_generator.generate()
-    assert isinstance(value_map, dict)
-    assert len(value_map) > 0
-    with open(
-        "tests/data/test_schema_generator_with_enums_relationship_4o.json", "w"
-    ) as f:
-        json.dump(value_map, f, indent=4)
+    assert isinstance(value_map, models.ValueMap)
+    save_model_to_test_data(
+        value_map, "test_schema_generator_with_enums_relationship_4o.json"
+    )
+
+
+def test_load_model_from_test_data() -> None:
+    model = load_model_from_test_data(
+        model=models.ValueMap,
+        filename="test_schema_generator_with_enums_relationship_claude.json",
+    )
+    assert isinstance(model, models.ValueMap)
 
 
 def test_schema_generator_with_enums_relationship_mini() -> None:
@@ -99,9 +89,7 @@ def test_schema_generator_with_enums_relationship_mini() -> None:
         generate_nested_relationship=True,
     )
     value_map = schema_generator.generate()
-    assert isinstance(value_map, dict)
-    assert len(value_map) > 0
-    with open(
-        "tests/data/test_schema_generator_with_enums_relationship_mini.json", "w"
-    ) as f:
-        json.dump(value_map, f, indent=4)
+    assert isinstance(value_map, models.ValueMap)
+    save_model_to_test_data(
+        value_map, "test_schema_generator_with_enums_relationship_mini.json"
+    )

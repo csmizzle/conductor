@@ -47,3 +47,14 @@ class GeneratedRelationshipSignature(dspy.Signature):
     generated_fields: list[models.GeneratedField] = dspy.OutputField(
         description="Generated fields"
     )
+
+
+class GeneratedSchemaNameSignature(dspy.Signature):
+    """
+    Based on a prompt, generate a name for a template that will house a set of fields.
+    The name should be short, consistent, and descriptive.
+    Limit the name to 3 words or less.
+    """
+
+    prompt = dspy.InputField(description="Prompt to generate template name from")
+    generated_schema_name = dspy.OutputField(description="Generated schema name")
