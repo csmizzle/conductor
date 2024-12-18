@@ -6,7 +6,6 @@ from pydantic import Field, create_model, InstanceOf
 from conductor.flow.rag import CitedValueWithCredibility, WebSearchRAG
 from conductor.flow.signatures import ExtractValue
 from conductor.flow.specify import specify_description
-from conductor.flow.models import NotAvailable
 from conductor.graph import models as graph_models
 from conductor.graph import signatures as graph_signatures
 from conductor.graph.extraction import RelationshipRAGExtractor
@@ -74,10 +73,11 @@ def create_extract_value_with_custom_type(
         """
         Distill an answer to an answer into a value that would fit into a database.
         Use the question to help understand which value to extract.
+        If there isn't a value return the None value.
         """
 
         # this is crazy but it works
-        value: value_type = dspy.OutputField(desc=value_description)  # type: ignore
+        value: Union[value_type, None] = dspy.OutputField(desc=value_description)  # type: ignore
 
     return CustomExtractValue
 
@@ -105,12 +105,9 @@ def create_web_search_value_rag(
             # Run the forward method of the parent class
             cited_answer = super().forward(question=question)
             # Convert the answer to a value
-            if cited_answer.answer != NotAvailable.NOT_AVAILABLE:
-                value = self.generate_value(
-                    question=question, answer=cited_answer.answer
-                ).value
-            else:
-                value = NotAvailable.NOT_AVAILABLE
+            value = self.generate_value(
+                question=question, answer=cited_answer.answer
+            ).value
             # Return an instance of the specified return class
             return return_class(
                 question=question,
@@ -580,7 +577,7 @@ def build_value_rag_pipeline(
     custom_cited_value = create_subclass_with_dynamic_fields(
         model_name="CustomCitedValueWithCredibility",
         base_class=CitedValueWithCredibility,
-        new_fields={"value": (value_type, None, value_description)},
+        new_fields={"value": (Union[value_type, None], None, value_description)},
     )
     custom_extract_value = create_extract_value_with_custom_type(
         value_type=value_type, value_description=value_description
@@ -652,7 +649,9 @@ def create_value_rag_pipeline(
                 elif value_type[1] == "single":
                     enum = enum
                 else:
-                    raise ValueError("Enum type must be 'single' or 'many'")
+                    raise ValueError(
+                        f"Enum type must be 'single' or 'many', not {value_type[1]}"
+                    )
                 custom_rag = build_value_rag_pipeline(
                     value_type=enum,
                     value_description=value_description,
@@ -675,6 +674,24 @@ def create_value_rag_pipeline(
                     _value_type,
                     _value_description,
                 ) in value_type.items():
+                    # do terrible nested checking
+                    if isinstance(_value_type, tuple):
+                        field_name = _field_name.replace(" ", "_").lower()  # snake sane
+                        enum_name = _field_name.title().replace(" ", "")  # camel case
+                        enum = enum_factory(
+                            name=enum_name,
+                            values=[
+                                (
+                                    value.replace(" ", "_").upper(),
+                                    value.replace(" ", "_").upper(),
+                                )
+                                for value in _value_type[0]
+                            ],
+                            not_available=add_not_available,
+                        )
+                        _value_type = enum
+                    else:
+                        _value_type = _value_type
                     custom_rag = build_value_rag_pipeline(
                         value_type=_value_type,
                         value_description=_value_description,

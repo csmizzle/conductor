@@ -89,6 +89,7 @@ def ingest_webpage(
             )
     except Exception as e:
         logger.error(f"Error ingesting {url}")
+        print(e)
         raise e
 
 

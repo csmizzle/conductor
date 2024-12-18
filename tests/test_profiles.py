@@ -178,15 +178,6 @@ def test_run_nested_value_pipeline() -> None:
                 },
                 "Farm employees",
             ),
-            # "owners": (
-            #     {
-            #         "name": (str, "Farm owner name"),
-            #         "title": (str, "Farm owner title"),
-            #         "phone": (str, "Farm owner phone"),
-            #         "email": (str, "Farm owner email"),
-            #     },
-            #     "Farm owners",
-            # ),
             "revenue": (int, "Farm revenue"),
         }
     }
@@ -257,15 +248,6 @@ def test_value_extraction_with_relationship_no_profiles() -> None:
                 },
                 "Farm employees",
             ),
-            # "owners": (
-            #     {
-            #         "name": (str, "Farm owner name"),
-            #         "title": (str, "Farm owner title"),
-            #         "phone": (str, "Farm owner phone"),
-            #         "email": (str, "Farm owner email"),
-            #     },
-            #     "Farm owners",
-            # ),
             "revenue": (int, "Farm revenue"),
         }
     }
@@ -511,7 +493,6 @@ def test_with_enum_pipeline_not_available_single() -> None:
         index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
         embeddings=BedrockEmbeddings(),
         cohere_api_key=os.getenv("COHERE_API_KEY"),
-        add_not_available=True,
     )
     assert isinstance(pipeline, dict)
     specification = "A Farm Less Ordinary - (Bluemont, VA)"
