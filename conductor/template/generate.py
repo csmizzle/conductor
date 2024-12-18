@@ -31,7 +31,8 @@ class SchemaGenerator:
         return (generated_enums, "many" if many else "single")
 
     def _unpack_generated_fields(
-        self, generated_fields: list[models.GeneratedField]
+        self,
+        generated_fields: list[models.GeneratedField],
     ) -> dict:
         values = {}
         for field in generated_fields:

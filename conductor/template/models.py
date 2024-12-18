@@ -1,4 +1,4 @@
-from typing import Union, Tuple
+from typing import Union, Tuple, Dict, List
 from pydantic import BaseModel, Field
 from enum import Enum
 
@@ -50,20 +50,34 @@ class ValueField(BaseModel):
 
 class ValueRelationshipField(BaseModel):
     name: str
-    field: Tuple[dict, str]
+    field: Tuple[
+        Dict[str, Union[Tuple[str, str], Tuple[Tuple[List[str], str], str]]], str
+    ]  # yikes!
 
 
 class ValueEnumField(BaseModel):
     name: str
-    field: Tuple[Tuple[list[str], str], str]
+    field: Tuple[Tuple[List[str], str], str]
 
 
 class ValueMap(BaseModel):
     name: str
-    fields: list[Union[ValueField, ValueRelationshipField, ValueEnumField]] = []
+    fields: List[Union[ValueField, ValueRelationshipField, ValueEnumField]] = []
 
     def to_value_map(self) -> dict:
+        _value_map = {
+            "str": str,
+            "int": int,
+            "flt": float,
+            "bln": bool,
+        }
         value_map = {self.name: {}}
         for field in self.fields:
-            value_map[self.name][field.name] = field.field
+            if isinstance(field, ValueField):
+                value_map[self.name][field.name] = (
+                    _value_map[field.field[0]],
+                    field.field[1],
+                )
+            else:
+                value_map[self.name][field.name] = field.field
         return value_map

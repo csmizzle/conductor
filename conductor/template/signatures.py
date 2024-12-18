@@ -24,6 +24,9 @@ class GeneratedEnumSignature(dspy.Signature):
     """
     Create a set of enum values for a field based on the name and description of the field.
     Be sure that the enum values are relevant to the field and provide a sensible range of options for the field.
+    The enum values should be a list of strings that can be easily transformed into a set of values for a field.
+    Do not create enum values that would be valid Python Identifiers if the they were upper case and spaces were replaced with underscores.
+    Do not use any special characters in the enum values, only letters, numbers, and spaces.
     """
 
     name: str = dspy.InputField(description="Name of the enum field")
@@ -52,9 +55,22 @@ class GeneratedRelationshipSignature(dspy.Signature):
 class GeneratedSchemaNameSignature(dspy.Signature):
     """
     Based on a prompt, generate a name for a template that will house a set of fields.
-    The name should be short, consistent, and descriptive.
-    Limit the name to 3 words or less.
+    The name should represent the single entity the template will be used to collect data on.
+    For example, if the prompt is "I am conducting due diligence on a company", the template name could be "Company".
+    If the prompt was "I am researching pitcher performance in baseball", the template name could be "Pitcher".
     """
 
     prompt = dspy.InputField(description="Prompt to generate template name from")
     generated_schema_name = dspy.OutputField(description="Generated schema name")
+
+
+class GeneratedRelationshipSchemaNameSignature(dspy.Signature):
+    """
+    Based on a name and description, generate a name for a template that will house a set of fields.
+    The name should be short, consistent, and descriptive.
+    Limit the name to 3 words or less.
+    """
+
+    name: str = dspy.InputField(description="Name of the relationship")
+    description: str = dspy.InputField(description="Description of the relationship")
+    generated_schema_name = dspy.OutputField(description="Generated template name")

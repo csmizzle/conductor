@@ -1,8 +1,16 @@
 from conductor.template.generate import SchemaGenerator
 from conductor.template import models
+from conductor.profiles.factory import (
+    create_value_rag_pipeline,
+    run_value_rag_pipeline_parallel,
+)
+from conductor.profiles.outputs import recursive_model_dump
+from elasticsearch import Elasticsearch
+from conductor.rag.embeddings import BedrockEmbeddings
 from tests.utils import load_model_from_test_data, save_model_to_test_data
 import dspy
 import os
+import json
 
 
 def test_schema_generator_with_enums() -> None:
@@ -93,3 +101,82 @@ def test_schema_generator_with_enums_relationship_mini() -> None:
     save_model_to_test_data(
         value_map, "test_schema_generator_with_enums_relationship_mini.json"
     )
+
+
+def test_run_generated_schema() -> None:
+    schema = load_model_from_test_data(
+        model=models.ValueMap,
+        filename="test_schema_generator_with_enums_relationship_claude.json",
+    )
+    value_map = schema.to_value_map()
+    pipeline = create_value_rag_pipeline(
+        value_map=value_map,
+        elasticsearch=Elasticsearch(hosts=[os.getenv("ELASTICSEARCH_URL")]),
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        add_not_available=True,
+    )
+    assert isinstance(pipeline, dict)
+
+
+def test_run_generated_schema_mini() -> None:
+    search_lm = dspy.LM(
+        "openai/gpt-4o-mini",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        max_tokens=3000,
+        cache=False,
+    )
+    dspy.configure(lm=search_lm)
+    schema = load_model_from_test_data(
+        model=models.ValueMap,
+        filename="test_schema_generator_with_enums_relationship_4o.json",
+    )
+    value_map = schema.to_value_map()
+    pipeline = create_value_rag_pipeline(
+        value_map=value_map,
+        elasticsearch=Elasticsearch(hosts=[os.getenv("ELASTICSEARCH_URL")]),
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        add_not_available=True,
+    )
+    assert isinstance(pipeline, dict)
+    results = run_value_rag_pipeline_parallel(
+        specification="Thomson Reuters", pipeline=pipeline, max_workers=8
+    )
+    assert isinstance(results, dict)
+    with open("tests/data/test_run_generated_schema_mini.json", "w") as file_:
+        json.dump(recursive_model_dump(results), file_, indent=4)
+
+
+def test_run_generated_schema_4o() -> None:
+    search_lm = dspy.LM(
+        "openai/gpt-4o",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        max_tokens=3000,
+        cache=False,
+    )
+    dspy.configure(lm=search_lm)
+    schema = load_model_from_test_data(
+        model=models.ValueMap,
+        filename="test_schema_generator_with_enums_relationship_4o.json",
+    )
+    value_map = schema.to_value_map()
+    pipeline = create_value_rag_pipeline(
+        value_map=value_map,
+        elasticsearch=Elasticsearch(hosts=[os.getenv("ELASTICSEARCH_URL")]),
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        add_not_available=True,
+    )
+    assert isinstance(pipeline, dict)
+    results = run_value_rag_pipeline_parallel(
+        specification="Thomson Reuters", pipeline=pipeline, max_workers=8
+    )
+    assert isinstance(results, dict)
+    with open("tests/data/test_run_generated_schema_4o.json", "w") as file_:
+        json.dump(recursive_model_dump(results), file_, indent=4)

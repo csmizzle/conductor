@@ -675,6 +675,24 @@ def create_value_rag_pipeline(
                     _value_type,
                     _value_description,
                 ) in value_type.items():
+                    # do terrible nested checking
+                    if isinstance(_value_type, tuple):
+                        field_name = _field_name.replace(" ", "_").lower()  # snake sane
+                        enum_name = _field_name.title().replace(" ", "")  # camel case
+                        enum = enum_factory(
+                            name=enum_name,
+                            values=[
+                                (
+                                    value.replace(" ", "_").upper(),
+                                    value.replace(" ", "_").upper(),
+                                )
+                                for value in _value_type[0]
+                            ],
+                            not_available=add_not_available,
+                        )
+                        _value_type = enum
+                    else:
+                        _value_type = _value_type
                     custom_rag = build_value_rag_pipeline(
                         value_type=_value_type,
                         value_description=_value_description,
