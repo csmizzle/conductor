@@ -6,7 +6,6 @@ from pydantic import Field, create_model, InstanceOf
 from conductor.flow.rag import CitedValueWithCredibility, WebSearchRAG
 from conductor.flow.signatures import ExtractValue
 from conductor.flow.specify import specify_description
-from conductor.flow.models import NotAvailable
 from conductor.graph import models as graph_models
 from conductor.graph import signatures as graph_signatures
 from conductor.graph.extraction import RelationshipRAGExtractor
@@ -106,12 +105,9 @@ def create_web_search_value_rag(
             # Run the forward method of the parent class
             cited_answer = super().forward(question=question)
             # Convert the answer to a value
-            if cited_answer.answer != NotAvailable.NOT_AVAILABLE:
-                value = self.generate_value(
-                    question=question, answer=cited_answer.answer
-                ).value
-            else:
-                value = NotAvailable.NOT_AVAILABLE
+            value = self.generate_value(
+                question=question, answer=cited_answer.answer
+            ).value
             # Return an instance of the specified return class
             return return_class(
                 question=question,
@@ -581,7 +577,7 @@ def build_value_rag_pipeline(
     custom_cited_value = create_subclass_with_dynamic_fields(
         model_name="CustomCitedValueWithCredibility",
         base_class=CitedValueWithCredibility,
-        new_fields={"value": (value_type, None, value_description)},
+        new_fields={"value": (Union[value_type, None], None, value_description)},
     )
     custom_extract_value = create_extract_value_with_custom_type(
         value_type=value_type, value_description=value_description

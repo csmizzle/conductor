@@ -64,7 +64,7 @@ class ValueMap(BaseModel):
     name: str
     fields: List[Union[ValueField, ValueRelationshipField, ValueEnumField]] = []
 
-    def to_value_map(self) -> dict:
+    def to_value_map(self, include_relationships: bool = True) -> dict:
         _value_map = {
             "str": str,
             "int": int,
@@ -78,6 +78,8 @@ class ValueMap(BaseModel):
                     _value_map[field.field[0]],
                     field.field[1],
                 )
-            else:
+            if isinstance(field, ValueRelationshipField) and include_relationships:
+                value_map[self.name][field.name] = field.field
+            if isinstance(field, ValueEnumField):
                 value_map[self.name][field.name] = field.field
         return value_map

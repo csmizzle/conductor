@@ -493,7 +493,6 @@ def test_with_enum_pipeline_not_available_single() -> None:
         index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
         embeddings=BedrockEmbeddings(),
         cohere_api_key=os.getenv("COHERE_API_KEY"),
-        add_not_available=True,
     )
     assert isinstance(pipeline, dict)
     specification = "A Farm Less Ordinary - (Bluemont, VA)"
