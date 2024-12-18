@@ -74,10 +74,11 @@ def create_extract_value_with_custom_type(
         """
         Distill an answer to an answer into a value that would fit into a database.
         Use the question to help understand which value to extract.
+        If there isn't a value return the None value.
         """
 
         # this is crazy but it works
-        value: value_type = dspy.OutputField(desc=value_description)  # type: ignore
+        value: Union[value_type, None] = dspy.OutputField(desc=value_description)  # type: ignore
 
     return CustomExtractValue
 
@@ -652,7 +653,9 @@ def create_value_rag_pipeline(
                 elif value_type[1] == "single":
                     enum = enum
                 else:
-                    raise ValueError("Enum type must be 'single' or 'many'")
+                    raise ValueError(
+                        f"Enum type must be 'single' or 'many', not {value_type[1]}"
+                    )
                 custom_rag = build_value_rag_pipeline(
                     value_type=enum,
                     value_description=value_description,

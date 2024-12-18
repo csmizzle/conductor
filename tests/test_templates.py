@@ -180,3 +180,63 @@ def test_run_generated_schema_4o() -> None:
     assert isinstance(results, dict)
     with open("tests/data/test_run_generated_schema_4o.json", "w") as file_:
         json.dump(recursive_model_dump(results), file_, indent=4)
+
+
+def test_pitcher_generated_schema_4o() -> None:
+    search_lm = dspy.LM(
+        "openai/bedrock/claude-3-5-sonnet",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        max_tokens=3000,
+        cache=False,
+    )
+    dspy.configure(lm=search_lm)
+    prompt = "I am researching MLB pitcher performance."
+    schema_generator = SchemaGenerator(prompt, generate_nested_enums=True)
+    schema = schema_generator.generate()
+    value_map = schema.to_value_map()
+    pipeline = create_value_rag_pipeline(
+        value_map=value_map,
+        elasticsearch=Elasticsearch(hosts=[os.getenv("ELASTICSEARCH_URL")]),
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        add_not_available=True,
+    )
+    results = run_value_rag_pipeline_parallel(
+        specification="David Bednar, Pittsburgh Pirates",
+        pipeline=pipeline,
+        max_workers=8,
+    )
+    with open("tests/data/test_pitcher_generated_schema_4o.json", "w") as file_:
+        json.dump(recursive_model_dump(results), file_, indent=4)
+
+
+def test_aircraft_generated_schema_claude() -> None:
+    search_lm = dspy.LM(
+        "openai/bedrock/claude-3-5-sonnet",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        max_tokens=3000,
+        cache=False,
+    )
+    dspy.configure(lm=search_lm)
+    prompt = "I am doing forward looking supply chain analysis of military aircraft."
+    schema_generator = SchemaGenerator(prompt, generate_nested_enums=True)
+    schema = schema_generator.generate()
+    value_map = schema.to_value_map()
+    pipeline = create_value_rag_pipeline(
+        value_map=value_map,
+        elasticsearch=Elasticsearch(hosts=[os.getenv("ELASTICSEARCH_URL")]),
+        index_name=os.getenv("ELASTICSEARCH_TEST_RAG_INDEX"),
+        embeddings=BedrockEmbeddings(),
+        cohere_api_key=os.getenv("COHERE_API_KEY"),
+        add_not_available=True,
+    )
+    results = run_value_rag_pipeline_parallel(
+        specification="AC130 Gunship",
+        pipeline=pipeline,
+        max_workers=8,
+    )
+    with open("tests/data/test_aircraft_generated_schema_claude.json", "w") as file_:
+        json.dump(recursive_model_dump(results), file_, indent=4)
