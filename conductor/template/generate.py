@@ -8,10 +8,14 @@ class SchemaGenerator:
     def __init__(
         self,
         prompt: str,
+        n_research_questions: int = None,
         generate_nested_enums: bool = False,
         generate_nested_relationship: bool = False,
     ) -> None:
         self.prompt = prompt
+        self.n_research_questions = n_research_questions
+        self.generate_nested_enums = generate_nested_enums
+        self.generate_nested_relationship = generate_nested_relationship
         self.generate_template = dspy.ChainOfThought(
             signatures.GeneratedFieldsSignature
         )
@@ -19,10 +23,11 @@ class SchemaGenerator:
         self.generate_relationship = dspy.ChainOfThought(
             signatures.GeneratedRelationshipSignature
         )
-        self.generate_nested_enums = generate_nested_enums
-        self.generate_nested_relationship = generate_nested_relationship
         self.generate_schema_name = dspy.ChainOfThought(
             signatures.GeneratedSchemaNameSignature
+        )
+        self.generate_research_questions = dspy.ChainOfThought(
+            signatures.GeneratedResearchQuestionsSignature
         )
 
     def _unpack_enum_values(
@@ -114,7 +119,21 @@ class SchemaGenerator:
                         )
                     )
         # generate schema name
+        logger.info("Generating schema name")
         schema_name = self.generate_schema_name(
             prompt=self.prompt
         ).generated_schema_name
-        return models.ValueMap(name=schema_name, fields=fields)
+        # generate research questions
+        if self.n_research_questions:
+            logger.info("Generating research questions")
+            research_questions = self.generate_research_questions(
+                prompt=self.prompt,
+                generated_fields=generated_fields.generated_fields,
+                n=self.n_research_questions,
+            ).generated_research_questions
+            value_map = models.ValueMap(
+                name=schema_name, questions=research_questions, fields=fields
+            )
+        else:
+            value_map = models.ValueMap(name=schema_name, fields=fields)
+        return value_map

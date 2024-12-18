@@ -74,3 +74,25 @@ class GeneratedRelationshipSchemaNameSignature(dspy.Signature):
     name: str = dspy.InputField(description="Name of the relationship")
     description: str = dspy.InputField(description="Description of the relationship")
     generated_schema_name = dspy.OutputField(description="Generated template name")
+
+
+class GeneratedResearchQuestionsSignature(dspy.Signature):
+    """
+    Based on a prompt, and the subsequent generated fields, generate a list of research questions that provide additional second level analysis on the data that pair nicely with the data schema and prompt.
+    The research questions should be open-ended and should not be leading.
+    The research questions should be relevant to the prompt, augment and provide additional context to the data schema, and provide a basis for further analysis.
+    Use the "n" parameter to specify the number of research questions to generate.
+    """
+
+    prompt: str = dspy.InputField(
+        description="Prompt to generate research questions from"
+    )
+    generated_fields: list[models.GeneratedField] = dspy.InputField(
+        description="Generated fields"
+    )
+    n: int = dspy.InputField(
+        default=5, description="Number of research questions -to generate"
+    )
+    generated_research_questions: list[str] = dspy.OutputField(
+        description="Generated research questions"
+    )

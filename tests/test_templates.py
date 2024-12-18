@@ -29,6 +29,24 @@ def test_schema_generator_with_enums() -> None:
     save_model_to_test_data(value_map, "test_schema_generator_with_enums.json")
 
 
+def test_schema_generator_with_enums_research_questions() -> None:
+    search_lm = dspy.LM(
+        "openai/bedrock/claude-3-5-sonnet",
+        api_base=os.getenv("LITELLM_HOST"),
+        api_key=os.getenv("LITELLM_API_KEY"),
+        max_tokens=3000,
+        cache=False,
+    )
+    dspy.configure(lm=search_lm)
+    prompt = "I am conducting due diligence on a company."
+    schema_generator = SchemaGenerator(prompt, n_research_questions=3)
+    value_map = schema_generator.generate()
+    assert isinstance(value_map, models.ValueMap)
+    save_model_to_test_data(
+        value_map, "test_schema_generator_with_enums_research_questions.json"
+    )
+
+
 def test_schema_generator_with_enums_relationship_claude() -> None:
     search_lm = dspy.LM(
         "openai/bedrock/claude-3-5-sonnet",

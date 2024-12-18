@@ -62,6 +62,7 @@ class ValueEnumField(BaseModel):
 
 class ValueMap(BaseModel):
     name: str
+    questions: List[str] = []
     fields: List[Union[ValueField, ValueRelationshipField, ValueEnumField]] = []
 
     def to_value_map(self, include_relationships: bool = True) -> dict:
