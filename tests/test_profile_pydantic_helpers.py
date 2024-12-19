@@ -1,4 +1,4 @@
-from conductor.profiles.factory import create_subclass_with_dynamic_fields
+from conductor.profiles.factory import create_subclass_with_dynamic_fields, enum_factory
 from conductor.flow.models import CitedValue
 
 
@@ -19,3 +19,8 @@ def test_create_dynamic_value() -> None:
         confidence=5,
     )
     assert dynamic_instance.value is True
+
+
+def test_enum_factory() -> None:
+    enum = enum_factory("TestEnum", [("A", "A"), ("B", "B")])
+    assert enum.A.value == "A"

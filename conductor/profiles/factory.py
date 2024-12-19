@@ -1,7 +1,7 @@
 """
 Factories for creating custom classes and pipelines for Evrim Profiles.
 """
-from typing import Any, Type, MutableMapping, Union, List, Dict, Optional, Tuple
+from typing import Any, Type, Union, List, Dict, Optional, Tuple
 from pydantic import Field, create_model, InstanceOf
 from conductor.flow.rag import CitedValueWithCredibility, WebSearchRAG
 from conductor.flow.signatures import ExtractValue
@@ -67,21 +67,32 @@ def create_extract_value_with_custom_type(
     Returns:
         Type[ExtractValue]: A specialized version of `ExtractValue`.
     """
+    if value_type is bool:
+        # Create a new subclass with the updated description for the value field, with boolean types we want to return false not null
+        class CustomExtractValue(ExtractValue):
+            """
+            Distill an answer to an answer into a value that would fit into a database.
+            Use the question to help understand which value to extract.
+            If there isn't a value return the None value.
+            """
 
-    # Create a new subclass with the updated description for the value field
-    class CustomExtractValue(ExtractValue):
-        """
-        Distill an answer to an answer into a value that would fit into a database.
-        Use the question to help understand which value to extract.
-        Only use the NOT_AVAILABLE value if the answer is not available to create a value.
-        """
+            # this is crazy but it works
+            value: value_type = dspy.OutputField(desc=value_description)  # type: ignore
 
-        # this is crazy but it works
-        value: value_type = dspy.OutputField(  # type: ignore
-            desc=value_description
-        )  # type: ignore
+        return CustomExtractValue
+    else:
+        # Create a new subclass with the updated description for the value field with a Union for Null value
+        class CustomExtractValue(ExtractValue):
+            """
+            Distill an answer to an answer into a value that would fit into a database.
+            Use the question to help understand which value to extract.
+            If there isn't a value return the None value.
+            """
 
-    return CustomExtractValue
+            value: Union[value_type, None] = dspy.OutputField(desc=value_description)  # type: ignore
+            # this is crazy but it works
+
+        return CustomExtractValue
 
 
 def create_web_search_value_rag(
@@ -107,11 +118,13 @@ def create_web_search_value_rag(
             # Run the forward method of the parent class
             cited_answer = super().forward(question=question)
             # Convert the answer to a value
-            value = self.generate_value(question=question, answer=cited_answer.answer)
+            value = self.generate_value(
+                question=question, answer=cited_answer.answer
+            ).value
             # Return an instance of the specified return class
             return return_class(
                 question=question,
-                value=value.value,
+                value=value,
                 documents=cited_answer.documents,
                 citations=cited_answer.citations,
                 faithfulness=cited_answer.faithfulness,
@@ -134,7 +147,9 @@ def run_specified_rag(
     return rag(question=query)
 
 
-def enum_factory(name: str, values: list[tuple[str, Any]]) -> Enum:
+def enum_factory(
+    name: str, values: list[tuple[str, Any]], not_available: bool = False
+) -> Enum:
     """
     Creates an Enum dynamically.
 
@@ -160,6 +175,8 @@ def enum_factory(name: str, values: list[tuple[str, Any]]) -> Enum:
             raise ValueError(
                 f"Enum member name '{item_name}' is not a valid Python identifier."
             )
+    if not_available:
+        values.append(("NOT_AVAILABLE", "NOT_AVAILABLE"))
 
     # Dynamically create and return the Enum
     return Enum(name, {item_name: item_value for item_name, item_value in values})
@@ -570,11 +587,18 @@ def build_value_rag_pipeline(
     embeddings: Embeddings,
     cohere_api_key: str = None,
 ) -> InstanceOf[WebSearchRAG]:
-    custom_cited_value = create_subclass_with_dynamic_fields(
-        model_name="CustomCitedValueWithCredibility",
-        base_class=CitedValueWithCredibility,
-        new_fields={"value": (value_type, None, value_description)},
-    )
+    if value_type is not bool:
+        custom_cited_value = create_subclass_with_dynamic_fields(
+            model_name="CustomCitedValueWithCredibility",
+            base_class=CitedValueWithCredibility,
+            new_fields={"value": (Union[value_type, None], None, value_description)},
+        )
+    else:
+        custom_cited_value = create_subclass_with_dynamic_fields(
+            model_name="CustomCitedValueWithCredibility",
+            base_class=CitedValueWithCredibility,
+            new_fields={"value": (value_type, None, value_description)},
+        )
     custom_extract_value = create_extract_value_with_custom_type(
         value_type=value_type, value_description=value_description
     )
@@ -598,6 +622,7 @@ def create_value_rag_pipeline(
     index_name: str,
     embeddings: Embeddings,
     cohere_api_key: str,
+    add_not_available: bool = False,
 ) -> dict[str, tuple[Type[WebSearchRAG], str]]:  # name, search class, description
     """
     Create a pipeline of WebSearchValueRAG classes based on the provided value map.
@@ -614,7 +639,7 @@ def create_value_rag_pipeline(
         for field_name, (value_type, value_description) in value_map[
             model_name
         ].items():
-            if not isinstance(value_type, MutableMapping):
+            if value_type in [int, float, str, bool]:
                 custom_rag = build_value_rag_pipeline(
                     value_type=value_type,
                     value_description=value_description,
@@ -624,8 +649,40 @@ def create_value_rag_pipeline(
                     cohere_api_key=cohere_api_key,
                 )
                 rag_pipeline[model_name][field_name] = (custom_rag, value_description)
+            # handle enum creation prior to building the pipeline
+            elif isinstance(value_type, tuple):
+                field_name = field_name.replace(" ", "_").lower()  # snake sane
+                enum_name = field_name.title().replace(" ", "")  # camel case
+                enum = enum_factory(
+                    name=enum_name,
+                    values=[
+                        (
+                            value.replace(" ", "_").upper(),
+                            value.replace(" ", "_").upper(),
+                        )
+                        for value in value_type[0]
+                    ],
+                    not_available=add_not_available,
+                )
+                if value_type[1] == "many":
+                    enum = List[enum]
+                elif value_type[1] == "single":
+                    enum = enum
+                else:
+                    raise ValueError(
+                        f"Enum type must be 'single' or 'many', not {value_type[1]}"
+                    )
+                custom_rag = build_value_rag_pipeline(
+                    value_type=enum,
+                    value_description=value_description,
+                    elasticsearch=elasticsearch,
+                    index_name=index_name,
+                    embeddings=embeddings,
+                    cohere_api_key=cohere_api_key,
+                )
+                rag_pipeline[model_name][field_name] = (custom_rag, value_description)
             # handle nested value maps
-            else:
+            elif isinstance(value_type, dict):
                 # create a triple type map (relationship_type, source entity type, target entity type)
                 relationship = generate_relationship(
                     source=model_name,
@@ -637,6 +694,24 @@ def create_value_rag_pipeline(
                     _value_type,
                     _value_description,
                 ) in value_type.items():
+                    # do terrible nested checking
+                    if isinstance(_value_type, tuple):
+                        field_name = _field_name.replace(" ", "_").lower()  # snake sane
+                        enum_name = _field_name.title().replace(" ", "")  # camel case
+                        enum = enum_factory(
+                            name=enum_name,
+                            values=[
+                                (
+                                    value.replace(" ", "_").upper(),
+                                    value.replace(" ", "_").upper(),
+                                )
+                                for value in _value_type[0]
+                            ],
+                            not_available=add_not_available,
+                        )
+                        _value_type = enum
+                    else:
+                        _value_type = _value_type
                     custom_rag = build_value_rag_pipeline(
                         value_type=_value_type,
                         value_description=_value_description,
@@ -668,9 +743,10 @@ def process_relationship(
     relationship: InstanceOf[graph_models.AggregatedCitedRelationship],
     profile_pipeline: dict,
     quality_threshold: int = 3,
-) -> Union[dict, None]:
-    profile = {}
+    generate_profile: bool = True,
+) -> dict:
     # Run the profile pipeline
+    profile = {}
     extraction_evaluation = evaluate_extraction(
         source_name=relationship.source.name,
         source_type=relationship.source.entity_type,
@@ -679,28 +755,35 @@ def process_relationship(
         relationship_type=relationship.relationship_type,
     )
     if extraction_evaluation.quality >= quality_threshold:
-        relationship_specification = generate_relationship_specification(
-            source=relationship.source.name,
-            relationship_type=relationship.relationship_type,
-            target=relationship.target.name,
-        )
-        logger.info(f"Running profile pipeline for {relationship_specification}")
-        for _field_name, _entry in profile_pipeline.items():
-            profile[_field_name] = run_specified_rag(
-                specification=relationship_specification,
-                name=_field_name,
-                rag=_entry[0],  # WebSearchValueRAG subclass
-                description=_entry[1],  # value_description
+        if generate_profile:
+            relationship_specification = generate_relationship_specification(
+                source=relationship.source.name,
+                relationship_type=relationship.relationship_type,
+                target=relationship.target.name,
             )
-        return {
-            "relationship": relationship,
-            "profile": profile,
-        }
+            logger.info(f"Running profile pipeline for {relationship_specification}")
+            for _field_name, _entry in profile_pipeline.items():
+                profile[_field_name] = run_specified_rag(
+                    specification=relationship_specification,
+                    name=_field_name,
+                    rag=_entry[0],  # WebSearchValueRAG subclass
+                    description=_entry[1],  # value_description
+                )
+        else:
+            logger.info("Skipping profile ...")
     else:
         logger.warning(
             f"Extraction evaluation quality is below threshold for {relationship.source.name}->{relationship.relationship_type}->{relationship.target.name}"
         )
         logger.warning(f"Quality: {extraction_evaluation.reasoning}")
+    return {
+        "relationship": relationship,
+        "quality": {
+            "value": extraction_evaluation.quality,
+            "reasoning": extraction_evaluation.reasoning,
+        },
+        "profile": profile,
+    }
 
 
 def parallel_process_relationships(
@@ -708,13 +791,18 @@ def parallel_process_relationships(
     profile_pipeline: dict,
     max_workers: int = 4,
     quality_threshold: int = 3,
+    generate_profiles: bool = True,
 ):
     profiled_relationships = []
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit tasks to the thread pool
         future_to_relationship = {
             executor.submit(
-                process_relationship, relationship, profile_pipeline, quality_threshold
+                process_relationship,
+                relationship,
+                profile_pipeline,
+                quality_threshold,
+                generate_profiles,
             ): relationship
             for relationship in deduplicated_graph.relationships
         }
@@ -736,12 +824,17 @@ def run_value_rag_pipeline(
     pipeline: dict[str, tuple[Type[WebSearchRAG], str]],
     max_workers: int = 4,
     quality_threshold: int = 3,
+    generate_relationship_profiles: bool = False,
 ) -> dict[str, list[dict[str, Type[CitedValueWithCredibility]]]]:
     """
     Run a pipeline of WebSearchValueRAG classes based on the provided value map.
 
     Args:
-        rag_pipeline (dict): A mapping of field names to (WebSearchValueRAG subclass, value_description) tuples.
+        specification (str): The specification string.
+        pipeline (dict): A mapping of field names to (WebSearchValueRAG subclass, value_description) tuples.
+        max_workers (int): The maximum number of workers to use for parallel processing.
+        quality_threshold (int): The minimum quality threshold for extraction evaluation.
+        generate_relationship_profiles (bool): Whether to generate profiles for relationships.
 
     Returns:
         dict: A mapping of field names to CitedValueWithCredibility instances.
@@ -783,6 +876,85 @@ def run_value_rag_pipeline(
                     profile_pipeline=profile_pipeline,
                     max_workers=max_workers,
                     quality_threshold=quality_threshold,
+                    generate_profiles=generate_relationship_profiles,
                 )
                 values[model_name][field_name] = profiled_relationships
+    return values
+
+
+def collect_single_value(
+    specification: str,
+    pipeline: dict,
+    model_name: str,
+    field_name: str,
+    entry: Union[tuple[Type[WebSearchRAG], str], dict],
+    resources: dict,
+    max_workers: int,
+    quality_threshold: int,
+    generate_relationship_profiles: bool,
+):
+    if isinstance(entry, tuple):  # handle single value maps
+        value = run_specified_rag(
+            specification=specification,
+            name=field_name,
+            description=entry[1],  # value_description
+            rag=entry[0],  # WebSearchValueRAG subclass
+        )
+        return {field_name: value}
+    if isinstance(entry, dict):  # handle nested value maps with relationship extraction
+        profile_pipeline = pipeline[model_name][field_name].pop("profile_pipeline")
+        triple_type = pipeline[model_name][field_name].pop("triple_type")
+        # get relationships
+        relationship_extractor = create_dynamic_relationship_extraction(
+            specification=specification,
+            triple_types=triple_type,
+            elasticsearch=resources["elasticsearch"],
+            index_name=resources["index_name"],
+        )
+        relationships = relationship_extractor.extract_parallel()
+        # clean the graph to get the deduplicated relationships
+        deduplicated_graph = create_deduplicated_graph(relationships=relationships)
+        profiled_relationships = parallel_process_relationships(
+            deduplicated_graph=deduplicated_graph,
+            profile_pipeline=profile_pipeline,
+            max_workers=max_workers,
+            quality_threshold=quality_threshold,
+            generate_profiles=generate_relationship_profiles,
+        )
+        return {field_name: profiled_relationships}
+
+
+def run_value_rag_pipeline_parallel(
+    specification: str,
+    pipeline: dict[str, tuple[Type[WebSearchRAG], str]],
+    max_workers: int = 4,
+    quality_threshold: int = 3,
+    generate_relationship_profiles: bool = False,
+) -> dict[str, list[dict[str, Type[CitedValueWithCredibility]]]]:
+    """
+    Run a pipeline of WebSearchValueRAG classes based on the provided value map.
+    """
+    resources = pipeline.pop("_resources")
+    values = {}
+    futures = []
+    for model_name in pipeline:
+        values[model_name] = {}
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            for field_name, entry in pipeline[model_name].items():
+                future = executor.submit(
+                    collect_single_value,
+                    specification,
+                    pipeline,
+                    model_name,
+                    field_name,
+                    entry,
+                    resources,
+                    max_workers,
+                    quality_threshold,
+                    generate_relationship_profiles,
+                )
+                futures.append(future)
+            for future in tqdm(as_completed(futures), total=len(futures)):
+                result = future.result()
+                values[model_name].update(result)
     return values

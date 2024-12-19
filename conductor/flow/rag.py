@@ -79,7 +79,7 @@ class CitedAnswerWithCredibility(BaseModel):
     class Config:
         use_enum_values = True
 
-    def slim(self) -> list[SlimCitedAnswerWithCredibility]:
+    def slim(self) -> SlimCitedAnswerWithCredibility:
         return SlimCitedAnswerWithCredibility(
             question=self.question,
             answer=self.answer,

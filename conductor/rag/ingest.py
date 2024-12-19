@@ -3,8 +3,6 @@ Ingest of raw data into Pydantic model
 """
 from conductor.rag.models import WebPage
 from docling.document_converter import DocumentConverter
-from docling.datamodel.base_models import DocumentStream
-import io
 from bs4 import BeautifulSoup
 from datetime import datetime
 from conductor.rag.client import ElasticsearchRetrieverClient
@@ -56,11 +54,11 @@ def ingest_webpage(
     try:
         # get a created at timestamp
         created_at = datetime.now()
-        # make request
-        response = make_request(url, **kwargs)
-        # process response if successful
-        if response:
-            if response.headers.get("content-type") != "application/pdf":
+        if ".pdf" not in url:
+            # make request
+            response = make_request(url, **kwargs)
+            # process response if successful
+            if response:
                 # get text from response
                 response_text = response.text
                 # parse with BeautifulSoup
@@ -73,29 +71,25 @@ def ingest_webpage(
                 return WebPage(
                     url=url, created_at=created_at, content=text, raw=response_text
                 )
-            # ingest pdfs
-            else:
-                logger.info(f"Ingesting PDF from {url} ...")
-                # docling document extractor from temp file
-                if response:
-                    converter = DocumentConverter()
-                    stream = DocumentStream(
-                        name="web_ingest.pdf",
-                        stream=io.BytesIO(response.content),
-                    )
-                    results = converter.convert(
-                        source=stream,
-                        max_num_pages=pdf_page_limit,
-                    )
-                    markdown = results.document.export_to_markdown()
-                    return WebPage(
-                        url=url,
-                        created_at=created_at,
-                        content=markdown,
-                        raw=results.document.export_to_text(),
-                    )
+        # ingest pdfs
+        else:
+            logger.info(f"Attempting to ingest PDF from {url} ...")
+            # docling document extractor from temp file
+            converter = DocumentConverter()
+            results = converter.convert(
+                source=url,
+                max_num_pages=pdf_page_limit,
+            )
+            markdown = results.document.export_to_markdown()
+            return WebPage(
+                url=url,
+                created_at=created_at,
+                content=markdown,
+                raw=results.document.export_to_text(),
+            )
     except Exception as e:
         logger.error(f"Error ingesting {url}")
+        print(e)
         raise e
 
 

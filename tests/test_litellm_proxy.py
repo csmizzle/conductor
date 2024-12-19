@@ -7,7 +7,7 @@ import os
 
 def test_bedrock_llm_dspy():
     lm = dspy.LM(
-        "openai/claude-3-5-sonnet",
+        model="openai/bedrock/claude-3-5-sonnet",
         api_base=os.getenv("LITELLM_HOST"),
         api_key=os.getenv("LITELLM_API_KEY"),
         cache=False,
